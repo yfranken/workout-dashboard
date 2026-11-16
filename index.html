@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Workout & Lichaamsmetingen Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-garmin: #f59e0b;
+      --accent-hevy: #10b981;
+      --accent-body: #ec4899;
+      --accent-corrected: #c084fc;
+      --danger: #ef4444;
+      --star: #fbbf24;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      margin: 0; padding: 14px; background: var(--bg); color: var(--text);
+      padding-bottom: 85px;
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    h1 { font-size: 1.2rem; margin: 0; font-weight: 700; }
+    .badge {
+      font-size: 0.7rem; padding: 3px 8px; border-radius: 999px;
+      background: #334155; color: var(--muted);
+    }
+    .tabs {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+      background: var(--card); padding: 4px; border-radius: 12px;
+      margin-bottom: 14px; border: 1px solid var(--card-border);
+    }
+    .tab-btn {
+      background: transparent; border: none; color: var(--muted);
+      padding: 9px 4px; border-radius: 8px; font-weight: 600; font-size: 0.78rem;
+      cursor: pointer; transition: 0.15s; white-space: nowrap;
+    }
+    .tab-btn.active { background: var(--accent); color: #0f172a; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 14px; margin-bottom: 14px;
+    }
+    .card h2 {
+      font-size: 0.94rem; margin: 0 0 10px 0; color: var(--text);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .zoom-controls { display: flex; gap: 4px; align-items: center; }
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+      margin-bottom: 14px;
+    }
+    .kpi-grid-3 {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      margin-bottom: 14px;
+    }
+    .kpi {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 11px;
+    }
+    .kpi-label { font-size: 0.72rem; color: var(--muted); }
+    .kpi-val { font-size: 1.22rem; font-weight: 700; margin-top: 3px; }
+    .kpi-sub { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .delta-pos { color: #10b981; }
+    .delta-neg { color: #f43f5e; }
+
+    select, input[type="text"], input[type="date"], input[type="number"] {
+      width: 100%; padding: 9px 11px; border-radius: 10px;
+      background: #0f172a; border: 1px solid var(--card-border);
+      color: var(--text); font-size: 0.88rem; margin-bottom: 9px;
+    }
+    .file-box {
+      border: 1.5px dashed var(--card-border); border-radius: 12px;
+      padding: 13px; text-align: center; margin-bottom: 10px;
+      background: rgba(15, 23, 42, 0.4);
+    }
+    .file-box input { display: none; }
+    .btn {
+      display: inline-block; width: 100%; padding: 11px; border-radius: 10px;
+      border: none; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+      text-align: center; margin-top: 5px;
+    }
+    .btn-sm {
+      padding: 5px 10px; font-size: 0.76rem; border-radius: 8px;
+      background: #0f172a; border: 1px solid var(--card-border);
+      color: var(--text); cursor: pointer; font-weight: 600;
+    }
+    .btn-sm:active { background: var(--accent); color: #0f172a; }
+    .btn-accent { background: var(--accent); color: #0f172a; }
+    .btn-garmin { background: var(--accent-garmin); color: #0f172a; }
+    .btn-hevy { background: var(--accent-hevy); color: #0f172a; }
+    .btn-body { background: var(--accent-body); color: #ffffff; }
+    .btn-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+
+    .chart-wrap { position: relative; height: 255px; width: 100%; touch-action: pan-y; }
+    .chart-wrap-tall { position: relative; height: 290px; width: 100%; touch-action: pan-y; }
+    .legend-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px;
+    }
+    .map-row {
+      display: flex; gap: 6px; align-items: center; margin-bottom: 8px;
+      font-size: 0.82rem;
+    }
+    .map-row span { flex: 1; word-break: break-word; color: var(--accent-garmin); }
+    .map-row input { flex: 1.3; margin-bottom: 0; padding: 7px 9px; font-size: 0.82rem; }
+    .status-msg { font-size: 0.78rem; color: var(--accent); margin-top: 8px; line-height: 1.4; }
+    .pill-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    .pill {
+      padding: 5px 9px; border-radius: 999px; font-size: 0.75rem;
+      background: #0f172a; border: 1px solid var(--card-border); color: var(--muted);
+      cursor: pointer;
+    }
+    .pill.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
+
+    /* Snelle punt-correctie balk */
+    .point-inspector {
+      margin-top: 10px; padding: 10px; border-radius: 10px;
+      background: #0f172a; border: 1px solid var(--accent);
+      display: none;
+    }
+    .point-inspector.visible { display: block; }
+    .inspector-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; margin-bottom: 8px;
+    }
+    .inspector-btns {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+    }
+    .insp-btn {
+      padding: 6px 4px; border-radius: 7px; font-size: 0.75rem; font-weight: 700;
+      border: 1px solid var(--card-border); background: #1e293b; color: var(--text);
+      cursor: pointer; text-align: center;
+    }
+    .insp-btn.active { background: var(--accent-corrected); color: #0f172a; border-color: var(--accent-corrected); }
+    .insp-btn.danger { color: var(--danger); }
+
+    /* Periode & navigatie bar */
+    .period-bar {
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .period-pills {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+      margin-bottom: 8px;
+    }
+    .period-pills-3 {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      margin-bottom: 8px;
+    }
+    .period-pill {
+      padding: 6px 4px; border-radius: 8px; font-size: 0.76rem; text-align: center;
+      background: #0f172a; border: 1px solid var(--card-border); color: var(--muted);
+      cursor: pointer; font-weight: 600;
+    }
+    .period-pill.active {
+      background: var(--accent); color: #0f172a; border-color: var(--accent);
+    }
+    .period-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #0f172a; border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 4px 6px;
+    }
+    .nav-arrow {
+      background: #1e293b; border: 1px solid var(--card-border); color: var(--text);
+      border-radius: 7px; padding: 5px 12px; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer;
+    }
+    .nav-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
+    .nav-label { font-size: 0.8rem; color: var(--text); font-weight: 600; text-align: center; }
+
+    /* Oefening instellingen lijst */
+    .pref-list {
+      max-height: 240px; overflow-y: auto; border: 1px solid var(--card-border);
+      border-radius: 10px; background: #0f172a; padding: 4px 8px;
+    }
+    .pref-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 4px; border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      font-size: 0.84rem; gap: 8px;
+    }
+    .pref-row:last-child { border-bottom: none; }
+    .pref-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .star-btn {
+      background: none; border: none; font-size: 1.25rem; cursor: pointer;
+      color: #475569; padding: 0 4px; line-height: 1;
+    }
+    .star-btn.active { color: var(--star); }
+    .toggle-label {
+      display: flex; align-items: center; gap: 6px; font-size: 0.78rem;
+      color: var(--muted); cursor: pointer; user-select: none;
+    }
+    .toggle-label input[type="checkbox"] {
+      accent-color: var(--accent); width: 16px; height: 16px; margin: 0;
+    }
+
+    /* Katrol-segment groepen */
+    .pulley-group {
+      background: #0f172a; border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 10px; margin-bottom: 10px;
+    }
+    .pulley-group-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; gap: 8px;
+    }
+    .pulley-title { font-weight: 700; font-size: 0.86rem; color: var(--text); }
+    .seg-option {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 10px; margin-bottom: 5px; border-radius: 8px;
+      border: 1px solid var(--card-border); background: #1e293b;
+      cursor: pointer; font-size: 0.78rem; gap: 8px;
+    }
+    .seg-option.is-ref {
+      border-color: var(--accent-hevy);
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .seg-option.is-adjusted {
+      border-color: rgba(192, 132, 252, 0.45);
+    }
+    .seg-badge-ref {
+      background: var(--accent-hevy); color: #0f172a;
+      font-weight: 700; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem;
+      white-space: nowrap;
+    }
+    .seg-badge-adj {
+      background: rgba(192, 132, 252, 0.2); color: var(--accent-corrected);
+      border: 1px solid rgba(192, 132, 252, 0.4);
+      font-weight: 700; padding: 2px 7px; border-radius: 6px; font-size: 0.72rem;
+      white-space: nowrap;
+    }
+    .setting-box {
+      background: #0f172a; border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 10px; margin-bottom: 10px;
+    }
+    .manual-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;
+    }
+    .manual-grid-3 {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px;
+    }
+    .manual-grid select, .manual-grid input,
+    .manual-grid-3 input, .manual-grid-3 select { margin-bottom: 4px; padding: 8px; font-size: 0.8rem; }
+    .field-lbl { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 2px; }
+    .hint-text { font-size: 0.72rem; color: var(--muted); margin-top: 6px; text-align: center; }
+
+    /* Tabel voor recente lichaamsmetingen */
+    .table-scroll { overflow-x: auto; }
+    table.mini-table {
+      width: 100%; border-collapse: collapse; font-size: 0.76rem;
+    }
+    table.mini-table th, table.mini-table td {
+      padding: 7px 6px; border-bottom: 1px solid var(--card-border); text-align: left;
+      white-space: nowrap;
+    }
+    table.mini-table th { color: var(--muted); font-weight: 600; }
+    .scanner-pill {
+      padding: 2px 6px; border-radius: 5px; font-size: 0.68rem; font-weight: 700;
+    }
+    .scanner-inbody { background: rgba(56, 189, 248, 0.18); color: var(--accent); }
+    .scanner-evolt { background: rgba(236, 72, 153, 0.18); color: var(--accent-body); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>Fitness &amp; Body Analytics</h1>
+      <div style="font-size: 0.7rem; color: var(--muted); margin-top: 3px; line-height: 1.4;">
+        <span class="legend-dot" style="background:var(--accent-garmin)"></span>Garmin &nbsp;
+        <span class="legend-dot" style="background:var(--accent-hevy)"></span>Hevy &nbsp;
+        <span class="legend-dot" style="background:var(--accent-body)"></span>Metingen &nbsp;
+        <span class="legend-dot" style="background:var(--accent-corrected)"></span>Gecorrigeerd
+      </div>
+    </div>
+    <span class="badge" id="totalBadge">0 sets</span>
+  </header>
+
+  <div class="tabs" id="mainTabs">
+    <button type="button" class="tab-btn active" data-tab="overview">Totaalbeeld</button>
+    <button type="button" class="tab-btn" data-tab="charts">Oefeningen</button>
+    <button type="button" class="tab-btn" data-tab="body">Metingen</button>
+    <button type="button" class="tab-btn" data-tab="upload">Data &amp; Sync</button>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 1: TOTAALBEELD (KRACHTTRAINING VS. LICHAAMSMETINGEN)   -->
+  <!-- ========================================================= -->
+  <div id="tab-overview" class="panel active">
+    <div class="card" style="padding-bottom:10px;">
+      <h2>
+        <span>Totaalbeeld &amp; Verband</span>
+        <span class="badge" id="ovPeriodBadge">Per Kwartaal</span>
+      </h2>
+      <div class="period-pills-3" id="ovGranularityPills">
+        <div class="period-pill" data-gran="month">Per Maand</div>
+        <div class="period-pill active" data-gran="quarter">Per Kwartaal</div>
+        <div class="period-pill" data-gran="year">Per Jaar</div>
+      </div>
+      <div class="period-nav" id="ovNavBar">
+        <button type="button" class="nav-arrow" id="ovPrevBtn">&#9664;</button>
+        <span class="nav-label" id="ovRangeLabel">Alle jaren</span>
+        <button type="button" class="nav-arrow" id="ovNextBtn" disabled>&#9654;</button>
+      </div>
+    </div>
+
+    <!-- KPI Samenvatting van gekozen tijdvak -->
+    <div class="kpi-grid-3">
+      <div class="kpi">
+        <div class="kpi-label">Sessies &amp; Tijd</div>
+        <div class="kpi-val" id="ovKpiSessions">0</div>
+        <div class="kpi-sub" id="ovKpiMinutes">0 min · 0/wk</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Volume &amp; Sets</div>
+        <div class="kpi-val" id="ovKpiVolume">0 t</div>
+        <div class="kpi-sub" id="ovKpiSetsReps">0 sets · 0 reps</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Spier / Vet Delta</div>
+        <div class="kpi-val" id="ovKpiBodyDelta">-</div>
+        <div class="kpi-sub" id="ovKpiFatDelta">Laad metingen</div>
+      </div>
+    </div>
+
+    <!-- Grafiek 1: Trainingsinspanning vs. Lichaamssamenstelling (Dual-Axis) -->
+    <div class="card">
+      <h2>
+        <span>Inspanning vs. Lichaamsresultaat</span>
+      </h2>
+      <div class="manual-grid" style="margin-top:0; margin-bottom:6px;">
+        <div>
+          <span class="field-lbl">Linker as (Training):</span>
+          <select id="ovTrainMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
+            <option value="volume">Totaal Volume (ton)</option>
+            <option value="sessions">Aantal Workouts</option>
+            <option value="minutes">Trainingsminuten</option>
+            <option value="sets">Aantal Sets</option>
+            <option value="reps">Aantal Herhalingen (reps)</option>
+          </select>
+        </div>
+        <div>
+          <span class="field-lbl">Rechter as (Meting):</span>
+          <select id="ovBodyMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
+            <option value="smm">Skeletspiermassa (kg)</option>
+            <option value="fatMass">Vetmassa (kg)</option>
+            <option value="fatPct">Vetpercentage (%)</option>
+            <option value="weight">Lichaamsgewicht (kg)</option>
+            <option value="smmPct">Spierpercentage (%)</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap-tall">
+        <canvas id="ovCorrelationChart"></canvas>
+      </div>
+      <div class="hint-text">Balken = trainingsinspanning · Lijn = verloop lichaamsmeting</div>
+    </div>
+
+    <!-- Grafiek 2: Getrainde Spiergroepen verdeling -->
+    <div class="card">
+      <h2>
+        <span>Getrainde Spiergroepen</span>
+        <div class="pill-row" id="ovMuscleMetricPills" style="margin-bottom:0;">
+          <span class="pill active" data-mm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
+          <span class="pill" data-mm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
+        </div>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="ovMuscleChart"></canvas>
+      </div>
+      <div class="hint-text">Automatisch ingedeeld op oefeningnaam (Borst, Rug, Benen, Schouders, Armen, Core)</div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 2: OEFENING PROGRESSIE                                -->
+  <!-- ========================================================= -->
+  <div id="tab-charts" class="panel">
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Workouts Totaal</div>
+        <div class="kpi-val" id="kpiWorkouts">0</div>
+        <div class="kpi-sub" id="kpiWorkoutsSub">0 Garmin · 0 Hevy</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Totaal Volume</div>
+        <div class="kpi-val" id="kpiVolume">0 t</div>
+        <div class="kpi-sub" id="kpiSetsSub">0 actieve sets</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>
+        <span>Oefening Progressie</span>
+        <div class="zoom-controls">
+          <button type="button" class="btn-sm" id="btnZoomIn" title="Inzoomen">+</button>
+          <button type="button" class="btn-sm" id="btnZoomOut" title="Uitzoomen">&minus;</button>
+          <button type="button" class="btn-sm" id="btnZoomResetEx">Reset</button>
+        </div>
+      </h2>
+      <select id="exerciseSelect"></select>
+      <div class="pill-row" id="metricPills">
+        <span class="pill active" data-metric="e1rm">Geschatte 1RM (kg)</span>
+        <span class="pill" data-metric="maxWeight">Max Gewicht (kg)</span>
+        <span class="pill" data-metric="volume">Sessie Volume (kg)</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="exerciseChart"></canvas>
+      </div>
+
+      <!-- Directe punt-editor bij tikken op een stip in de grafiek -->
+      <div class="point-inspector" id="pointInspector">
+        <div class="inspector-head">
+          <div>
+            <strong id="inspTitle" style="color:var(--text);">-</strong>
+            <div id="inspSub" style="font-size:0.72rem; color:var(--muted);"></div>
+          </div>
+          <button type="button" class="btn-sm" id="btnCloseInspector" style="padding:2px 7px;">✕</button>
+        </div>
+        <div class="inspector-btns" id="inspectorBtns">
+          <button type="button" class="insp-btn" data-factor="1">1× (Normaal)</button>
+          <button type="button" class="insp-btn" data-factor="2">× 2</button>
+          <button type="button" class="insp-btn" data-factor="0.5">÷ 2</button>
+          <button type="button" class="insp-btn danger" data-factor="0">Verberg</button>
+        </div>
+      </div>
+
+      <!-- Periode selector & navigatiepijlen -->
+      <div class="period-bar">
+        <div class="period-pills" id="periodPills">
+          <div class="period-pill" data-period="1m">1 Maand</div>
+          <div class="period-pill" data-period="3m">Kwartaal</div>
+          <div class="period-pill" data-period="1y">Jaar</div>
+          <div class="period-pill active" data-period="all">Altijd</div>
+        </div>
+        <div class="period-nav" id="periodNavBar" style="display:none;">
+          <button type="button" class="nav-arrow" id="prevPeriodBtn">&#9664;</button>
+          <span class="nav-label" id="periodLabel">-</span>
+          <button type="button" class="nav-arrow" id="nextPeriodBtn" disabled>&#9654;</button>
+        </div>
+      </div>
+
+      <div class="hint-text">Tik op een stip in de grafiek om direct 1×, ×2, ÷2 of Verberg te kiezen</div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 3: LICHAAMSMETINGEN (ANALYSE & NIEUWE INVOER)         -->
+  <!-- ========================================================= -->
+  <div id="tab-body" class="panel">
+    <div class="kpi-grid-3">
+      <div class="kpi">
+        <div class="kpi-label">Gewicht</div>
+        <div class="kpi-val" id="bodyKpiWeight">-</div>
+        <div class="kpi-sub" id="bodyKpiWeightSub">Geen data</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Skeletspier</div>
+        <div class="kpi-val" id="bodyKpiSmm">-</div>
+        <div class="kpi-sub" id="bodyKpiSmmSub">-</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Vetmassa / %</div>
+        <div class="kpi-val" id="bodyKpiFat">-</div>
+        <div class="kpi-sub" id="bodyKpiFatSub">-</div>
+      </div>
+    </div>
+
+    <!-- Grafiek 1: Kernwaarden (Spier vs. Vet vs. Gewicht) -->
+    <div class="card">
+      <h2>
+        <span>Lichaamssamenstelling Verloop</span>
+        <div class="pill-row" id="bodyMainModePills" style="margin-bottom:0;">
+          <span class="pill active" data-bmode="kg" style="padding:3px 8px; font-size:0.72rem;">Kilo's (kg)</span>
+          <span class="pill" data-bmode="pct" style="padding:3px 8px; font-size:0.72rem;">Percentages (%)</span>
+        </div>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="bodyMainChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Grafiek 1B: Lichaamswater (L) met blauwe lijn -->
+    <div class="card">
+      <h2>
+        <span>Lichaamswater (L)</span>
+        <span class="badge" id="waterBadge">- L</span>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="bodyWaterChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Grafiek 2A: Segmentale Analyse - Armen -->
+    <div class="card">
+      <h2>
+        <span>Segmentaal: Armen (L/R)</span>
+        <span class="badge">Links: Spier · Rechts: Vet</span>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="bodySegArmsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Grafiek 2B: Segmentale Analyse - Benen -->
+    <div class="card">
+      <h2>
+        <span>Segmentaal: Benen (L/R)</span>
+        <span class="badge">Links: Spier · Rechts: Vet</span>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="bodySegLegsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Grafiek 2C: Segmentale Analyse - Romp / Buik -->
+    <div class="card">
+      <h2>
+        <span>Segmentaal: Romp / Buik</span>
+        <span class="badge">Links: Spier · Rechts: Vet</span>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="bodySegTrunkChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Nieuwe Meting Toevoegen (zoals tabblad Data in Excel) -->
+    <div class="card">
+      <h2>+ Nieuwe Lichaamsmeting Invoeren</h2>
+      <div class="manual-grid">
+        <div>
+          <span class="field-lbl">Datum:</span>
+          <input type="date" id="bmDate" />
+        </div>
+        <div>
+          <span class="field-lbl">Scanner:</span>
+          <select id="bmScanner">
+            <option value="InBody">InBody</option>
+            <option value="Evolt">Evolt</option>
+            <option value="Weegschaal">Thuisweegschaal</option>
+          </select>
+        </div>
+      </div>
+      <div class="manual-grid-3">
+        <div>
+          <span class="field-lbl">Gewicht (kg)*:</span>
+          <input type="number" step="0.1" id="bmWeight" placeholder="75.0" />
+        </div>
+        <div>
+          <span class="field-lbl">Skeletspier (kg)*:</span>
+          <input type="number" step="0.1" id="bmSmm" placeholder="34.5" />
+        </div>
+        <div>
+          <span class="field-lbl">Vetmassa (kg)*:</span>
+          <input type="number" step="0.1" id="bmFat" placeholder="13.5" />
+        </div>
+      </div>
+      <div class="manual-grid-3">
+        <div>
+          <span class="field-lbl">Buikomtrek (cm):</span>
+          <input type="number" step="0.1" id="bmWaist" placeholder="81.0" />
+        </div>
+        <div>
+          <span class="field-lbl">Lichaamswater (L):</span>
+          <input type="number" step="0.1" id="bmWater" placeholder="44.5" />
+        </div>
+        <div>
+          <span class="field-lbl">BMI:</span>
+          <input type="number" step="0.1" id="bmBmi" placeholder="22.6" />
+        </div>
+      </div>
+
+      <details style="margin-top:6px; font-size:0.8rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">Segmentale waarden (Armen / Benen / Buik) invullen</summary>
+        <div style="margin-top:8px;">
+          <strong style="color:var(--accent); font-size:0.74rem;">Spiermassa (kg):</strong>
+          <div class="manual-grid-3">
+            <div><span class="field-lbl">Linkerarm:</span><input type="number" step="0.01" id="bmLArmS" /></div>
+            <div><span class="field-lbl">Rechterarm:</span><input type="number" step="0.01" id="bmRArmS" /></div>
+            <div><span class="field-lbl">Buik/Romp:</span><input type="number" step="0.1" id="bmBuikS" /></div>
+            <div><span class="field-lbl">Linkerbeen:</span><input type="number" step="0.01" id="bmLBeenS" /></div>
+            <div><span class="field-lbl">Rechterbeen:</span><input type="number" step="0.01" id="bmRBeenS" /></div>
+          </div>
+          <strong style="color:var(--accent-body); font-size:0.74rem; display:block; margin-top:6px;">Vetmassa (kg):</strong>
+          <div class="manual-grid-3">
+            <div><span class="field-lbl">Linkerarm:</span><input type="number" step="0.01" id="bmLArmV" /></div>
+            <div><span class="field-lbl">Rechterarm:</span><input type="number" step="0.01" id="bmRArmV" /></div>
+            <div><span class="field-lbl">Buik/Romp:</span><input type="number" step="0.1" id="bmBuikV" /></div>
+            <div><span class="field-lbl">Linkerbeen:</span><input type="number" step="0.01" id="bmLBeenV" /></div>
+            <div><span class="field-lbl">Rechterbeen:</span><input type="number" step="0.01" id="bmRBeenV" /></div>
+          </div>
+        </div>
+      </details>
+
+      <button type="button" class="btn btn-body" id="btnAddBodyMeasurement">Meting opslaan</button>
+      <div id="bmSaveFeedback" class="status-msg"></div>
+    </div>
+
+    <!-- Overzicht van ingevoerde metingen -->
+    <div class="card">
+      <h2>Metingen Historie (<span id="bmCountLabel">0</span>)</h2>
+      <div class="table-scroll">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Bron</th>
+              <th>Gewicht</th>
+              <th>Spier</th>
+              <th>Vet</th>
+              <th>Water</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="bmTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 4: DATA & SYNC + MAPPING + CORRECTIES                 -->
+  <!-- ========================================================= -->
+  <div id="tab-upload" class="panel">
+    <div class="card">
+      <h2>1. Lichaamsmetingen Excel Importeren</h2>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:0;">
+        Laad jouw Excel-bestand (<code>Fitness_N.xlsx</code>). Leest direct alle rijen en segmentale kolommen uit het tabblad <strong>Data</strong>.
+      </p>
+      <div class="file-box">
+        <div id="bodyFileStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen lichaamsmetingen geladen</div>
+        <label class="btn btn-body">
+          Kies Excel bestand (.xlsx)
+          <input type="file" id="inputBodyXlsx" accept=".xlsx,.xls" />
+        </label>
+        <button type="button" class="btn btn-danger" id="btnClearBodyData" style="margin-top:8px; display:none;">
+          Verwijder ingeladen Excel / metingen data
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Garmin Historie (Vóór 21-02-2025)</h2>
+      <div class="file-box">
+        <div id="garminStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen Garmin-data geladen</div>
+        <label class="btn btn-garmin">
+          Kies Garmin CSV
+          <input type="file" id="inputGarminFile" accept=".csv,text/csv" />
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Hevy Export (Vanaf 21-02-2025)</h2>
+      <div class="file-box">
+        <div id="hevyStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen Hevy-data geladen</div>
+        <label class="btn btn-hevy">
+          Update met nieuwe Hevy CSV
+          <input type="file" id="inputHevyFile" accept=".csv,text/csv" />
+        </label>
+      </div>
+      <div id="uploadFeedback" class="status-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>
+        <span>4. Favorieten &amp; Trendlijn</span>
+        <label class="toggle-label" style="color:var(--text);">
+          <input type="checkbox" id="globalTrendToggle" />
+          Trendlijn alle
+        </label>
+      </h2>
+      <input type="text" id="prefSearch" placeholder="Zoek oefening..." />
+      <div id="prefsListContainer" class="pref-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>5. Baseline &amp; Katrolcorrectie</h2>
+      <div class="setting-box">
+        <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-weight:600;">
+          <input type="checkbox" id="autoFilterOutliersToggle" />
+          Verberg losse uitschieters (&lt; 65% of &gt; 145% van werkgewicht)
+        </label>
+        <label class="toggle-label" style="color:var(--muted);">
+          <input type="checkbox" id="showBaselineBandToggle" />
+          Toon baseline-band in grafiek
+        </label>
+      </div>
+
+      <button type="button" class="btn btn-accent" id="btnAutoDetect">Analyseer grote katrol-wissels opnieuw</button>
+      <div id="pulleyScanMsg" class="status-msg" style="margin-bottom:8px;"></div>
+      <div id="pulleyGroupsContainer"></div>
+
+      <details style="margin-top:10px; font-size:0.82rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig datumrange corrigeren of verbergen</summary>
+        <div style="margin-top:8px;">
+          <select id="manualPulleyEx"></select>
+          <div class="manual-grid">
+            <div><span class="field-lbl">Vanaf:</span><input type="date" id="manualStart" /></div>
+            <div><span class="field-lbl">Tot en met:</span><input type="date" id="manualEnd" /></div>
+          </div>
+          <div class="manual-grid">
+            <select id="manualFactor">
+              <option value="2">Vermenigvuldig met × 2</option>
+              <option value="0.5">Halveer met ÷ 2</option>
+              <option value="0">Verberg in grafiek</option>
+            </select>
+            <button type="button" class="btn-sm" id="btnAddManualRange" style="height:36px;">Toevoegen</button>
+          </div>
+        </div>
+      </details>
+
+      <div id="singlePointRulesBox" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>6. Garmin &rarr; Hevy Namen Koppelen</h2>
+      <datalist id="hevyNamesList"></datalist>
+      <div id="mappingContainer" style="max-height:240px; overflow-y:auto;"></div>
+      <button type="button" class="btn btn-hevy" id="btnSaveMappings" style="margin-top:10px;">Koppelingen opslaan</button>
+    </div>
+
+    <div class="card">
+      <h2>Backup &amp; Synchronisatie (PC ⇄ Mobiel)</h2>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:0;">
+        Exporteer al je data (workouts, metingen, correcties, favorieten) naar één backup-bestand en sla dit op in je OneDrive of Google Drive om op je andere apparaat te importeren.
+      </p>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top:8px;">
+        <button type="button" class="btn btn-accent" id="btnExportBackup" style="margin-top:0;">Backup Exporteren</button>
+        <label class="btn btn-hevy" style="margin-top:0; cursor:pointer; display:inline-block; text-align:center; padding:11px; border-radius:10px; font-weight:600; font-size:0.88rem;">
+          Backup Importeren
+          <input type="file" id="inputImportBackup" accept=".json" style="display:none;" />
+        </label>
+      </div>
+      <div id="backupFeedback" class="status-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Onderhoud</h2>
+      <button type="button" class="btn btn-danger" id="btnClearAll">Alle opgeslagen data wissen</button>
+    </div>
+  </div>
+
+<script>
+// === VEILIGE HELPERS ===
+function safeParseJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// === CONFIGURATIE & STATE ===
+const CUTOFF_DATE = new Date("2025-02-21T00:00:00");
+const DB_NAME = "WorkoutAnalyticsDB";
+const DB_VERSION = 1;
+
+let state = {
+  garminSets: [],
+  hevySets: [],
+  bodyMeasurements: [], // [{ date, scanner, weight, smm, smmPct, fatMass, fatPct, waist, bmi, lArmS, rArmS, lBeenS, rBeenS, buikS, lArmV, rArmV, lBeenV, rBeenV, buikV, water, protein, minerals }]
+  mappings: safeParseJSON("exercise_mappings", {}),
+  favorites: safeParseJSON("exercise_favorites", []),
+  globalTrend: safeParseJSON("global_trend", true),
+  trendOverrides: safeParseJSON("trend_overrides", {}),
+  pulleyGroups: safeParseJSON("pulley_groups_v5", []),
+  pointOverrides: safeParseJSON("point_overrides_v2", {}),
+  autoFilterOutliers: safeParseJSON("auto_filter_outliers", true),
+  showBaselineBand: safeParseJSON("show_baseline_band", true),
+  selectedMetric: "e1rm",
+  period: "all",
+  periodOffset: 0,
+  inspectedPoint: null,
+  // Totaalbeeld state
+  ovGranularity: "quarter", // "month" | "quarter" | "year"
+  ovOffset: 0,
+  ovMuscleMetric: "sets",
+  // Lichaamsmetingen state
+  bodyMainMode: "kg",       // "kg" | "pct"
+  bodySegType: "spier"      // "spier" | "vet"
+};
+
+let exerciseChartInstance = null;
+let ovCorrChartInstance = null;
+let ovMuscleChartInstance = null;
+let bodyMainChartInstance = null;
+let bodyWaterChartInstance = null;
+let bodySegArmsChartInstance = null;
+let bodySegLegsChartInstance = null;
+let bodySegTrunkChartInstance = null;
+
+// === PLUGINS REGISTREREN ===
+if (typeof Chart !== "undefined") {
+  const verticalCrosshairPlugin = {
+    id: "verticalCrosshair",
+    afterDatasetsDraw(chart) {
+      const active = chart.getActiveElements();
+      if (!active || active.length === 0) return;
+      const { ctx, chartArea: { top, bottom } } = chart;
+      const x = active[0].element.x;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(248, 250, 252, 0.55)";
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+  Chart.register(verticalCrosshairPlugin);
+  if (typeof ChartZoom !== "undefined") {
+    try { Chart.register(ChartZoom); } catch (e) {}
+  }
+}
+
+// === INDEXEDDB OPSLAG ===
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("datasets")) {
+        db.createObjectStore("datasets");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveDataset(key, data) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("datasets", "readwrite");
+      tx.objectStore("datasets").put(data, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {}
+}
+
+async function loadDataset(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("datasets", "readonly");
+      const req = tx.objectStore("datasets").get(key);
+      req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+// === DATUM PARSERS ===
+function parseWorkoutDate(str) {
+  if (str === null || str === undefined || str === "") return null;
+  if (str instanceof Date && !isNaN(str.getTime())) return str;
+
+  // Excel serieel datumnummer (bijv. 44726 = 14-06-2022)
+  if (typeof str === "number" || /^\d{5}(?:\.\d+)?$/.test(String(str).trim())) {
+    const serial = Number(str);
+    if (serial > 20000 && serial < 90000) {
+      // Excel epoch is 30 dec 1899 (86400000 ms per dag)
+      const utcMs = Math.round((serial - 25569) * 86400 * 1000);
+      const d = new Date(utcMs);
+      return isNaN(d.getTime()) ? null : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0);
+    }
+  }
+
+  const clean = String(str).replace(/^\uFEFF/, "").trim();
+
+  const months = {
+    jan:0, feb:1, mar:2, mrt:2, apr:3, may:4, mei:4, jun:5,
+    jul:6, aug:7, sep:8, oct:9, okt:9, nov:10, dec:11
+  };
+  const mText = clean.match(/^(\d{1,2})[\s\-]+([A-Za-z]{3})[\s\-]+(\d{4})(?:,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (mText) {
+    const mon = months[mText[2].toLowerCase()];
+    if (mon !== undefined) {
+      return new Date(
+        Number(mText[3]), mon, Number(mText[1]),
+        Number(mText[4] || 12), Number(mText[5] || 0), Number(mText[6] || 0)
+      );
+    }
+  }
+
+  const mIso = clean.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (mIso) {
+    return new Date(
+      Number(mIso[1]), Number(mIso[2]) - 1, Number(mIso[3]),
+      Number(mIso[4] || 12), Number(mIso[5] || 0), Number(mIso[6] || 0)
+    );
+  }
+
+  const mEu = clean.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (mEu) {
+    let yr = Number(mEu[3]);
+    if (yr < 100) yr += 2000;
+    return new Date(
+      yr, Number(mEu[2]) - 1, Number(mEu[1]),
+      Number(mEu[4] || 12), Number(mEu[5] || 0), Number(mEu[6] || 0)
+    );
+  }
+  const _skipOldEu = null;
+  if (_skipOldEu)
+  if (mEu) {
+    return new Date(
+      Number(mEu[3]), Number(mEu[2]) - 1, Number(mEu[1]),
+      Number(mEu[4] || 12), Number(mEu[5] || 0), Number(mEu[6] || 0)
+    );
+  }
+
+  const fallback = new Date(clean);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function formatYMD(dt) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
+
+function formatShortNL(ymd) {
+  if (!ymd) return "";
+  const [y, m, d] = ymd.split("-");
+  const months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  return `${Number(d)} ${months[Number(m) - 1]} '${y.slice(2)}`;
+}
+
+// === SPIERGROEP CLASSIFICATIE (VOOR TOTAALBEELD) ===
+function classifyMuscleGroup(exName) {
+  const n = String(exName || "").toLowerCase();
+  if (/bench|chest|fly|pec|push.?up|dip/.test(n) && !/tricep/.test(n)) return "Borst";
+  if (/lat|row|pull.?up|chin.?up|pulldown|deadlift|back|shrug|hyperextension|pullover/.test(n)) return "Rug";
+  if (/squat|leg|lunge|calf|calves|hamstring|quad|glute|hip thrust|rdl|romanian|step.?up/.test(n)) return "Benen";
+  if (/shoulder|overhead|military|lateral|delt|arnold|face pull|upright|front raise/.test(n)) return "Schouders";
+  if (/curl|bicep|tricep|extension|skull|pushdown|hammer|preacher|kickback/.test(n)) return "Armen";
+  if (/crunch|plank|ab|core|sit.?up|russian|leg raise|woodchop/.test(n)) return "Core";
+  return "Overig";
+}
+
+// === EXCEL IMPORT VOOR LICHAAMSMETINGEN (Fitness_N.xlsx) ===
+function handleBodyXlsxUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const feedback = document.getElementById("uploadFeedback");
+  feedback.textContent = "Excel lichaamsmetingen uitlezen...";
+
+  if (typeof XLSX === "undefined") {
+    feedback.textContent = "Fout: Excel-bibliotheek niet geladen.";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array", cellDates: false });
+      const sheetName = workbook.SheetNames.includes("Data") ? "Data" : workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+
+      // Zoek dynamisch de koprij en de kolom waarin 'Datum' staat (omdat kolom A in Excel leeg is en SheetJS bij kolom B start!)
+      let headerRowIdx = 2;
+      let dateCol = 1; // In B1:BL46 is Kolom B = index 0 (Scanner), Kolom C = index 1 (Datum), Kolom D = index 2 (Gewicht)
+      for (let r = 0; r < Math.min(10, rows.length); r++) {
+        if (!rows[r]) continue;
+        const foundIdx = rows[r].findIndex(cell => String(cell || "").trim().toLowerCase() === "datum");
+        if (foundIdx !== -1) {
+          headerRowIdx = r;
+          dateCol = foundIdx;
+          break;
+        }
+      }
+
+      const parsed = [];
+      for (let r = headerRowIdx + 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row) continue;
+        const rawDate = row[dateCol];
+        const weight = parseFloat(row[dateCol + 1]);
+        if (!rawDate || isNaN(weight) || weight <= 30) continue;
+
+        const dt = parseWorkoutDate(rawDate);
+        if (!dt || dt.getFullYear() < 2010) continue;
+
+        const smm = parseFloat(row[dateCol + 2]) || null;
+        let smmPct = parseFloat(row[dateCol + 3]);
+        if (!isNaN(smmPct) && smmPct <= 1) smmPct = smmPct * 100;
+        else if (isNaN(smmPct) && smm && weight) smmPct = (smm / weight) * 100;
+
+        const fatMass = parseFloat(row[dateCol + 4]) || null;
+        let fatPct = parseFloat(row[dateCol + 5]);
+        if (!isNaN(fatPct) && fatPct <= 1) fatPct = fatPct * 100;
+        else if (isNaN(fatPct) && fatMass && weight) fatPct = (fatMass / weight) * 100;
+
+        parsed.push({
+          date: formatYMD(dt),
+          scanner: String(row[dateCol - 1] || "Scan").trim(),
+          weight: Number(weight.toFixed(2)),
+          smm: smm ? Number(smm.toFixed(2)) : null,
+          smmPct: !isNaN(smmPct) ? Number(smmPct.toFixed(1)) : null,
+          fatMass: fatMass ? Number(fatMass.toFixed(2)) : null,
+          fatPct: !isNaN(fatPct) ? Number(fatPct.toFixed(1)) : null,
+          waist: parseFloat(row[dateCol + 6]) || null,
+          bmi: parseFloat(row[dateCol + 7]) || null,
+          lArmS: parseFloat(row[dateCol + 8]) || null,
+          rArmS: parseFloat(row[dateCol + 9]) || null,
+          lBeenS: parseFloat(row[dateCol + 10]) || null,
+          rBeenS: parseFloat(row[dateCol + 11]) || null,
+          buikS: parseFloat(row[dateCol + 12]) || null,
+          lArmV: parseFloat(row[dateCol + 13]) || null,
+          rArmV: parseFloat(row[dateCol + 14]) || null,
+          lBeenV: parseFloat(row[dateCol + 15]) || null,
+          rBeenV: parseFloat(row[dateCol + 16]) || null,
+          buikV: parseFloat(row[dateCol + 17]) || null,
+          water: parseFloat(row[dateCol + 18]) || null,
+          protein: parseFloat(row[dateCol + 19]) || null,
+          minerals: parseFloat(row[dateCol + 20]) || null
+        });
+      }
+
+      parsed.sort((a, b) => a.date.localeCompare(b.date));
+      state.bodyMeasurements = parsed;
+      await saveDataset("bodyMeasurements", parsed);
+
+      feedback.textContent = `Succes! ${parsed.length} lichaamsmetingen ingeladen uit tabblad '${sheetName}'.`;
+      event.target.value = "";
+      refreshAll();
+    } catch (err) {
+      feedback.textContent = "Fout bij lezen Excel: " + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// === CSV UPLOAD VERWERKING (GARMIN & HEVY) ===
+function handleFileUpload(event, source) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const feedback = document.getElementById("uploadFeedback");
+  feedback.textContent = "Bestand verwerken...";
+
+  if (typeof Papa === "undefined") {
+    feedback.textContent = "Fout: CSV-bibliotheek niet geladen.";
+    return;
+  }
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: h => h.replace(/^﻿/, "").trim(),
+    complete: async function(results) {
+      const rows = results.data || [];
+      const parsed = [];
+
+      for (const r of rows) {
+        const rawDate = r.start_time || r.Datum || r.Date || r.startTimeLocal;
+        const dt = parseWorkoutDate(rawDate);
+        if (!dt) continue;
+
+        if (source === "garmin" && dt >= CUTOFF_DATE) continue;
+        if (source === "hevy" && dt < CUTOFF_DATE) continue;
+
+        const endDt = parseWorkoutDate(r.end_time);
+        const setDurationSec = parseFloat(r.duration_seconds) || 0;
+        let workoutDurationMin = 0;
+        if (endDt && endDt > dt) {
+          workoutDurationMin = Math.round((endDt.getTime() - dt.getTime()) / 60000);
+        }
+
+        const rawWeight = r.weight_kg ?? r.Gewicht_KG ?? r.weight ?? "0";
+        const weight = parseFloat(String(rawWeight).replace(",", ".")) || 0;
+        const reps = parseInt(r.reps ?? r.Herhalingen ?? "0", 10) || 0;
+        const rawExercise = String(r.exercise_title || r.OefeningNaam || r.OefeningCategorie || "Onbekend").trim();
+
+        const pad = n => String(n).padStart(2, "0");
+        const dateDay = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+        const monthKey = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`;
+
+        parsed.push({
+          source,
+          dateMs: dt.getTime(),
+          dateDay,
+          monthKey,
+          workoutTitle: String(r.title || r.WorkoutNaam || "Workout").trim(),
+          workoutDurationMin,
+          setDurationSec,
+          rawExercise,
+          weight,
+          reps
+        });
+      }
+
+      if (source === "garmin") {
+        state.garminSets = parsed;
+        await saveDataset("garmin", parsed);
+      } else {
+        state.hevySets = parsed;
+        await saveDataset("hevy", parsed);
+      }
+
+      const sortedDays = parsed.map(p => p.dateDay).sort();
+      const rangeInfo = sortedDays.length > 0
+        ? ` (${sortedDays[0]} t/m ${sortedDays[sortedDays.length - 1]})`
+        : "";
+
+      feedback.textContent = `Succes! ${parsed.length} sets opgeslagen voor ${source.toUpperCase()}${rangeInfo}.`;
+      event.target.value = "";
+      refreshAll();
+    },
+    error: function(err) {
+      feedback.textContent = "Fout bij lezen CSV: " + err.message;
+    }
+  });
+}
+
+// === BEREKEN DE FACTOR VAN EEN BLOK ===
+function getSegmentFactor(group, segIdx) {
+  if (!group || !Array.isArray(group.segments)) return 1;
+  const curSeg = group.segments[segIdx];
+  if (!curSeg) return 1;
+
+  if (curSeg.manualFactor !== undefined && curSeg.manualFactor !== null) {
+    return Number(curSeg.manualFactor);
+  }
+  if (segIdx === group.refSegmentIdx) return 1;
+  const refSeg = group.segments[group.refSegmentIdx];
+  if (!refSeg || curSeg.medianWeight <= 0) return 1;
+
+  const ratio = refSeg.medianWeight / curSeg.medianWeight;
+  if (ratio >= 1.5) return 2;
+  if (ratio <= 0.67) return 0.5;
+  return 1;
+}
+
+// === DATA COMBINEREN, MAPPEN & CORRECTIES TOEPASSEN ===
+function getCombinedSets(skipAllCorrections = false) {
+  const all = [...state.garminSets, ...state.hevySets];
+  const activeGroups = skipAllCorrections
+    ? []
+    : (state.pulleyGroups || []).filter(g => g && g.enabled && Array.isArray(g.segments));
+
+  const result = [];
+
+  for (const s of all) {
+    const mappedName = (s.source === "garmin" && state.mappings[s.rawExercise])
+      ? state.mappings[s.rawExercise]
+      : s.rawExercise;
+
+    let factor = 1;
+    let hidden = false;
+
+    if (!skipAllCorrections) {
+      const ptKey = `${mappedName}|${s.dateDay}`;
+      if (Object.prototype.hasOwnProperty.call(state.pointOverrides, ptKey)) {
+        const ptFactor = Number(state.pointOverrides[ptKey]);
+        if (ptFactor === 0) hidden = true;
+        else factor = ptFactor;
+      } else {
+        for (const grp of activeGroups) {
+          if (grp.exercise !== mappedName) continue;
+          for (let i = 0; i < grp.segments.length; i++) {
+            const seg = grp.segments[i];
+            if (s.dateDay >= seg.startDay && s.dateDay <= seg.endDay) {
+              const f = getSegmentFactor(grp, i);
+              if (f === 0) hidden = true;
+              else factor *= f;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (hidden) continue;
+
+    const adjWeight = s.weight * factor;
+    const e1rm = (adjWeight > 0 && s.reps > 0)
+      ? (s.reps === 1 ? adjWeight : adjWeight * (1 + s.reps / 30))
+      : 0;
+
+    result.push({
+      ...s,
+      exercise: mappedName,
+      muscleGroup: classifyMuscleGroup(mappedName),
+      rawWeight: s.weight,
+      appliedFactor: factor,
+      weight: adjWeight,
+      corrected: factor !== 1,
+      volume: adjWeight * s.reps,
+      e1rm
+    });
+  }
+
+  return result;
+}
+
+// === STATISTIEK & BASELINE HELPERS ===
+function median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function upperQuartile(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const idx = Math.min(s.length - 1, Math.floor(s.length * 0.72));
+  return s[idx];
+}
+
+function computeRollingBaseline(timeline, metricKey) {
+  const n = timeline.length;
+  const windowHalf = 5;
+  return timeline.map((entry, i) => {
+    const start = Math.max(0, i - windowHalf);
+    const end = Math.min(n, i + windowHalf + 1);
+    const slice = [];
+    for (let j = start; j < end; j++) {
+      const val = timeline[j][metricKey];
+      if (val > 0) slice.push(val);
+    }
+    const base = slice.length > 0 ? upperQuartile(slice) : entry[metricKey];
+    return {
+      base,
+      low: base * 0.65,
+      high: base * 1.45
+    };
+  });
+}
+
+// === KATROL-DETECTIE ===
+function autoDetectPulleyGroups() {
+  const rawSets = getCombinedSets(true);
+  const byEx = {};
+
+  for (const s of rawSets) {
+    if (s.weight <= 0) continue;
+    if (!byEx[s.exercise]) byEx[s.exercise] = {};
+    byEx[s.exercise][s.dateDay] = Math.max(byEx[s.exercise][s.dateDay] || 0, s.weight);
+  }
+
+  state.pulleyGroups = state.pulleyGroups.filter(g => g && g.isManual);
+  let foundGroups = 0;
+
+  for (const [exercise, dayMap] of Object.entries(byEx)) {
+    const days = Object.keys(dayMap).sort();
+    if (days.length < 12) continue;
+
+    const splitIndices = [];
+    for (let i = 6; i <= days.length - 6; i++) {
+      const prevWeights = days.slice(i - 6, i).map(d => dayMap[d]);
+      const nextWeights = days.slice(i, i + 6).map(d => dayMap[d]);
+
+      const uqBefore = upperQuartile(prevWeights);
+      const uqAfter = upperQuartile(nextWeights);
+      if (uqBefore <= 0 || uqAfter <= 0) continue;
+
+      const ratio = uqAfter / uqBefore;
+      if ((ratio >= 1.65 && ratio <= 2.45) || (ratio >= 0.40 && ratio <= 0.62)) {
+        splitIndices.push(i);
+        i += 5;
+      }
+    }
+
+    if (splitIndices.length > 0) {
+      const segments = [];
+      let startIdx = 0;
+      const boundaries = [...splitIndices, days.length];
+
+      for (let b = 0; b < boundaries.length; b++) {
+        const endIdx = boundaries[b] - 1;
+        const sliceDays = days.slice(startIdx, endIdx + 1);
+        const sliceWeights = sliceDays.map(d => dayMap[d]);
+        segments.push({
+          startDay: sliceDays[0],
+          endDay: sliceDays[sliceDays.length - 1],
+          sessionCount: sliceDays.length,
+          medianWeight: upperQuartile(sliceWeights)
+        });
+        startIdx = boundaries[b];
+      }
+
+      state.pulleyGroups.push({
+        id: "grp_" + Date.now() + "_" + Math.floor(Math.random() * 100000),
+        exercise,
+        enabled: true,
+        refSegmentIdx: segments.length - 1,
+        segments
+      });
+      foundGroups++;
+    }
+  }
+
+  savePulleyGroups();
+  const msg = document.getElementById("pulleyScanMsg");
+  msg.textContent = foundGroups > 0
+    ? `${foundGroups} oefening(en) met grote katrol-wissel gevonden!`
+    : "Geen grote structurele katrol-wissels gevonden.";
+  refreshAll();
+}
+
+function savePulleyGroups() {
+  localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+}
+
+function savePointOverrides() {
+  localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
+}
+
+// =========================================================================
+// TOTAALBEELD LOGICA (AGGREGATIE PER MAAND / KWARTAAL / JAAR + METINGEN)
+// =========================================================================
+function getBucketKey(ymd, gran) {
+  const [y, m] = ymd.split("-");
+  if (gran === "year") return y;
+  if (gran === "quarter") {
+    const q = Math.floor((Number(m) - 1) / 3) + 1;
+    return `${y}-Q${q}`;
+  }
+  return `${y}-${m}`; // month
+}
+
+function formatBucketLabel(key, gran) {
+  if (gran === "year") return key;
+  if (gran === "quarter") return key.replace("-", " ");
+  const [y, m] = key.split("-");
+  const months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  return `${months[Number(m) - 1]} '${y.slice(2)}`;
+}
+
+function renderOverviewDashboard(sets) {
+  const gran = state.ovGranularity;
+  document.getElementById("ovPeriodBadge").textContent =
+    gran === "month" ? "Per Maand" : (gran === "quarter" ? "Per Kwartaal" : "Per Jaar");
+
+  // 1. Verzamel alle unieke buckets uit zowel trainingen als lichaamsmetingen
+  const bucketMap = {};
+  const ensureBucket = k => {
+    if (!bucketMap[k]) {
+      bucketMap[k] = {
+        key: k,
+        days: new Set(),
+        dayDurations: {},
+        volumeKg: 0,
+        setsCount: 0,
+        repsCount: 0,
+        musclesSets: {},
+        musclesVol: {},
+        bodyEntries: []
+      };
+    }
+    return bucketMap[k];
+  };
+
+  for (const s of sets) {
+    const k = getBucketKey(s.dateDay, gran);
+    const b = ensureBucket(k);
+    b.days.add(s.dateDay);
+    if (s.workoutDurationMin > 0) {
+      b.dayDurations[s.dateDay] = Math.max(b.dayDurations[s.dateDay] || 0, s.workoutDurationMin);
+    } else if (s.setDurationSec > 0) {
+      b.dayDurations[s.dateDay] = (b.dayDurations[s.dateDay] || 0) + (s.setDurationSec / 60);
+    }
+    b.volumeKg += s.volume;
+    b.setsCount += 1;
+    b.repsCount += s.reps;
+
+    const mg = s.muscleGroup;
+    b.musclesSets[mg] = (b.musclesSets[mg] || 0) + 1;
+    b.musclesVol[mg] = (b.musclesVol[mg] || 0) + (s.volume / 1000);
+  }
+
+  for (const m of state.bodyMeasurements) {
+    const k = getBucketKey(m.date, gran);
+    const b = ensureBucket(k);
+    b.bodyEntries.push(m);
+  }
+
+  const allKeys = Object.keys(bucketMap).sort();
+  // Bepaal zichtbaar venster (bijv. 12 maanden, 8 kwartalen, of alle jaren)
+  const windowSize = gran === "month" ? 12 : (gran === "quarter" ? 8 : 10);
+  const maxOffset = Math.max(0, allKeys.length - windowSize);
+  state.ovOffset = Math.min(state.ovOffset, maxOffset);
+
+  const endIdx = allKeys.length - state.ovOffset;
+  const startIdx = Math.max(0, endIdx - windowSize);
+  const visibleKeys = allKeys.slice(startIdx, endIdx);
+
+  document.getElementById("ovPrevBtn").disabled = startIdx === 0;
+  document.getElementById("ovNextBtn").disabled = state.ovOffset === 0;
+  document.getElementById("ovRangeLabel").textContent = visibleKeys.length > 0
+    ? `${formatBucketLabel(visibleKeys[0], gran)} – ${formatBucketLabel(visibleKeys[visibleKeys.length - 1], gran)}`
+    : "Geen data";
+
+  // 2. KPI's over zichtbare periode berekenen
+  let totalSessions = 0;
+  let totalMinutes = 0;
+  let totalVolKg = 0;
+  let totalSets = 0;
+  let totalReps = 0;
+  const visibleBody = [];
+
+  visibleKeys.forEach(k => {
+    const b = bucketMap[k];
+    const sessCount = b.days.size;
+    totalSessions += sessCount;
+    let mins = 0;
+    b.days.forEach(d => {
+      mins += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; // Fallback ~55 min als horloge geen eindtijd gaf
+    });
+    totalMinutes += mins;
+    totalVolKg += b.volumeKg;
+    totalSets += b.setsCount;
+    totalReps += b.repsCount;
+    visibleBody.push(...b.bodyEntries);
+  });
+
+  const weeksApprox = visibleKeys.length * (gran === "month" ? 4.33 : (gran === "quarter" ? 13 : 52));
+  const perWeek = weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0";
+
+  document.getElementById("ovKpiSessions").textContent = `${totalSessions}×`;
+  document.getElementById("ovKpiMinutes").textContent = `${Math.round(totalMinutes / 60)} uur · ${perWeek}/wk`;
+  document.getElementById("ovKpiVolume").textContent = `${(totalVolKg / 1000).toFixed(1)} t`;
+  document.getElementById("ovKpiSetsReps").textContent = `${totalSets} sets · ${totalReps.toLocaleString("nl-NL")} reps`;
+
+  visibleBody.sort((a, b) => a.date.localeCompare(b.date));
+  if (visibleBody.length >= 2) {
+    const first = visibleBody[0];
+    const last = visibleBody[visibleBody.length - 1];
+    const dSmm = (last.smm && first.smm) ? (last.smm - first.smm) : null;
+    const dFat = (last.fatMass && first.fatMass) ? (last.fatMass - first.fatMass) : null;
+    document.getElementById("ovKpiBodyDelta").innerHTML = dSmm !== null
+      ? `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`
+      : "-";
+    document.getElementById("ovKpiFatDelta").textContent = dFat !== null
+      ? `Vet: ${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg`
+      : `${visibleBody.length} metingen`;
+  } else if (visibleBody.length === 1) {
+    document.getElementById("ovKpiBodyDelta").textContent = `${visibleBody[0].smm ?? "-"} kg`;
+    document.getElementById("ovKpiFatDelta").textContent = "1 meting in periode";
+  } else {
+    document.getElementById("ovKpiBodyDelta").textContent = "-";
+    document.getElementById("ovKpiFatDelta").textContent = "Geen metingen";
+  }
+
+  // 3. Dual-Axis Grafiek (Trainingsinspanning vs. Lichaamsmeting)
+  const trainMetric = document.getElementById("ovTrainMetric").value;
+  const bodyMetric = document.getElementById("ovBodyMetric").value;
+
+  const trainLabels = {
+    volume: "Volume (ton)",
+    sessions: "Workouts",
+    minutes: "Minuten",
+    sets: "Sets",
+    reps: "Reps"
+  };
+  const bodyLabels = {
+    smm: "Skeletspier (kg)",
+    fatMass: "Vetmassa (kg)",
+    fatPct: "Vetpercentage (%)",
+    weight: "Gewicht (kg)",
+    smmPct: "Spierpercentage (%)"
+  };
+
+  const labels = visibleKeys.map(k => formatBucketLabel(k, gran));
+  const trainData = visibleKeys.map(k => {
+    const b = bucketMap[k];
+    if (trainMetric === "volume") return Number((b.volumeKg / 1000).toFixed(1));
+    if (trainMetric === "sessions") return b.days.size;
+    if (trainMetric === "sets") return b.setsCount;
+    if (trainMetric === "reps") return b.repsCount;
+    if (trainMetric === "minutes") {
+      let m = 0;
+      b.days.forEach(d => { m += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; });
+      return m;
+    }
+    return 0;
+  });
+
+  const bodyData = visibleKeys.map(k => {
+    const entries = bucketMap[k].bodyEntries;
+    if (!entries || entries.length === 0) return null;
+    // Gebruik het gemiddelde van de metingen binnen dat tijdvak
+    const vals = entries.map(e => e[bodyMetric]).filter(v => v !== null && !isNaN(v));
+    if (vals.length === 0) return null;
+    const avg = vals.reduce((a, c) => a + c, 0) / vals.length;
+    return Number(avg.toFixed(1));
+  });
+
+  const ctx1 = document.getElementById("ovCorrelationChart").getContext("2d");
+  if (ovCorrChartInstance) ovCorrChartInstance.destroy();
+
+  ovCorrChartInstance = new Chart(ctx1, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: "bar",
+          label: trainLabels[trainMetric],
+          data: trainData,
+          backgroundColor: "rgba(56, 189, 248, 0.55)",
+          borderColor: "#38bdf8",
+          borderWidth: 1,
+          borderRadius: 5,
+          yAxisID: "y"
+        },
+        {
+          type: "line",
+          label: bodyLabels[bodyMetric],
+          data: bodyData,
+          borderColor: "#ec4899",
+          backgroundColor: "#ec4899",
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 2.5,
+          spanGaps: true,
+          tension: 0.25,
+          yAxisID: "y1"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
+      plugins: {
+        legend: { labels: { color: "#f8fafc", boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: "rgba(15, 23, 42, 0.95)",
+          borderColor: "#334155",
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
+        y: {
+          type: "linear",
+          position: "left",
+          ticks: { color: "#38bdf8", font: { size: 10 } },
+          grid: { color: "#334155" }
+        },
+        y1: {
+          type: "linear",
+          position: "right",
+          ticks: { color: "#ec4899", font: { size: 10 } },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+
+  // 4. Gestapelde Spiergroepen Grafiek
+  const muscleGroups = ["Borst", "Rug", "Benen", "Schouders", "Armen", "Core"];
+  const muscleColors = {
+    Borst: "#38bdf8",
+    Rug: "#10b981",
+    Benen: "#f59e0b",
+    Schouders: "#c084fc",
+    Armen: "#ec4899",
+    Core: "#94a3b8"
+  };
+
+  const muscleDatasets = muscleGroups.map(mg => ({
+    label: mg,
+    data: visibleKeys.map(k => {
+      const b = bucketMap[k];
+      const val = state.ovMuscleMetric === "sets" ? (b.musclesSets[mg] || 0) : (b.musclesVol[mg] || 0);
+      return Number(val.toFixed(1));
+    }),
+    backgroundColor: muscleColors[mg],
+    borderRadius: 3
+  }));
+
+  const ctx2 = document.getElementById("ovMuscleChart").getContext("2d");
+  if (ovMuscleChartInstance) ovMuscleChartInstance.destroy();
+
+  ovMuscleChartInstance = new Chart(ctx2, {
+    type: "bar",
+    data: { labels, datasets: muscleDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
+      plugins: {
+        legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
+        tooltip: {
+          backgroundColor: "rgba(15, 23, 42, 0.95)",
+          borderColor: "#334155",
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } }
+      }
+    }
+  });
+}
+
+// =========================================================================
+// LICHAAMSMETINGEN TABBLAD RENDEREN
+// =========================================================================
+function renderBodyMeasurementsTab() {
+  const list = [...state.bodyMeasurements].sort((a, b) => a.date.localeCompare(b.date));
+  document.getElementById("bmCountLabel").textContent = list.length;
+  document.getElementById("bodyFileStatus").textContent = list.length > 0
+    ? `${list.length} metingen opgeslagen (${formatShortNL(list[0].date)} t/m ${formatShortNL(list[list.length - 1].date)})`
+    : "Nog geen lichaamsmetingen geladen";
+  const clearBodyBtn = document.getElementById("btnClearBodyData");
+  if (clearBodyBtn) clearBodyBtn.style.display = list.length > 0 ? "inline-block" : "none";
+
+  // KPI's (laatste meting + verschil t.o.v. eerste meting)
+  if (list.length > 0) {
+    const first = list[0];
+    const last = list[list.length - 1];
+
+    const dW = (last.weight - first.weight).toFixed(1);
+    document.getElementById("bodyKpiWeight").textContent = `${last.weight} kg`;
+    document.getElementById("bodyKpiWeightSub").textContent = list.length > 1
+      ? `${dW >= 0 ? "+" : ""}${dW} kg sinds start`
+      : formatShortNL(last.date);
+
+    if (last.smm) {
+      const dS = first.smm ? (last.smm - first.smm).toFixed(1) : null;
+      document.getElementById("bodyKpiSmm").textContent = `${last.smm} kg`;
+      document.getElementById("bodyKpiSmmSub").innerHTML = dS !== null
+        ? `<span class="${Number(dS) >= 0 ? "delta-pos" : "delta-neg"}">${Number(dS) >= 0 ? "+" : ""}${dS} kg</span> (${last.smmPct ?? "-"}%)`
+        : `${last.smmPct ?? "-"}%`;
+    } else {
+      document.getElementById("bodyKpiSmm").textContent = "-";
+    }
+
+    if (last.fatMass) {
+      const dF = first.fatMass ? (last.fatMass - first.fatMass).toFixed(1) : null;
+      document.getElementById("bodyKpiFat").textContent = `${last.fatMass} kg`;
+      document.getElementById("bodyKpiFatSub").innerHTML = dF !== null
+        ? `<span class="${Number(dF) <= 0 ? "delta-pos" : "delta-neg"}">${Number(dF) >= 0 ? "+" : ""}${dF} kg</span> (${last.fatPct ?? "-"}%)`
+        : `${last.fatPct ?? "-"}%`;
+    } else {
+      document.getElementById("bodyKpiFat").textContent = "-";
+    }
+  } else {
+    document.getElementById("bodyKpiWeight").textContent = "-";
+    document.getElementById("bodyKpiWeightSub").textContent = "Laad Excel of voer in";
+    document.getElementById("bodyKpiSmm").textContent = "-";
+    document.getElementById("bodyKpiFat").textContent = "-";
+  }
+
+  // Grafiek 1: Kernwaarden (kg of %)
+  const labels = list.map(m => formatShortNL(m.date));
+  const ctxMain = document.getElementById("bodyMainChart").getContext("2d");
+  if (bodyMainChartInstance) bodyMainChartInstance.destroy();
+
+  const mainDatasets = state.bodyMainMode === "kg"
+    ? [
+        { label: "Gewicht (kg)", data: list.map(m => m.weight), borderColor: "#94a3b8", tension: 0.25, pointRadius: 4 },
+        { label: "Skeletspier (kg)", data: list.map(m => m.smm), borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.12)", fill: true, tension: 0.25, pointRadius: 4 },
+        { label: "Vetmassa (kg)", data: list.map(m => m.fatMass), borderColor: "#ec4899", tension: 0.25, pointRadius: 4 }
+      ]
+    : [
+        { label: "Spierpercentage (%)", data: list.map(m => m.smmPct), borderColor: "#10b981", tension: 0.25, pointRadius: 4 },
+        { label: "Vetpercentage (%)", data: list.map(m => m.fatPct), borderColor: "#ec4899", tension: 0.25, pointRadius: 4 }
+      ];
+
+  bodyMainChartInstance = new Chart(ctxMain, {
+    type: "line",
+    data: { labels, datasets: mainDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
+      plugins: {
+        legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 11 } } },
+        tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", borderColor: "#334155", borderWidth: 1 }
+      },
+      scales: {
+        x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
+        y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } }
+      }
+    }
+  });
+
+  // Grafiek 1B: Lichaamswater (L) met blauwe lijn
+  const ctxWater = document.getElementById("bodyWaterChart").getContext("2d");
+  if (bodyWaterChartInstance) bodyWaterChartInstance.destroy();
+  const waterVals = list.map(m => m.water);
+  const validWaters = waterVals.filter(v => v !== null && v !== undefined && !isNaN(v));
+  document.getElementById("waterBadge").textContent = validWaters.length > 0 ? `${validWaters[validWaters.length - 1]} L` : "- L";
+
+  bodyWaterChartInstance = new Chart(ctxWater, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Lichaamswater (L)",
+          data: waterVals,
+          borderColor: "#38bdf8",
+          backgroundColor: "rgba(56, 189, 248, 0.14)",
+          pointBackgroundColor: "#38bdf8",
+          pointBorderColor: "#38bdf8",
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.25,
+          spanGaps: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", borderColor: "#38bdf8", borderWidth: 1 }
+      },
+      scales: {
+        x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
+        y: {
+          title: { display: true, text: "Liters (L)", color: "#38bdf8", font: { size: 10 } },
+          ticks: { color: "#38bdf8" },
+          grid: { color: "#334155" }
+        }
+      }
+    }
+  });
+
+  // Hulpfunctie voor Dual-Axis Segmentale Grafieken (Links = Spier, Rechts = Vet)
+  function createDualAxisSegChart(canvasId, prevInstance, datasets) {
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    if (prevInstance) prevInstance.destroy();
+    return new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
+        plugins: {
+          legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
+          tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", borderColor: "#334155", borderWidth: 1 }
+        },
+        scales: {
+          x: { ticks: { color: "#94a3b8", maxTicksLimit: 6, font: { size: 10 } }, grid: { color: "#1e293b" } },
+          y: {
+            type: "linear",
+            position: "left",
+            title: { display: true, text: "Spier (kg)", color: "#10b981", font: { size: 10 } },
+            ticks: { color: "#10b981", font: { size: 10 } },
+            grid: { color: "#334155" }
+          },
+          y1: {
+            type: "linear",
+            position: "right",
+            title: { display: true, text: "Vet (kg)", color: "#ec4899", font: { size: 10 } },
+            ticks: { color: "#ec4899", font: { size: 10 } },
+            grid: { drawOnChartArea: false }
+          }
+        }
+      }
+    });
+  }
+
+  // Grafiek 2A: Armen (Spier L/R op linker as, Vet L/R op rechter as)
+  bodySegArmsChartInstance = createDualAxisSegChart("bodySegArmsChart", bodySegArmsChartInstance, [
+    { label: "L-Arm Spier", data: list.map(m => m.lArmS), borderColor: "#10b981", tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
+    { label: "R-Arm Spier", data: list.map(m => m.rArmS), borderColor: "#38bdf8", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
+    { label: "L-Arm Vet", data: list.map(m => m.lArmV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true },
+    { label: "R-Arm Vet", data: list.map(m => m.rArmV), borderColor: "#f59e0b", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true }
+  ]);
+
+  // Grafiek 2B: Benen (Spier L/R op linker as, Vet L/R op rechter as)
+  bodySegLegsChartInstance = createDualAxisSegChart("bodySegLegsChart", bodySegLegsChartInstance, [
+    { label: "L-Been Spier", data: list.map(m => m.lBeenS), borderColor: "#10b981", tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
+    { label: "R-Been Spier", data: list.map(m => m.rBeenS), borderColor: "#38bdf8", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
+    { label: "L-Been Vet", data: list.map(m => m.lBeenV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true },
+    { label: "R-Been Vet", data: list.map(m => m.rBeenV), borderColor: "#f59e0b", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true }
+  ]);
+
+  // Grafiek 2C: Romp / Buik (Spier op linker as, Vet op rechter as)
+  bodySegTrunkChartInstance = createDualAxisSegChart("bodySegTrunkChart", bodySegTrunkChartInstance, [
+    { label: "Romp Spier", data: list.map(m => m.buikS), borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.1)", fill: true, tension: 0.25, pointRadius: 3.5, yAxisID: "y", spanGaps: true },
+    { label: "Romp Vet", data: list.map(m => m.buikV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3.5, yAxisID: "y1", spanGaps: true }
+  ]);
+
+  // Tabel vullen (nieuwste bovenaan)
+  const tbody = document.getElementById("bmTableBody");
+  const reversed = [...list].reverse();
+  tbody.innerHTML = reversed.map(m => {
+    const badgeCls = m.scanner.toLowerCase().includes("evolt") ? "scanner-evolt" : "scanner-inbody";
+    return `
+      <tr>
+        <td>${formatShortNL(m.date)}</td>
+        <td><span class="scanner-pill ${badgeCls}">${escapeHtml(m.scanner)}</span></td>
+        <td>${m.weight} kg</td>
+        <td>${m.smm ?? "-"} kg</td>
+        <td>${m.fatMass ?? "-"} kg (${m.fatPct ?? "-"}%)</td>
+        <td style="color:var(--accent);">${m.water ? m.water + " L" : "-"}</td>
+        <td><button type="button" class="btn-sm" data-del-bm="${escapeHtml(m.date)}" style="color:var(--danger); padding:2px 6px;">✕</button></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// =========================================================================
+// BESTAANDE OEFENINGEN & INSTELLINGEN UI
+// =========================================================================
+function renderPulleyGroupsUI(allExercises) {
+  const container = document.getElementById("pulleyGroupsContainer");
+  const manualSelect = document.getElementById("manualPulleyEx");
+
+  const favEx = allExercises.filter(ex => state.favorites.includes(ex)).sort();
+  const otherEx = allExercises.filter(ex => !state.favorites.includes(ex)).sort();
+
+  let manualOptionsHtml = "";
+  if (favEx.length > 0) {
+    manualOptionsHtml += `<optgroup label="★ Favorieten">` +
+      favEx.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)}</option>`).join("") +
+      `</optgroup>`;
+  }
+  manualOptionsHtml += `<optgroup label="Alle oefeningen">` +
+    otherEx.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)}</option>`).join("") +
+    `</optgroup>`;
+  manualSelect.innerHTML = manualOptionsHtml;
+
+  if (!state.pulleyGroups || state.pulleyGroups.length === 0) {
+    container.innerHTML = `<div style="font-size:0.78rem; color:var(--muted);">Nog geen grote blok-regels actief.</div>`;
+  } else {
+    const sortedGroups = [...state.pulleyGroups].sort((a, b) => {
+      const aFav = state.favorites.includes(a?.exercise) ? 1 : 0;
+      const bFav = state.favorites.includes(b?.exercise) ? 1 : 0;
+      return bFav - aFav;
+    });
+
+    container.innerHTML = sortedGroups.map(grp => {
+      if (!grp || !Array.isArray(grp.segments)) return "";
+      const isFav = state.favorites.includes(grp.exercise);
+      const starBadge = isFav ? `<span style="color:var(--star); margin-right:4px;">★</span>` : "";
+
+      const segmentsHtml = grp.segments.map((seg, idx) => {
+        const isRef = idx === grp.refSegmentIdx && !grp.isManual;
+        const factor = getSegmentFactor(grp, idx);
+        const medTxt = seg.medianWeight > 0 ? ` · werkgewicht ~${seg.medianWeight.toFixed(1)} kg` : "";
+        const countTxt = seg.sessionCount ? ` (${seg.sessionCount}×)` : "";
+
+        let badgeHtml = "";
+        let cls = "";
+        if (factor === 0) {
+          badgeHtml = `<span class="seg-badge-adj" style="color:var(--danger);">Verborgen</span>`;
+        } else if (isRef) {
+          badgeHtml = `<span class="seg-badge-ref">✓ Juist (1×)</span>`;
+          cls = "is-ref";
+        } else if (factor !== 1) {
+          badgeHtml = `<span class="seg-badge-adj">Wordt ${factor === 2 ? "× 2" : "÷ 2"}</span>`;
+          cls = "is-adjusted";
+        } else {
+          badgeHtml = `<span class="seg-badge-adj" style="opacity:0.6;">1×</span>`;
+        }
+
+        return `
+          <div class="seg-option ${cls}" data-action="set-ref" data-gid="${escapeHtml(grp.id)}" data-sidx="${idx}">
+            <div>
+              <strong>${formatShortNL(seg.startDay)} t/m ${formatShortNL(seg.endDay)}</strong>
+              <div style="color:var(--muted); font-size:0.72rem;">${medTxt}${countTxt}</div>
+            </div>
+            ${badgeHtml}
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="pulley-group">
+          <div class="pulley-group-header">
+            <span class="pulley-title">${starBadge}${escapeHtml(grp.exercise)}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" data-action="toggle-grp" data-gid="${escapeHtml(grp.id)}" ${grp.enabled ? "checked" : ""} style="width:17px; height:17px; accent-color:var(--accent);" />
+              <button type="button" class="btn-sm" data-action="del-grp" data-gid="${escapeHtml(grp.id)}" style="color:var(--danger); padding:3px 7px;">✕</button>
+            </div>
+          </div>
+          ${segmentsHtml}
+        </div>
+      `;
+    }).join("");
+  }
+
+  const ptKeys = Object.keys(state.pointOverrides);
+  const ptBox = document.getElementById("singlePointRulesBox");
+  if (ptKeys.length > 0) {
+    ptBox.innerHTML = `
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+        <span>${ptKeys.length} individuele stip-aanpassing(en) actief</span>
+        <button type="button" class="btn-sm" id="btnClearPointOverrides" style="color:var(--danger);">Alles herstellen</button>
+      </div>
+    `;
+  } else {
+    ptBox.innerHTML = "";
+  }
+}
+
+function isTrendEnabledFor(exerciseName) {
+  if (Object.prototype.hasOwnProperty.call(state.trendOverrides, exerciseName)) {
+    return state.trendOverrides[exerciseName];
+  }
+  return state.globalTrend;
+}
+
+function getPeriodRange(allTimelineDays) {
+  if (state.period === "all" || allTimelineDays.length === 0) {
+    return { startStr: null, endStr: null, hasOlder: false };
+  }
+
+  const latestDay = allTimelineDays[allTimelineDays.length - 1];
+  const earliestDay = allTimelineDays[0];
+  const anchor = new Date(latestDay + "T23:59:59");
+  const monthsStep = state.period === "1m" ? 1 : (state.period === "3m" ? 3 : 12);
+
+  const endDate = new Date(anchor);
+  endDate.setMonth(endDate.getMonth() - (state.periodOffset * monthsStep));
+
+  const startDate = new Date(endDate);
+  startDate.setMonth(startDate.getMonth() - monthsStep);
+  startDate.setDate(startDate.getDate() + 1);
+
+  const toYMD = d => d.toISOString().slice(0, 10);
+  const startStr = toYMD(startDate);
+  const endStr = toYMD(endDate);
+
+  return {
+    startStr,
+    endStr,
+    hasOlder: earliestDay < startStr
+  };
+}
+
+function refreshAll() {
+  const sets = getCombinedSets();
+
+  document.getElementById("totalBadge").textContent = `${sets.length} sets`;
+
+  if (state.garminSets.length > 0) {
+    const gDays = state.garminSets.map(s => s.dateDay).sort();
+    document.getElementById("garminStatus").textContent =
+      `${state.garminSets.length} sets (${formatShortNL(gDays[0])} t/m ${formatShortNL(gDays[gDays.length - 1])})`;
+  } else {
+    document.getElementById("garminStatus").textContent = "Nog geen Garmin-data geladen";
+  }
+
+  if (state.hevySets.length > 0) {
+    const hDays = state.hevySets.map(s => s.dateDay).sort();
+    document.getElementById("hevyStatus").textContent =
+      `${state.hevySets.length} sets (${formatShortNL(hDays[0])} t/m ${formatShortNL(hDays[hDays.length - 1])})`;
+  } else {
+    document.getElementById("hevyStatus").textContent = "Nog geen Hevy-data geladen";
+  }
+
+  document.getElementById("globalTrendToggle").checked = Boolean(state.globalTrend);
+  document.getElementById("autoFilterOutliersToggle").checked = Boolean(state.autoFilterOutliers);
+  document.getElementById("showBaselineBandToggle").checked = Boolean(state.showBaselineBand);
+
+  // KPI's
+  const garminDays = new Set(state.garminSets.map(s => s.dateDay)).size;
+  const hevyDays = new Set(state.hevySets.map(s => s.dateDay)).size;
+  const totalVolTons = sets.reduce((sum, s) => sum + s.volume, 0) / 1000;
+
+  document.getElementById("kpiWorkouts").textContent = garminDays + hevyDays;
+  document.getElementById("kpiWorkoutsSub").textContent = `${garminDays} Garmin · ${hevyDays} Hevy`;
+  document.getElementById("kpiVolume").textContent = `${totalVolTons.toFixed(1)} t`;
+  document.getElementById("kpiSetsSub").textContent = `${sets.length} actieve sets`;
+
+  // Oefeningen sorteren met Favorieten bovenaan
+  const counts = {};
+  sets.forEach(s => { counts[s.exercise] = (counts[s.exercise] || 0) + 1; });
+  const allExercises = Object.keys(counts);
+
+  const favList = allExercises
+    .filter(ex => state.favorites.includes(ex))
+    .sort((a, b) => counts[b] - counts[a]);
+  const otherList = allExercises
+    .filter(ex => !state.favorites.includes(ex))
+    .sort((a, b) => counts[b] - counts[a]);
+
+  const select = document.getElementById("exerciseSelect");
+  const prevVal = select.value;
+
+  let optionsHtml = "";
+  if (favList.length > 0) {
+    optionsHtml += `<optgroup label="★ Favorieten">` +
+      favList.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") +
+      `</optgroup>`;
+  }
+  optionsHtml += `<optgroup label="Alle oefeningen">` +
+    otherList.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") +
+    `</optgroup>`;
+
+  select.innerHTML = optionsHtml;
+  if (allExercises.includes(prevVal)) {
+    select.value = prevVal;
+  } else if (favList.length > 0) {
+    select.value = favList[0];
+  } else if (otherList.length > 0) {
+    select.value = otherList[0];
+  }
+
+  try { renderOverviewDashboard(sets); } catch (e) { console.error("Fout bij totaalbeeld:", e); }
+  try { renderExerciseChart(); } catch (e) { console.error("Fout bij oefening-grafiek:", e); }
+  try { renderBodyMeasurementsTab(); } catch (e) { console.error("Fout bij lichaamsmetingen:", e); }
+  renderPrefsList();
+  renderPulleyGroupsUI(allExercises);
+  renderMappingUI();
+}
+
+function openPointInspector(exercise, day, entry) {
+  state.inspectedPoint = { exercise, day };
+  const insp = document.getElementById("pointInspector");
+  const curVal = Number(entry[state.selectedMetric].toFixed(1));
+  const rawVal = Number((curVal / (entry.appliedFactor || 1)).toFixed(1));
+
+  document.getElementById("inspTitle").textContent = `${formatShortNL(day)} · Huidig: ${curVal} kg`;
+  document.getElementById("inspSub").textContent = entry.appliedFactor !== 1
+    ? `Origineel uit CSV: ${rawVal} kg (nu ×${entry.appliedFactor})`
+    : `Origineel uit CSV: ${rawVal} kg`;
+
+  const activeFactor = Number(entry.appliedFactor || 1);
+  document.querySelectorAll("#inspectorBtns .insp-btn").forEach(btn => {
+    btn.classList.toggle("active", Number(btn.getAttribute("data-factor")) === activeFactor);
+  });
+  insp.classList.add("visible");
+}
+
+function renderExerciseChart() {
+  if (typeof Chart === "undefined") return;
+  const chosen = document.getElementById("exerciseSelect").value;
+  const sets = getCombinedSets().filter(s => s.exercise === chosen);
+
+  const byDay = {};
+  for (const s of sets) {
+    if (!byDay[s.dateDay]) {
+      byDay[s.dateDay] = {
+        day: s.dateDay,
+        source: s.source,
+        corrected: false,
+        appliedFactor: s.appliedFactor || 1,
+        maxWeight: 0,
+        e1rm: 0,
+        volume: 0
+      };
+    }
+    byDay[s.dateDay].maxWeight = Math.max(byDay[s.dateDay].maxWeight, s.weight);
+    byDay[s.dateDay].e1rm = Math.max(byDay[s.dateDay].e1rm, s.e1rm);
+    byDay[s.dateDay].volume += s.volume;
+    if (s.corrected) {
+      byDay[s.dateDay].corrected = true;
+      byDay[s.dateDay].appliedFactor = s.appliedFactor;
+    }
+  }
+
+  let fullTimeline = Object.values(byDay).sort((a, b) => a.day.localeCompare(b.day));
+  let baselines = computeRollingBaseline(fullTimeline, state.selectedMetric);
+
+  if (state.autoFilterOutliers && fullTimeline.length >= 5) {
+    for (let pass = 0; pass < 2; pass++) {
+      const filteredTimeline = [];
+      for (let i = 0; i < fullTimeline.length; i++) {
+        const val = fullTimeline[i][state.selectedMetric];
+        const b = baselines[i];
+        const ptKey = `${chosen}|${fullTimeline[i].day}`;
+        const hasManualOverride = Object.prototype.hasOwnProperty.call(state.pointOverrides, ptKey);
+
+        if (!hasManualOverride && b.base > 0 && (val < b.low || val > b.high)) {
+          continue;
+        }
+        filteredTimeline.push(fullTimeline[i]);
+      }
+      fullTimeline = filteredTimeline;
+      baselines = computeRollingBaseline(fullTimeline, state.selectedMetric);
+    }
+  }
+
+  const allDays = fullTimeline.map(d => d.day);
+  const navBar = document.getElementById("periodNavBar");
+  let timeline = fullTimeline;
+  let visibleBaselines = baselines;
+
+  if (state.period !== "all" && allDays.length > 0) {
+    const range = getPeriodRange(allDays);
+    const slicedT = [];
+    const slicedB = [];
+    for (let i = 0; i < fullTimeline.length; i++) {
+      if (fullTimeline[i].day >= range.startStr && fullTimeline[i].day <= range.endStr) {
+        slicedT.push(fullTimeline[i]);
+        slicedB.push(baselines[i]);
+      }
+    }
+    timeline = slicedT;
+    visibleBaselines = slicedB;
+
+    navBar.style.display = "flex";
+    document.getElementById("periodLabel").textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
+    document.getElementById("prevPeriodBtn").disabled = !range.hasOlder;
+    document.getElementById("nextPeriodBtn").disabled = state.periodOffset === 0;
+  } else {
+    navBar.style.display = "none";
+  }
+
+  const labels = timeline.map(d => d.day);
+  const values = timeline.map(d => Number(d[state.selectedMetric].toFixed(1)));
+  const pointColors = timeline.map(d => {
+    if (d.corrected) return "#c084fc";
+    return d.source === "garmin" ? "#f59e0b" : "#10b981";
+  });
+
+  const datasets = [{
+    label: chosen,
+    data: values,
+    borderColor: "#38bdf8",
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    pointBackgroundColor: pointColors,
+    pointBorderColor: pointColors,
+    pointRadius: 4.5,
+    pointHoverRadius: 7,
+    tension: 0.25,
+    fill: !state.showBaselineBand
+  }];
+
+  if (state.showBaselineBand && visibleBaselines.length >= 3) {
+    datasets.push({
+      label: "Baseline bovengrens",
+      data: visibleBaselines.map(b => Number(b.high.toFixed(1))),
+      borderColor: "rgba(16, 185, 129, 0.25)",
+      borderWidth: 1,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0.35
+    });
+    datasets.push({
+      label: "Baseline band",
+      data: visibleBaselines.map(b => Number(b.low.toFixed(1))),
+      borderColor: "rgba(16, 185, 129, 0.25)",
+      backgroundColor: "rgba(16, 185, 129, 0.08)",
+      borderWidth: 1,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: "-1",
+      tension: 0.35
+    });
+  }
+
+  if (isTrendEnabledFor(chosen) && values.length >= 2) {
+    const trendData = values.map((_, idx) => {
+      if (idx === 0) return values[0];
+      if (idx === values.length - 1) return values[values.length - 1];
+      return null;
+    });
+    datasets.push({
+      label: "Trend (eerste → laatste)",
+      data: trendData,
+      borderColor: "rgba(248, 250, 252, 0.55)",
+      borderWidth: 2,
+      borderDash: [6, 6],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      spanGaps: true,
+      fill: false,
+      tension: 0
+    });
+  }
+
+  const ctx = document.getElementById("exerciseChart").getContext("2d");
+  if (exerciseChartInstance) exerciseChartInstance.destroy();
+
+  const pluginsConfig = {
+    legend: { display: false },
+    tooltip: {
+      enabled: true,
+      backgroundColor: "rgba(15, 23, 42, 0.95)",
+      borderColor: "#38bdf8",
+      borderWidth: 1,
+      titleColor: "#f8fafc",
+      bodyColor: "#38bdf8",
+      filter: item => item.datasetIndex === 0,
+      callbacks: {
+        title: items => {
+          const idx = items[0].dataIndex;
+          const entry = timeline[idx];
+          const src = entry?.source === "garmin" ? "Garmin" : "Hevy";
+          const corrTag = entry?.corrected ? ` · ×${entry.appliedFactor}` : "";
+          return `${items[0].label} (${src}${corrTag})`;
+        },
+        label: item => `Waarde: ${item.formattedValue} kg`
+      }
+    }
+  };
+
+  if (typeof ChartZoom !== "undefined") {
+    pluginsConfig.zoom = {
+      pan: { enabled: true, mode: "x" },
+      zoom: {
+        wheel: { enabled: true },
+        pinch: { enabled: false },
+        mode: "x"
+      }
+    };
+  }
+
+  exerciseChartInstance = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
+      onClick: (event, elements) => {
+        if (!elements || elements.length === 0) return;
+        const idx = elements[0].index;
+        const entry = timeline[idx];
+        if (entry) {
+          openPointInspector(chosen, entry.day, entry);
+        }
+      },
+      plugins: pluginsConfig,
+      scales: {
+        x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
+        y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } }
+      }
+    }
+  });
+}
+
+function renderPrefsList() {
+  const sets = getCombinedSets();
+  const counts = {};
+  sets.forEach(s => { counts[s.exercise] = (counts[s.exercise] || 0) + 1; });
+
+  const search = (document.getElementById("prefSearch").value || "").toLowerCase();
+  const exercises = Object.keys(counts)
+    .filter(ex => ex.toLowerCase().includes(search))
+    .sort((a, b) => {
+      const aFav = state.favorites.includes(a) ? 1 : 0;
+      const bFav = state.favorites.includes(b) ? 1 : 0;
+      if (aFav !== bFav) return bFav - aFav;
+      return counts[b] - counts[a];
+    });
+
+  const container = document.getElementById("prefsListContainer");
+  if (exercises.length === 0) {
+    container.innerHTML = `<div style="padding:10px; font-size:0.8rem; color:var(--muted);">Geen oefeningen gevonden.</div>`;
+    return;
+  }
+
+  container.innerHTML = exercises.map(ex => {
+    const isFav = state.favorites.includes(ex);
+    const trendOn = isTrendEnabledFor(ex);
+    const esc = escapeHtml(ex);
+    return `
+      <div class="pref-row">
+        <button type="button" class="star-btn ${isFav ? "active" : ""}" data-action="toggle-fav" data-ex="${esc}" title="Favoriet">★</button>
+        <span class="pref-name" title="${esc}">${esc}</span>
+        <label class="toggle-label">
+          <input type="checkbox" data-action="toggle-trend" data-ex="${esc}" ${trendOn ? "checked" : ""} />
+          Trend
+        </label>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderMappingUI() {
+  const uniqueGarmin = [...new Set(state.garminSets.map(s => s.rawExercise))].sort();
+  const uniqueHevy = [...new Set(state.hevySets.map(s => s.rawExercise))].sort();
+
+  document.getElementById("hevyNamesList").innerHTML = uniqueHevy
+    .map(name => `<option value="${escapeHtml(name)}">`).join("");
+
+  const container = document.getElementById("mappingContainer");
+  if (uniqueGarmin.length === 0) {
+    container.innerHTML = `<p style="font-size:0.82rem; color:var(--muted);">Laad eerst je Garmin CSV onder 'Data & Sync'.</p>`;
+    return;
+  }
+
+  container.innerHTML = uniqueGarmin.map(gName => {
+    const val = state.mappings[gName] || "";
+    return `
+      <div class="map-row">
+        <span>${escapeHtml(gName)}</span>
+        <input type="text" list="hevyNamesList" data-garmin="${escapeHtml(gName)}"
+               value="${escapeHtml(val)}" placeholder="Kies Hevy naam..." />
+      </div>
+    `;
+  }).join("");
+}
+
+function switchTab(tabName) {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName);
+  });
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  const target = document.getElementById(`tab-${tabName}`);
+  if (target) target.classList.add("active");
+}
+
+// === EVENT LISTENERS BINDEN ===
+function bindEvents() {
+  // Hoofdnavigatie
+  document.getElementById("mainTabs").addEventListener("click", e => {
+    const btn = e.target.closest(".tab-btn");
+    if (btn) switchTab(btn.getAttribute("data-tab"));
+  });
+
+  // Totaalbeeld (Overview) events
+  document.getElementById("ovGranularityPills").addEventListener("click", e => {
+    const pill = e.target.closest(".period-pill");
+    if (!pill) return;
+    state.ovGranularity = pill.getAttribute("data-gran");
+    state.ovOffset = 0;
+    document.querySelectorAll("#ovGranularityPills .period-pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderOverviewDashboard(getCombinedSets());
+  });
+  document.getElementById("ovPrevBtn").addEventListener("click", () => {
+    state.ovOffset += 1;
+    renderOverviewDashboard(getCombinedSets());
+  });
+  document.getElementById("ovNextBtn").addEventListener("click", () => {
+    state.ovOffset = Math.max(0, state.ovOffset - 1);
+    renderOverviewDashboard(getCombinedSets());
+  });
+  document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
+  document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
+  document.getElementById("ovMuscleMetricPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.ovMuscleMetric = pill.getAttribute("data-mm");
+    document.querySelectorAll("#ovMuscleMetricPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderOverviewDashboard(getCombinedSets());
+  });
+
+  // Lichaamsmetingen tab events
+  document.getElementById("bodyMainModePills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.bodyMainMode = pill.getAttribute("data-bmode");
+    document.querySelectorAll("#bodyMainModePills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderBodyMeasurementsTab();
+  });
+
+
+  document.getElementById("btnAddBodyMeasurement").addEventListener("click", async () => {
+    const date = document.getElementById("bmDate").value;
+    const weight = parseFloat(document.getElementById("bmWeight").value);
+    const smm = parseFloat(document.getElementById("bmSmm").value) || null;
+    const fatMass = parseFloat(document.getElementById("bmFat").value) || null;
+    const fb = document.getElementById("bmSaveFeedback");
+
+    if (!date || isNaN(weight) || weight <= 0) {
+      fb.textContent = "Vul minimaal een datum en gewicht in.";
+      return;
+    }
+
+    const entry = {
+      date,
+      scanner: document.getElementById("bmScanner").value,
+      weight: Number(weight.toFixed(2)),
+      smm: smm ? Number(smm.toFixed(2)) : null,
+      smmPct: smm ? Number(((smm / weight) * 100).toFixed(1)) : null,
+      fatMass: fatMass ? Number(fatMass.toFixed(2)) : null,
+      fatPct: fatMass ? Number(((fatMass / weight) * 100).toFixed(1)) : null,
+      waist: parseFloat(document.getElementById("bmWaist").value) || null,
+      bmi: parseFloat(document.getElementById("bmBmi").value) || null,
+      water: parseFloat(document.getElementById("bmWater").value) || null,
+      lArmS: parseFloat(document.getElementById("bmLArmS").value) || null,
+      rArmS: parseFloat(document.getElementById("bmRArmS").value) || null,
+      lBeenS: parseFloat(document.getElementById("bmLBeenS").value) || null,
+      rBeenS: parseFloat(document.getElementById("bmRBeenS").value) || null,
+      buikS: parseFloat(document.getElementById("bmBuikS").value) || null,
+      lArmV: parseFloat(document.getElementById("bmLArmV").value) || null,
+      rArmV: parseFloat(document.getElementById("bmRArmV").value) || null,
+      lBeenV: parseFloat(document.getElementById("bmLBeenV").value) || null,
+      rBeenV: parseFloat(document.getElementById("bmRBeenV").value) || null,
+      buikV: parseFloat(document.getElementById("bmBuikV").value) || null
+    };
+
+    // Vervang bestaande meting op dezelfde datum of voeg toe
+    state.bodyMeasurements = state.bodyMeasurements.filter(m => m.date !== date);
+    state.bodyMeasurements.push(entry);
+    state.bodyMeasurements.sort((a, b) => a.date.localeCompare(b.date));
+    await saveDataset("bodyMeasurements", state.bodyMeasurements);
+
+    fb.textContent = `Meting van ${formatShortNL(date)} opgeslagen!`;
+    refreshAll();
+  });
+
+  document.getElementById("bmTableBody").addEventListener("click", async e => {
+    const delBtn = e.target.closest("[data-del-bm]");
+    if (!delBtn) return;
+    const d = delBtn.getAttribute("data-del-bm");
+    state.bodyMeasurements = state.bodyMeasurements.filter(m => m.date !== d);
+    await saveDataset("bodyMeasurements", state.bodyMeasurements);
+    refreshAll();
+  });
+
+  // Oefeningen zoom & selectie
+  document.getElementById("btnZoomIn").addEventListener("click", () => {
+    if (exerciseChartInstance && exerciseChartInstance.zoom) exerciseChartInstance.zoom(1.25);
+  });
+  document.getElementById("btnZoomOut").addEventListener("click", () => {
+    if (exerciseChartInstance && exerciseChartInstance.zoom) exerciseChartInstance.zoom(0.8);
+  });
+  document.getElementById("btnZoomResetEx").addEventListener("click", () => {
+    if (exerciseChartInstance && exerciseChartInstance.resetZoom) exerciseChartInstance.resetZoom();
+  });
+
+  document.getElementById("exerciseSelect").addEventListener("change", () => {
+    state.periodOffset = 0;
+    document.getElementById("pointInspector").classList.remove("visible");
+    renderExerciseChart();
+  });
+
+  document.getElementById("metricPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.selectedMetric = pill.getAttribute("data-metric");
+    document.querySelectorAll("#metricPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderExerciseChart();
+  });
+
+  document.getElementById("btnCloseInspector").addEventListener("click", () => {
+    document.getElementById("pointInspector").classList.remove("visible");
+  });
+
+  document.getElementById("inspectorBtns").addEventListener("click", e => {
+    const btn = e.target.closest(".insp-btn");
+    if (!btn || !state.inspectedPoint) return;
+    const factor = Number(btn.getAttribute("data-factor"));
+    const ptKey = `${state.inspectedPoint.exercise}|${state.inspectedPoint.day}`;
+
+    state.pointOverrides[ptKey] = factor;
+    savePointOverrides();
+
+    if (factor === 0) {
+      document.getElementById("pointInspector").classList.remove("visible");
+    }
+    refreshAll();
+  });
+
+  document.getElementById("periodPills").addEventListener("click", e => {
+    const pill = e.target.closest(".period-pill");
+    if (!pill) return;
+    state.period = pill.getAttribute("data-period");
+    state.periodOffset = 0;
+    document.querySelectorAll("#periodPills .period-pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderExerciseChart();
+  });
+  document.getElementById("prevPeriodBtn").addEventListener("click", () => {
+    state.periodOffset += 1;
+    renderExerciseChart();
+  });
+  document.getElementById("nextPeriodBtn").addEventListener("click", () => {
+    state.periodOffset = Math.max(0, state.periodOffset - 1);
+    renderExerciseChart();
+  });
+
+  // Uploads & Excel verwijderen
+  document.getElementById("inputBodyXlsx").addEventListener("change", handleBodyXlsxUpload);
+  document.getElementById("btnClearBodyData").addEventListener("click", async () => {
+    if (!confirm("Weet je zeker dat je alle ingeladen lichaamsmetingen (Excel-data) wilt verwijderen?")) return;
+    state.bodyMeasurements = [];
+    await saveDataset("bodyMeasurements", []);
+    document.getElementById("uploadFeedback").textContent = "Lichaamsmetingen verwijderd.";
+    refreshAll();
+  });
+  document.getElementById("inputGarminFile").addEventListener("change", e => handleFileUpload(e, "garmin"));
+  document.getElementById("inputHevyFile").addEventListener("change", e => handleFileUpload(e, "hevy"));
+
+  // Instellingen & correcties
+  document.getElementById("globalTrendToggle").addEventListener("change", e => {
+    state.globalTrend = e.target.checked;
+    state.trendOverrides = {};
+    localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
+    localStorage.setItem("trend_overrides", JSON.stringify({}));
+    renderPrefsList();
+    renderExerciseChart();
+  });
+
+  document.getElementById("autoFilterOutliersToggle").addEventListener("change", e => {
+    state.autoFilterOutliers = e.target.checked;
+    localStorage.setItem("auto_filter_outliers", JSON.stringify(state.autoFilterOutliers));
+    renderExerciseChart();
+  });
+
+  document.getElementById("showBaselineBandToggle").addEventListener("change", e => {
+    state.showBaselineBand = e.target.checked;
+    localStorage.setItem("show_baseline_band", JSON.stringify(state.showBaselineBand));
+    renderExerciseChart();
+  });
+
+  document.getElementById("prefSearch").addEventListener("input", renderPrefsList);
+
+  document.getElementById("prefsListContainer").addEventListener("click", e => {
+    const star = e.target.closest("[data-action='toggle-fav']");
+    if (!star) return;
+    const exName = star.getAttribute("data-ex");
+    const idx = state.favorites.indexOf(exName);
+    if (idx === -1) state.favorites.push(exName);
+    else state.favorites.splice(idx, 1);
+    localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
+    refreshAll();
+  });
+
+  document.getElementById("prefsListContainer").addEventListener("change", e => {
+    const cb = e.target.closest("[data-action='toggle-trend']");
+    if (!cb) return;
+    const exName = cb.getAttribute("data-ex");
+    state.trendOverrides[exName] = cb.checked;
+    localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
+    renderExerciseChart();
+  });
+
+  document.getElementById("btnAutoDetect").addEventListener("click", autoDetectPulleyGroups);
+
+  document.getElementById("pulleyGroupsContainer").addEventListener("click", e => {
+    const delBtn = e.target.closest("[data-action='del-grp']");
+    if (delBtn) {
+      const gid = delBtn.getAttribute("data-gid");
+      state.pulleyGroups = state.pulleyGroups.filter(g => g.id !== gid);
+      savePulleyGroups();
+      refreshAll();
+      return;
+    }
+
+    const segOpt = e.target.closest("[data-action='set-ref']");
+    if (segOpt) {
+      const gid = segOpt.getAttribute("data-gid");
+      const sidx = Number(segOpt.getAttribute("data-sidx"));
+      const grp = state.pulleyGroups.find(g => g.id === gid);
+      if (grp && !grp.isManual) {
+        grp.refSegmentIdx = sidx;
+        grp.enabled = true;
+        savePulleyGroups();
+        refreshAll();
+      }
+    }
+  });
+
+  document.getElementById("pulleyGroupsContainer").addEventListener("change", e => {
+    const cb = e.target.closest("[data-action='toggle-grp']");
+    if (!cb) return;
+    const gid = cb.getAttribute("data-gid");
+    const grp = state.pulleyGroups.find(g => g.id === gid);
+    if (grp) {
+      grp.enabled = cb.checked;
+      savePulleyGroups();
+      refreshAll();
+    }
+  });
+
+  document.getElementById("singlePointRulesBox").addEventListener("click", e => {
+    if (e.target.id === "btnClearPointOverrides") {
+      state.pointOverrides = {};
+      savePointOverrides();
+      refreshAll();
+    }
+  });
+
+  document.getElementById("btnAddManualRange").addEventListener("click", () => {
+    const ex = document.getElementById("manualPulleyEx").value;
+    const startDay = document.getElementById("manualStart").value;
+    const endDay = document.getElementById("manualEnd").value;
+    const factor = Number(document.getElementById("manualFactor").value);
+    if (!ex || !startDay || !endDay) return;
+
+    state.pulleyGroups.push({
+      id: "manual_" + Date.now(),
+      exercise: ex,
+      enabled: true,
+      isManual: true,
+      refSegmentIdx: -1,
+      segments: [{
+        startDay: startDay <= endDay ? startDay : endDay,
+        endDay: startDay <= endDay ? endDay : startDay,
+        medianWeight: 0,
+        manualFactor: factor
+      }]
+    });
+    savePulleyGroups();
+    refreshAll();
+  });
+
+  document.getElementById("btnSaveMappings").addEventListener("click", () => {
+    const inputs = document.querySelectorAll("#mappingContainer input");
+    const updated = {};
+    inputs.forEach(inp => {
+      const g = inp.getAttribute("data-garmin");
+      const h = inp.value.trim();
+      if (h) updated[g] = h;
+    });
+    state.mappings = updated;
+    localStorage.setItem("exercise_mappings", JSON.stringify(updated));
+    refreshAll();
+    switchTab("charts");
+  });
+
+  // Backup export / import
+  document.getElementById("btnExportBackup").addEventListener("click", async () => {
+    try {
+      const backup = {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        garminSets: state.garminSets,
+        hevySets: state.hevySets,
+        bodyMeasurements: state.bodyMeasurements,
+        mappings: state.mappings,
+        favorites: state.favorites,
+        globalTrend: state.globalTrend,
+        trendOverrides: state.trendOverrides,
+        pulleyGroups: state.pulleyGroups,
+        pointOverrides: state.pointOverrides
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fitness_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      document.getElementById("backupFeedback").textContent = "Backup succesvol geëxporteerd!";
+    } catch (err) {
+      document.getElementById("backupFeedback").textContent = "Fout bij exporteren: " + err.message;
+    }
+  });
+
+  document.getElementById("inputImportBackup").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fb = document.getElementById("backupFeedback");
+    fb.textContent = "Backup inlezen...";
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+      try {
+        const data = JSON.parse(evt.target.result);
+        if (!data || typeof data !== "object") throw new Error("Ongeldig backup-bestand");
+
+        state.garminSets = Array.isArray(data.garminSets) ? data.garminSets : [];
+        state.hevySets = Array.isArray(data.hevySets) ? data.hevySets : [];
+        state.bodyMeasurements = Array.isArray(data.bodyMeasurements) ? data.bodyMeasurements : [];
+        if (data.mappings) state.mappings = data.mappings;
+        if (Array.isArray(data.favorites)) state.favorites = data.favorites;
+        if (data.globalTrend !== undefined) state.globalTrend = data.globalTrend;
+        if (data.trendOverrides) state.trendOverrides = data.trendOverrides;
+        if (Array.isArray(data.pulleyGroups)) state.pulleyGroups = data.pulleyGroups;
+        if (data.pointOverrides) state.pointOverrides = data.pointOverrides;
+
+        await saveDataset("garmin", state.garminSets);
+        await saveDataset("hevy", state.hevySets);
+        await saveDataset("bodyMeasurements", state.bodyMeasurements);
+        localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
+        localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
+        localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
+        localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
+        localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+        localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
+
+        fb.textContent = `Backup succesvol geïmporteerd! (${state.garminSets.length} Garmin, ${state.hevySets.length} Hevy, ${state.bodyMeasurements.length} metingen)`;
+        event.target.value = "";
+        refreshAll();
+      } catch (err) {
+        fb.textContent = "Fout bij importeren backup: " + err.message;
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("btnClearAll").addEventListener("click", async () => {
+    if (!confirm("Weet je zeker dat je alle opgeslagen data (workouts + metingen) wilt wissen?")) return;
+    state.garminSets = [];
+    state.hevySets = [];
+    state.bodyMeasurements = [];
+    await saveDataset("garmin", []);
+    await saveDataset("hevy", []);
+    await saveDataset("bodyMeasurements", []);
+    refreshAll();
+  });
+}
+
+// === STARTUP ===
+(async function init() {
+  document.getElementById("bmDate").value = formatYMD(new Date());
+  bindEvents();
+  state.garminSets = await loadDataset("garmin");
+  state.hevySets = await loadDataset("hevy");
+  const loadedBody = await loadDataset("bodyMeasurements");
+  // Verwijder automatisch foutieve 1970-1977 metingen uit een eerdere import
+  state.bodyMeasurements = loadedBody.filter(m => m && m.date >= "2010-01-01" && m.weight >= 40);
+  if (state.bodyMeasurements.length !== loadedBody.length) {
+    await saveDataset("bodyMeasurements", state.bodyMeasurements);
+  }
+  refreshAll();
+})();
+</script>
+</body>
+</html>
