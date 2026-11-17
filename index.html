@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Workout & Lichaamsmetingen Analytics</title>
+  <title>Leefstyl App</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -22,33 +23,46 @@
       --accent-hevy: #10b981;
       --accent-body: #ec4899;
       --accent-corrected: #c084fc;
+      --accent-carbs: #fbbf24;
+      --accent-fat: #f43f5e;
       --danger: #ef4444;
       --star: #fbbf24;
     }
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body {
       margin: 0; padding: 14px; background: var(--bg); color: var(--text);
-      padding-bottom: 85px;
+      padding-bottom: 90px;
     }
     header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
-    h1 { font-size: 1.2rem; margin: 0; font-weight: 700; }
+    h1 { font-size: 1.15rem; margin: 0; font-weight: 700; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
     .badge {
       font-size: 0.7rem; padding: 3px 8px; border-radius: 999px;
       background: #334155; color: var(--muted);
     }
+    .icon-btn {
+      background: var(--card); border: 1px solid var(--card-border);
+      color: var(--text); border-radius: 10px; padding: 6px 10px;
+      font-size: 1rem; cursor: pointer; font-weight: 700;
+    }
+    .icon-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+
+    /* 5-knops navigatiebalk voor mobiel & desktop */
     .tabs {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
       background: var(--card); padding: 4px; border-radius: 12px;
       margin-bottom: 14px; border: 1px solid var(--card-border);
     }
     .tab-btn {
       background: transparent; border: none; color: var(--muted);
-      padding: 9px 4px; border-radius: 8px; font-weight: 600; font-size: 0.78rem;
+      padding: 8px 2px; border-radius: 8px; font-weight: 600; font-size: 0.73rem;
       cursor: pointer; transition: 0.15s; white-space: nowrap;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
     }
+    .tab-btn span.t-ico { font-size: 0.95rem; }
     .tab-btn.active { background: var(--accent); color: #0f172a; }
     .panel { display: none; }
     .panel.active { display: block; }
@@ -70,17 +84,21 @@
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
       margin-bottom: 14px;
     }
+    .kpi-grid-4 {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+      margin-bottom: 12px;
+    }
     .kpi {
       background: var(--card); border: 1px solid var(--card-border);
-      border-radius: 12px; padding: 11px;
+      border-radius: 12px; padding: 10px;
     }
-    .kpi-label { font-size: 0.72rem; color: var(--muted); }
-    .kpi-val { font-size: 1.22rem; font-weight: 700; margin-top: 3px; }
-    .kpi-sub { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .kpi-label { font-size: 0.7rem; color: var(--muted); }
+    .kpi-val { font-size: 1.15rem; font-weight: 700; margin-top: 2px; }
+    .kpi-sub { font-size: 0.66rem; color: var(--muted); margin-top: 2px; }
     .delta-pos { color: #10b981; }
     .delta-neg { color: #f43f5e; }
 
-    select, input[type="text"], input[type="date"], input[type="number"] {
+    select, input[type="text"], input[type="date"], input[type="number"], textarea {
       width: 100%; padding: 9px 11px; border-radius: 10px;
       background: #0f172a; border: 1px solid var(--card-border);
       color: var(--text); font-size: 0.88rem; margin-bottom: 9px;
@@ -128,7 +146,85 @@
     }
     .pill.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
 
-    /* Snelle punt-correctie balk */
+    /* Voeding & Macro stijlen */
+    .macro-bar-wrap {
+      background: #0f172a; border-radius: 8px; height: 8px; width: 100%;
+      overflow: hidden; margin-top: 5px; border: 1px solid #334155;
+    }
+    .macro-bar-fill { height: 100%; transition: width 0.25s; }
+    .meal-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #0f172a; border: 1px solid var(--card-border);
+      border-radius: 11px; padding: 10px; margin-bottom: 8px; gap: 8px;
+    }
+    .meal-info { flex: 1; min-width: 0; }
+    .meal-title { font-weight: 700; font-size: 0.86rem; color: var(--text); }
+    .meal-macros { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .stepper {
+      display: flex; align-items: center; gap: 5px; background: #1e293b;
+      padding: 3px; border-radius: 9px; border: 1px solid var(--card-border);
+    }
+    .step-btn {
+      background: #0f172a; border: 1px solid var(--card-border); color: var(--text);
+      border-radius: 7px; padding: 6px 10px; font-weight: 700; font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .step-btn:active { background: var(--accent); color: #0f172a; }
+    .step-val-input {
+      width: 56px !important; margin-bottom: 0 !important; padding: 5px 4px !important;
+      text-align: center; font-weight: 700; font-size: 0.82rem !important;
+    }
+
+    /* Dranken Grid */
+    .drink-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px;
+    }
+    .drink-card {
+      background: #0f172a; border: 1px solid var(--card-border); border-radius: 10px;
+      padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; font-size: 0.8rem; font-weight: 600;
+    }
+    .drink-card.selected { border-color: var(--accent); background: rgba(56, 189, 248, 0.14); }
+    .drink-fav-star { color: var(--star); margin-right: 4px; cursor: pointer; }
+    .vol-chip-row {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding: 8px;
+      background: #0f172a; border-radius: 10px; border: 1px solid var(--accent);
+    }
+
+    /* Weekmenu avondeten kaart */
+    .dinner-box {
+      background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 12px; padding: 11px; margin-bottom: 10px;
+    }
+    .dinner-box.unconfirmed {
+      background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    /* Planner / Agenda stijlen */
+    .cal-header {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+      text-align: center; font-size: 0.72rem; color: var(--muted); font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    }
+    .cal-cell {
+      background: #0f172a; border: 1px solid var(--card-border); border-radius: 9px;
+      min-height: 62px; padding: 4px 3px; cursor: pointer;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .cal-cell.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+    .cal-cell.selected { background: rgba(56, 189, 248, 0.16); border-color: var(--accent); }
+    .cal-cell.other-month { opacity: 0.35; }
+    .cal-day-num { font-size: 0.74rem; font-weight: 700; text-align: right; padding-right: 2px; }
+    .cal-bars { display: flex; flex-direction: column; gap: 2px; margin-top: 3px; }
+    .cal-bar { height: 4px; border-radius: 2px; width: 100%; }
+    .cal-icons { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; }
+    .food-dot-orange { color: #f59e0b; }
+    .food-dot-green { color: #10b981; }
+
+    /* Overige UI stijlen */
     .point-inspector {
       margin-top: 10px; padding: 10px; border-radius: 10px;
       background: #0f172a; border: 1px solid var(--accent);
@@ -150,7 +246,6 @@
     .insp-btn.active { background: var(--accent-corrected); color: #0f172a; border-color: var(--accent-corrected); }
     .insp-btn.danger { color: var(--danger); }
 
-    /* Periode & navigatie bar */
     .period-bar {
       margin-top: 12px; padding-top: 10px;
       border-top: 1px solid rgba(51, 65, 85, 0.6);
@@ -184,7 +279,12 @@
     .nav-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
     .nav-label { font-size: 0.8rem; color: var(--text); font-weight: 600; text-align: center; }
 
-    /* Oefening instellingen lijst */
+    .overload-banner {
+      background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.45);
+      border-radius: 10px; padding: 9px 11px; margin-bottom: 10px;
+      font-size: 0.78rem; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+
     .pref-list {
       max-height: 240px; overflow-y: auto; border: 1px solid var(--card-border);
       border-radius: 10px; background: #0f172a; padding: 4px 8px;
@@ -209,7 +309,6 @@
       accent-color: var(--accent); width: 16px; height: 16px; margin: 0;
     }
 
-    /* Katrol-segment groepen */
     .pulley-group {
       background: #0f172a; border: 1px solid var(--card-border);
       border-radius: 10px; padding: 10px; margin-bottom: 10px;
@@ -258,7 +357,6 @@
     .field-lbl { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 2px; }
     .hint-text { font-size: 0.72rem; color: var(--muted); margin-top: 6px; text-align: center; }
 
-    /* Tabel voor recente lichaamsmetingen */
     .table-scroll { overflow-x: auto; }
     table.mini-table {
       width: 100%; border-collapse: collapse; font-size: 0.76rem;
@@ -279,26 +377,31 @@
 
   <header>
     <div>
-      <h1>Fitness &amp; Body Analytics</h1>
-      <div style="font-size: 0.7rem; color: var(--muted); margin-top: 3px; line-height: 1.4;">
+      <h1>Leefstyl App</h1>
+      <div style="font-size: 0.68rem; color: var(--muted); margin-top: 2px;">
         <span class="legend-dot" style="background:var(--accent-garmin)"></span>Garmin &nbsp;
         <span class="legend-dot" style="background:var(--accent-hevy)"></span>Hevy &nbsp;
-        <span class="legend-dot" style="background:var(--accent-body)"></span>Metingen &nbsp;
-        <span class="legend-dot" style="background:var(--accent-corrected)"></span>Gecorrigeerd
+        <span class="legend-dot" style="background:var(--accent-body)"></span>Metingen
       </div>
     </div>
-    <span class="badge" id="totalBadge">0 sets</span>
+    <div class="header-actions">
+      <span class="badge" id="cloudSyncBadge" title="Cloud Sync Status" style="cursor:pointer;">☁️ Lokaal</span>
+      <span class="badge" id="totalBadge">0 sets</span>
+      <button type="button" class="icon-btn" id="btnOpenSettings" data-tab="upload" title="Data &amp; Sync">⚙</button>
+    </div>
   </header>
 
+  <!-- 5 Hoofd-tabbladen -->
   <div class="tabs" id="mainTabs">
-    <button type="button" class="tab-btn active" data-tab="overview">Totaalbeeld</button>
-    <button type="button" class="tab-btn" data-tab="charts">Oefeningen</button>
-    <button type="button" class="tab-btn" data-tab="body">Metingen</button>
-    <button type="button" class="tab-btn" data-tab="upload">Data &amp; Sync</button>
+    <button type="button" class="tab-btn active" data-tab="overview"><span class="t-ico">📊</span>Totaal</button>
+    <button type="button" class="tab-btn" data-tab="planner"><span class="t-ico">📅</span>Planner</button>
+    <button type="button" class="tab-btn" data-tab="nutrition"><span class="t-ico">🥗</span>Voeding</button>
+    <button type="button" class="tab-btn" data-tab="charts"><span class="t-ico">🏋️</span>Training</button>
+    <button type="button" class="tab-btn" data-tab="body"><span class="t-ico">⚖️</span>Metingen</button>
   </div>
 
   <!-- ========================================================= -->
-  <!-- TAB 1: TOTAALBEELD (KRACHTTRAINING VS. LICHAAMSMETINGEN)   -->
+  <!-- TAB 1: TOTAALBEELD                                        -->
   <!-- ========================================================= -->
   <div id="tab-overview" class="panel active">
     <div class="card" style="padding-bottom:10px;">
@@ -318,7 +421,6 @@
       </div>
     </div>
 
-    <!-- KPI Samenvatting van gekozen tijdvak -->
     <div class="kpi-grid-3">
       <div class="kpi">
         <div class="kpi-label">Sessies &amp; Tijd</div>
@@ -337,20 +439,19 @@
       </div>
     </div>
 
-    <!-- Grafiek 1: Trainingsinspanning vs. Lichaamssamenstelling (Dual-Axis) -->
     <div class="card">
-      <h2>
-        <span>Inspanning vs. Lichaamsresultaat</span>
-      </h2>
+      <h2><span>Inspanning &amp; Voeding vs. Lichaamsresultaat</span></h2>
       <div class="manual-grid" style="margin-top:0; margin-bottom:6px;">
         <div>
-          <span class="field-lbl">Linker as (Training):</span>
+          <span class="field-lbl">Linker as (Training / Voeding):</span>
           <select id="ovTrainMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
             <option value="volume">Totaal Volume (ton)</option>
             <option value="sessions">Aantal Workouts</option>
             <option value="minutes">Trainingsminuten</option>
             <option value="sets">Aantal Sets</option>
             <option value="reps">Aantal Herhalingen (reps)</option>
+            <option value="avgKcal">Gem. Kcal / dag</option>
+            <option value="avgProtein">Gem. Eiwit (g/dag)</option>
           </select>
         </div>
         <div>
@@ -367,10 +468,8 @@
       <div class="chart-wrap-tall">
         <canvas id="ovCorrelationChart"></canvas>
       </div>
-      <div class="hint-text">Balken = trainingsinspanning · Lijn = verloop lichaamsmeting</div>
     </div>
 
-    <!-- Grafiek 2: Getrainde Spiergroepen verdeling -->
     <div class="card">
       <h2>
         <span>Getrainde Spiergroepen</span>
@@ -382,12 +481,238 @@
       <div class="chart-wrap">
         <canvas id="ovMuscleChart"></canvas>
       </div>
-      <div class="hint-text">Automatisch ingedeeld op oefeningnaam (Borst, Rug, Benen, Schouders, Armen, Core)</div>
     </div>
   </div>
 
   <!-- ========================================================= -->
-  <!-- TAB 2: OEFENING PROGRESSIE                                -->
+  <!-- TAB 2: PLANNER (AGENDA MET VOEDING & WORKOUTS)            -->
+  <!-- ========================================================= -->
+  <div id="tab-planner" class="panel">
+    <div class="card" style="padding-bottom:10px;">
+      <h2>
+        <span>Agenda &amp; Weekoverzicht</span>
+        <button type="button" class="btn-sm" id="btnPlannerToday">Vandaag</button>
+      </h2>
+      <div class="period-nav" style="margin-bottom:10px;">
+        <button type="button" class="nav-arrow" id="calPrevMonthBtn">&#9664;</button>
+        <span class="nav-label" id="calMonthLabel">-</span>
+        <button type="button" class="nav-arrow" id="calNextMonthBtn">&#9654;</button>
+      </div>
+      <div style="font-size:0.7rem; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+        <span>🍽️ <span style="color:#f59e0b;">Oranje</span> = Bezig</span>
+        <span>🍽️ <span style="color:#10b981;">Groen</span> = Dag afgerond</span>
+        <span><span class="legend-dot" style="background:var(--accent-hevy)"></span>Gedaan</span>
+        <span><span class="legend-dot" style="background:var(--accent)"></span>Gepland</span>
+      </div>
+      <div class="cal-header">
+        <div>Ma</div><div>Di</div><div>Wo</div><div>Do</div><div>Vr</div><div>Za</div><div>Zo</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <!-- Detailkaart voor geselecteerde dag in Planner -->
+    <div class="card" id="plannerDayDetailCard">
+      <h2>
+        <span id="plannerSelectedDateLabel">Geselecteerde dag</span>
+        <button type="button" class="btn-sm btn-accent" id="btnGoToDayFood" style="color:#0f172a;">Open Voeding &rarr;</button>
+      </h2>
+      <div id="plannerDaySummary" style="font-size:0.82rem; color:var(--muted); margin-bottom:10px;"></div>
+
+      <div style="border-top:1px solid var(--card-border); padding-top:10px;">
+        <span class="field-lbl" style="font-weight:600; color:var(--text);">Workout inplannen op deze dag:</span>
+        <div class="manual-grid" style="margin-top:4px;">
+          <select id="planWorkoutSelect" style="margin-bottom:0; font-size:0.82rem;">
+            <option value="">-- Kies workout --</option>
+            <option value="Upper Body">Upper Body</option>
+            <option value="Lower Body">Lower Body</option>
+            <option value="Push">Push</option>
+            <option value="Pull">Pull</option>
+            <option value="Full Body">Full Body</option>
+            <option value="Cardio / Hardlopen">Cardio / Hardlopen</option>
+          </select>
+          <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:0; padding:8px;">Inplannen</button>
+        </div>
+        <div id="plannedWorkoutsList" style="margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 3: VOEDING (DAGLOGBOEK, ALLE MACRO'S & WEEKMENU)      -->
+  <!-- ========================================================= -->
+  <div id="tab-nutrition" class="panel">
+    <!-- Dag-navigatie -->
+    <div class="card" style="padding-bottom:10px;">
+      <h2>
+        <span>Dagvoeding</span>
+        <span class="badge" id="nutriDayTypeBadge">Rustdag</span>
+      </h2>
+      <div class="period-nav">
+        <button type="button" class="nav-arrow" id="nutriPrevDayBtn">&#9664;</button>
+        <span class="nav-label" id="nutriDateLabel">Vandaag</span>
+        <button type="button" class="nav-arrow" id="nutriNextDayBtn">&#9654;</button>
+      </div>
+    </div>
+
+    <!-- Alle 4 Macro's Overzicht (Kcal, Eiwitten, Koolhydraten, Vetten) -->
+    <div class="kpi-grid-4">
+      <div class="kpi">
+        <div class="kpi-label">Calorieën</div>
+        <div class="kpi-val" id="macKcalVal">0</div>
+        <div class="kpi-sub" id="macKcalSub">/ 2300 kcal</div>
+        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macKcalBar" style="width:0%; background:var(--accent);"></div></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Eiwitten</div>
+        <div class="kpi-val" id="macProtVal">0g</div>
+        <div class="kpi-sub" id="macProtSub">/ 155g</div>
+        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macProtBar" style="width:0%; background:var(--accent-hevy);"></div></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Koolhydraten</div>
+        <div class="kpi-val" id="macCarbVal">0g</div>
+        <div class="kpi-sub" id="macCarbSub">/ 240g</div>
+        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macCarbBar" style="width:0%; background:var(--accent-carbs);"></div></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Vetten</div>
+        <div class="kpi-val" id="macFatVal">0g</div>
+        <div class="kpi-sub" id="macFatSub">/ 75g</div>
+        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macFatBar" style="width:0%; background:var(--accent-fat);"></div></div>
+      </div>
+    </div>
+
+    <!-- 1. Vaste Basis (Ontbijt, Tussendoortje, Lunch) met + / - stappen -->
+    <div class="card">
+      <h2>
+        <span>Basisdag (Ontbijt, Tussendoor &amp; Lunch)</span>
+        <button type="button" class="btn-sm" id="btnResetDayDefaults" title="Herstel standaardwaarden">Reset dag</button>
+      </h2>
+
+      <!-- Magere Kwark (-50g / +50g + exact getalveld) -->
+      <div class="meal-row">
+        <div class="meal-info">
+          <div class="meal-title">Magere Kwark (Ontbijt)</div>
+          <div class="meal-macros" id="kwarkMacroTxt">250g · 130 kcal · 22g E · 10g KH · 0g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" id="btnKwarkMinus">-50</button>
+          <input type="number" id="inputKwarkGrams" class="step-val-input" step="10" min="0" value="250" />
+          <button type="button" class="step-btn" id="btnKwarkPlus">+50</button>
+        </div>
+      </div>
+
+      <!-- Ontbijt-toppings / Smoothie -->
+      <div class="meal-row">
+        <div class="meal-info">
+          <div class="meal-title">Ontbijt-extra (Havermout / Fruit / Smoothie)</div>
+          <div class="meal-macros" id="smoothieMacroTxt">1 portie · 260 kcal · 12g E · 38g KH · 6g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" id="btnSmoothieMinus">-</button>
+          <span id="smoothieCountSpan" style="padding:0 6px; font-weight:700; font-size:0.85rem;">1×</span>
+          <button type="button" class="step-btn" id="btnSmoothiePlus">+</button>
+        </div>
+      </div>
+
+      <!-- Brood Snedes (- / +) -->
+      <div class="meal-row">
+        <div class="meal-info">
+          <div class="meal-title">Volkoren Brood + Beleg (Lunch)</div>
+          <div class="meal-macros" id="breadMacroTxt">4 snedes · 540 kcal · 28g E · 64g KH · 16g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" id="btnBreadMinus">-</button>
+          <span id="breadCountSpan" style="padding:0 6px; font-weight:700; font-size:0.85rem;">4</span>
+          <button type="button" class="step-btn" id="btnBreadPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Avondeten vanuit Weekmenu (Bevestigen & Dag Wisselen) -->
+    <div class="card">
+      <h2>
+        <span>Avondeten (Weekmenu)</span>
+        <button type="button" class="btn-sm btn-accent" id="btnToggleWeekmenuPaste" style="color:#0f172a;">+ Plak Weekmenu</button>
+      </h2>
+
+      <!-- Plak-paneel voor Gemini weekmenu tekst -->
+      <div id="weekmenuPasteBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:10px;">
+        <span class="field-lbl">Plak hier de weekmenu-tekst uit de chat (maandag t/m zondag):</span>
+        <textarea id="weekmenuPasteText" rows="5" placeholder="Bijv:
+Maandag: Kipfilet met rijst en broccoli (640 kcal, 52g eiwit, 68g kh, 14g vet)
+Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 32g vet)..."></textarea>
+        <div class="manual-grid">
+          <button type="button" class="btn btn-hevy" id="btnParseWeekmenu" style="margin-top:0; padding:8px;">Inladen in deze week</button>
+          <button type="button" class="btn-sm" id="btnCloseWeekmenuPaste">Annuleren</button>
+        </div>
+      </div>
+
+      <div id="dinnerContainer"></div>
+    </div>
+
+    <!-- 3. Dranken Kiezer (Favorieten + Categorieën + Inhoudskeuze) -->
+    <div class="card">
+      <h2>
+        <span>Dranken Toevoegen</span>
+        <span class="badge" id="drinksTotalBadge">0 ml</span>
+      </h2>
+      <div class="pill-row" id="drinkCatPills">
+        <span class="pill active" data-dcat="fav">★ Favorieten</span>
+        <span class="pill" data-dcat="warm">Warme dranken</span>
+        <span class="pill" data-dcat="thee">Thee</span>
+        <span class="pill" data-dcat="fris">Frisdranken</span>
+        <span class="pill" data-dcat="water">Water</span>
+      </div>
+      <div class="drink-grid" id="drinkGrid"></div>
+
+      <!-- Hoeveelheid-kiezer na selectie van drank -->
+      <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
+        <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
+        <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
+      </div>
+
+      <!-- Gelogde dranken vandaag -->
+      <div id="loggedDrinksList" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- 4. Aanvullend Eten & Producten Zoeken (Lokaal + Open Food Facts) -->
+    <div class="card">
+      <h2><span>+ Aanvullend Eten Toevoegen</span></h2>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="foodSearchInput" placeholder="Zoek product (bijv. banaan, ei, Lidl skyr)..." style="margin-bottom:6px;" />
+        <button type="button" class="btn-sm btn-accent" id="btnSearchFoodApi" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek online</button>
+      </div>
+      <div id="foodSearchResults" style="max-height:190px; overflow-y:auto;"></div>
+
+      <details style="margin-top:8px; font-size:0.8rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig item / alle macro's invullen</summary>
+        <div style="margin-top:8px;">
+          <input type="text" id="customFoodName" placeholder="Naam gerecht of tussendoortje" />
+          <div class="manual-grid">
+            <div><span class="field-lbl">Kcal*:</span><input type="number" id="customFoodKcal" placeholder="250" /></div>
+            <div><span class="field-lbl">Eiwitten (g):</span><input type="number" step="0.1" id="customFoodProt" placeholder="15" /></div>
+            <div><span class="field-lbl">Koolhydraten (g):</span><input type="number" step="0.1" id="customFoodCarb" placeholder="25" /></div>
+            <div><span class="field-lbl">Vetten (g):</span><input type="number" step="0.1" id="customFoodFat" placeholder="8" /></div>
+          </div>
+          <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Toevoegen aan vandaag</button>
+        </div>
+      </details>
+
+      <div id="loggedExtraFoodsList" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- 5. Dag Afronden voor Planner -->
+    <div class="card" style="border-color:var(--accent-hevy);">
+      <label class="toggle-label" style="color:var(--text); font-weight:700; font-size:0.9rem; justify-content:space-between;">
+        <span>✅ Dag voeding afronden (Groen vinkje in Planner)</span>
+        <input type="checkbox" id="chkCompleteFoodDay" style="width:20px; height:20px;" />
+      </label>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 4: OEFENING PROGRESSIE & OVERLOAD ADVIES              -->
   <!-- ========================================================= -->
   <div id="tab-charts" class="panel">
     <div class="kpi-grid">
@@ -413,6 +738,16 @@
         </div>
       </h2>
       <select id="exerciseSelect"></select>
+
+      <!-- Ingebouwd Progressive Overload Advies voor volgende sessie -->
+      <div class="overload-banner" id="overloadAdviceBox" style="display:none;">
+        <div>
+          <strong style="color:var(--accent-hevy);">Volgende sessie advies:</strong>
+          <div id="overloadAdviceText" style="color:var(--text); margin-top:2px;">-</div>
+        </div>
+        <button type="button" class="btn-sm" id="btnCopyWorkoutSummary" title="Kopieer laatste sessies voor Gemini">Kopieer</button>
+      </div>
+
       <div class="pill-row" id="metricPills">
         <span class="pill active" data-metric="e1rm">Geschatte 1RM (kg)</span>
         <span class="pill" data-metric="maxWeight">Max Gewicht (kg)</span>
@@ -422,7 +757,6 @@
         <canvas id="exerciseChart"></canvas>
       </div>
 
-      <!-- Directe punt-editor bij tikken op een stip in de grafiek -->
       <div class="point-inspector" id="pointInspector">
         <div class="inspector-head">
           <div>
@@ -439,7 +773,6 @@
         </div>
       </div>
 
-      <!-- Periode selector & navigatiepijlen -->
       <div class="period-bar">
         <div class="period-pills" id="periodPills">
           <div class="period-pill" data-period="1m">1 Maand</div>
@@ -453,13 +786,11 @@
           <button type="button" class="nav-arrow" id="nextPeriodBtn" disabled>&#9654;</button>
         </div>
       </div>
-
-      <div class="hint-text">Tik op een stip in de grafiek om direct 1×, ×2, ÷2 of Verberg te kiezen</div>
     </div>
   </div>
 
   <!-- ========================================================= -->
-  <!-- TAB 3: LICHAAMSMETINGEN (ANALYSE & NIEUWE INVOER)         -->
+  <!-- TAB 5: LICHAAMSMETINGEN                                   -->
   <!-- ========================================================= -->
   <div id="tab-body" class="panel">
     <div class="kpi-grid-3">
@@ -480,7 +811,6 @@
       </div>
     </div>
 
-    <!-- Grafiek 1: Kernwaarden (Spier vs. Vet vs. Gewicht) -->
     <div class="card">
       <h2>
         <span>Lichaamssamenstelling Verloop</span>
@@ -494,7 +824,6 @@
       </div>
     </div>
 
-    <!-- Grafiek 1B: Lichaamswater (L) met blauwe lijn -->
     <div class="card">
       <h2>
         <span>Lichaamswater (L)</span>
@@ -505,47 +834,25 @@
       </div>
     </div>
 
-    <!-- Grafiek 2A: Segmentale Analyse - Armen -->
     <div class="card">
-      <h2>
-        <span>Segmentaal: Armen (L/R)</span>
-        <span class="badge">Links: Spier · Rechts: Vet</span>
-      </h2>
-      <div class="chart-wrap">
-        <canvas id="bodySegArmsChart"></canvas>
-      </div>
+      <h2><span>Segmentaal: Armen (L/R)</span><span class="badge">Links: Spier · Rechts: Vet</span></h2>
+      <div class="chart-wrap"><canvas id="bodySegArmsChart"></canvas></div>
     </div>
 
-    <!-- Grafiek 2B: Segmentale Analyse - Benen -->
     <div class="card">
-      <h2>
-        <span>Segmentaal: Benen (L/R)</span>
-        <span class="badge">Links: Spier · Rechts: Vet</span>
-      </h2>
-      <div class="chart-wrap">
-        <canvas id="bodySegLegsChart"></canvas>
-      </div>
+      <h2><span>Segmentaal: Benen (L/R)</span><span class="badge">Links: Spier · Rechts: Vet</span></h2>
+      <div class="chart-wrap"><canvas id="bodySegLegsChart"></canvas></div>
     </div>
 
-    <!-- Grafiek 2C: Segmentale Analyse - Romp / Buik -->
     <div class="card">
-      <h2>
-        <span>Segmentaal: Romp / Buik</span>
-        <span class="badge">Links: Spier · Rechts: Vet</span>
-      </h2>
-      <div class="chart-wrap">
-        <canvas id="bodySegTrunkChart"></canvas>
-      </div>
+      <h2><span>Segmentaal: Romp / Buik</span><span class="badge">Links: Spier · Rechts: Vet</span></h2>
+      <div class="chart-wrap"><canvas id="bodySegTrunkChart"></canvas></div>
     </div>
 
-    <!-- Nieuwe Meting Toevoegen (zoals tabblad Data in Excel) -->
     <div class="card">
       <h2>+ Nieuwe Lichaamsmeting Invoeren</h2>
       <div class="manual-grid">
-        <div>
-          <span class="field-lbl">Datum:</span>
-          <input type="date" id="bmDate" />
-        </div>
+        <div><span class="field-lbl">Datum:</span><input type="date" id="bmDate" /></div>
         <div>
           <span class="field-lbl">Scanner:</span>
           <select id="bmScanner">
@@ -556,75 +863,25 @@
         </div>
       </div>
       <div class="manual-grid-3">
-        <div>
-          <span class="field-lbl">Gewicht (kg)*:</span>
-          <input type="number" step="0.1" id="bmWeight" placeholder="75.0" />
-        </div>
-        <div>
-          <span class="field-lbl">Skeletspier (kg)*:</span>
-          <input type="number" step="0.1" id="bmSmm" placeholder="34.5" />
-        </div>
-        <div>
-          <span class="field-lbl">Vetmassa (kg)*:</span>
-          <input type="number" step="0.1" id="bmFat" placeholder="13.5" />
-        </div>
+        <div><span class="field-lbl">Gewicht (kg)*:</span><input type="number" step="0.1" id="bmWeight" placeholder="75.0" /></div>
+        <div><span class="field-lbl">Skeletspier (kg)*:</span><input type="number" step="0.1" id="bmSmm" placeholder="34.5" /></div>
+        <div><span class="field-lbl">Vetmassa (kg)*:</span><input type="number" step="0.1" id="bmFat" placeholder="13.5" /></div>
       </div>
       <div class="manual-grid-3">
-        <div>
-          <span class="field-lbl">Buikomtrek (cm):</span>
-          <input type="number" step="0.1" id="bmWaist" placeholder="81.0" />
-        </div>
-        <div>
-          <span class="field-lbl">Lichaamswater (L):</span>
-          <input type="number" step="0.1" id="bmWater" placeholder="44.5" />
-        </div>
-        <div>
-          <span class="field-lbl">BMI:</span>
-          <input type="number" step="0.1" id="bmBmi" placeholder="22.6" />
-        </div>
+        <div><span class="field-lbl">Buikomtrek (cm):</span><input type="number" step="0.1" id="bmWaist" placeholder="81.0" /></div>
+        <div><span class="field-lbl">Lichaamswater (L):</span><input type="number" step="0.1" id="bmWater" placeholder="44.5" /></div>
+        <div><span class="field-lbl">BMI:</span><input type="number" step="0.1" id="bmBmi" placeholder="22.6" /></div>
       </div>
-
-      <details style="margin-top:6px; font-size:0.8rem; color:var(--muted);">
-        <summary style="cursor:pointer; font-weight:600; color:var(--text);">Segmentale waarden (Armen / Benen / Buik) invullen</summary>
-        <div style="margin-top:8px;">
-          <strong style="color:var(--accent); font-size:0.74rem;">Spiermassa (kg):</strong>
-          <div class="manual-grid-3">
-            <div><span class="field-lbl">Linkerarm:</span><input type="number" step="0.01" id="bmLArmS" /></div>
-            <div><span class="field-lbl">Rechterarm:</span><input type="number" step="0.01" id="bmRArmS" /></div>
-            <div><span class="field-lbl">Buik/Romp:</span><input type="number" step="0.1" id="bmBuikS" /></div>
-            <div><span class="field-lbl">Linkerbeen:</span><input type="number" step="0.01" id="bmLBeenS" /></div>
-            <div><span class="field-lbl">Rechterbeen:</span><input type="number" step="0.01" id="bmRBeenS" /></div>
-          </div>
-          <strong style="color:var(--accent-body); font-size:0.74rem; display:block; margin-top:6px;">Vetmassa (kg):</strong>
-          <div class="manual-grid-3">
-            <div><span class="field-lbl">Linkerarm:</span><input type="number" step="0.01" id="bmLArmV" /></div>
-            <div><span class="field-lbl">Rechterarm:</span><input type="number" step="0.01" id="bmRArmV" /></div>
-            <div><span class="field-lbl">Buik/Romp:</span><input type="number" step="0.1" id="bmBuikV" /></div>
-            <div><span class="field-lbl">Linkerbeen:</span><input type="number" step="0.01" id="bmLBeenV" /></div>
-            <div><span class="field-lbl">Rechterbeen:</span><input type="number" step="0.01" id="bmRBeenV" /></div>
-          </div>
-        </div>
-      </details>
-
       <button type="button" class="btn btn-body" id="btnAddBodyMeasurement">Meting opslaan</button>
       <div id="bmSaveFeedback" class="status-msg"></div>
     </div>
 
-    <!-- Overzicht van ingevoerde metingen -->
     <div class="card">
       <h2>Metingen Historie (<span id="bmCountLabel">0</span>)</h2>
       <div class="table-scroll">
         <table class="mini-table">
           <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Bron</th>
-              <th>Gewicht</th>
-              <th>Spier</th>
-              <th>Vet</th>
-              <th>Water</th>
-              <th></th>
-            </tr>
+            <tr><th>Datum</th><th>Bron</th><th>Gewicht</th><th>Spier</th><th>Vet</th><th>Water</th><th></th></tr>
           </thead>
           <tbody id="bmTableBody"></tbody>
         </table>
@@ -633,14 +890,27 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- TAB 4: DATA & SYNC + MAPPING + CORRECTIES                 -->
+  <!-- TAB 6 (VIA ⚙): DATA, SYNC, DOELEN & INSTELLINGEN          -->
   <!-- ========================================================= -->
   <div id="tab-upload" class="panel">
     <div class="card">
-      <h2>1. Lichaamsmetingen Excel Importeren</h2>
-      <p style="font-size:0.8rem; color:var(--muted); margin-top:0;">
-        Laad jouw Excel-bestand (<code>Fitness_N.xlsx</code>). Leest direct alle rijen en segmentale kolommen uit het tabblad <strong>Data</strong>.
+      <h2>1. Voedingsdoelen &amp; Standaardmaaltijden</h2>
+      <p style="font-size:0.78rem; color:var(--muted); margin-top:0;">
+        Stel je dagelijkse macro-doelen in (rustdag vs. trainingsdag) en pas je standaard ontbijt/lunch aan.
       </p>
+      <div class="manual-grid">
+        <div><span class="field-lbl">Kcal Rustdag:</span><input type="number" id="cfgKcalRest" /></div>
+        <div><span class="field-lbl">Kcal Trainingsdag:</span><input type="number" id="cfgKcalTrain" /></div>
+        <div><span class="field-lbl">Eiwitten doel (g):</span><input type="number" id="cfgProtGoal" /></div>
+        <div><span class="field-lbl">Koolhydraten doel (g):</span><input type="number" id="cfgCarbGoal" /></div>
+        <div><span class="field-lbl">Vetten doel (g):</span><input type="number" id="cfgFatGoal" /></div>
+        <div><span class="field-lbl">Standaard Kwark (g):</span><input type="number" step="50" id="cfgDefaultKwark" /></div>
+      </div>
+      <button type="button" class="btn btn-hevy" id="btnSaveNutriGoals">Voedingsdoelen opslaan</button>
+    </div>
+
+    <div class="card">
+      <h2>2. Lichaamsmetingen Excel Importeren</h2>
       <div class="file-box">
         <div id="bodyFileStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen lichaamsmetingen geladen</div>
         <label class="btn btn-body">
@@ -654,24 +924,14 @@
     </div>
 
     <div class="card">
-      <h2>2. Garmin Historie (Vóór 21-02-2025)</h2>
+      <h2>3. Garmin &amp; Hevy CSV Upload</h2>
       <div class="file-box">
-        <div id="garminStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen Garmin-data geladen</div>
-        <label class="btn btn-garmin">
-          Kies Garmin CSV
-          <input type="file" id="inputGarminFile" accept=".csv,text/csv" />
-        </label>
+        <div id="garminStatus" style="font-size:0.82rem; margin-bottom:6px;">Nog geen Garmin-data</div>
+        <label class="btn btn-garmin">Kies Garmin CSV<input type="file" id="inputGarminFile" accept=".csv,text/csv" /></label>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>3. Hevy Export (Vanaf 21-02-2025)</h2>
       <div class="file-box">
-        <div id="hevyStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen Hevy-data geladen</div>
-        <label class="btn btn-hevy">
-          Update met nieuwe Hevy CSV
-          <input type="file" id="inputHevyFile" accept=".csv,text/csv" />
-        </label>
+        <div id="hevyStatus" style="font-size:0.82rem; margin-bottom:6px;">Nog geen Hevy-data</div>
+        <label class="btn btn-hevy">Update met nieuwe Hevy CSV<input type="file" id="inputHevyFile" accept=".csv,text/csv" /></label>
       </div>
       <div id="uploadFeedback" class="status-msg"></div>
     </div>
@@ -700,53 +960,66 @@
           Toon baseline-band in grafiek
         </label>
       </div>
-
-      <button type="button" class="btn btn-accent" id="btnAutoDetect">Analyseer grote katrol-wissels opnieuw</button>
+      <button type="button" class="btn btn-accent" id="btnAutoDetect">Analyseer grote katrol-wissels</button>
       <div id="pulleyScanMsg" class="status-msg" style="margin-bottom:8px;"></div>
       <div id="pulleyGroupsContainer"></div>
-
-      <details style="margin-top:10px; font-size:0.82rem; color:var(--muted);">
-        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig datumrange corrigeren of verbergen</summary>
-        <div style="margin-top:8px;">
-          <select id="manualPulleyEx"></select>
-          <div class="manual-grid">
-            <div><span class="field-lbl">Vanaf:</span><input type="date" id="manualStart" /></div>
-            <div><span class="field-lbl">Tot en met:</span><input type="date" id="manualEnd" /></div>
-          </div>
-          <div class="manual-grid">
-            <select id="manualFactor">
-              <option value="2">Vermenigvuldig met × 2</option>
-              <option value="0.5">Halveer met ÷ 2</option>
-              <option value="0">Verberg in grafiek</option>
-            </select>
-            <button type="button" class="btn-sm" id="btnAddManualRange" style="height:36px;">Toevoegen</button>
-          </div>
-        </div>
-      </details>
-
       <div id="singlePointRulesBox" style="margin-top:10px;"></div>
     </div>
 
     <div class="card">
       <h2>6. Garmin &rarr; Hevy Namen Koppelen</h2>
       <datalist id="hevyNamesList"></datalist>
-      <div id="mappingContainer" style="max-height:240px; overflow-y:auto;"></div>
+      <div id="mappingContainer" style="max-height:220px; overflow-y:auto;"></div>
       <button type="button" class="btn btn-hevy" id="btnSaveMappings" style="margin-top:10px;">Koppelingen opslaan</button>
     </div>
 
-    <div class="card">
-      <h2>Backup &amp; Synchronisatie (PC ⇄ Mobiel)</h2>
-      <p style="font-size:0.8rem; color:var(--muted); margin-top:0;">
-        Exporteer al je data (workouts, metingen, correcties, favorieten) naar één backup-bestand en sla dit op in je OneDrive of Google Drive om op je andere apparaat te importeren.
+    <div class="card" style="border-color: var(--accent);">
+      <h2>
+        <span>7. Automatische Cloud Sync (PC ⇄ Mobiel)</span>
+        <span class="badge" id="cloudCardBadge">Niet gekoppeld</span>
+      </h2>
+      <p style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
+        Koppel een gratis <strong>Supabase</strong> project zodat jouw voeding, planner, metingen en workouts binnen 1 seconde automatisch synchroniseren tussen je PC en Android-telefoon.
       </p>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top:8px;">
-        <button type="button" class="btn btn-accent" id="btnExportBackup" style="margin-top:0;">Backup Exporteren</button>
-        <label class="btn btn-hevy" style="margin-top:0; cursor:pointer; display:inline-block; text-align:center; padding:11px; border-radius:10px; font-weight:600; font-size:0.88rem;">
-          Backup Importeren
-          <input type="file" id="inputImportBackup" accept=".json" style="display:none;" />
-        </label>
+      <div style="margin-bottom:8px;">
+        <span class="field-lbl">Supabase Project URL:</span>
+        <input type="text" id="cfgSupaUrl" placeholder="https://jouwproject.supabase.co" />
+        <span class="field-lbl">Supabase Anon Public Key:</span>
+        <input type="text" id="cfgSupaKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." />
+        <span class="field-lbl">Persoonlijke Sync-Sleutel (kies zelf een wachtwoordzin):</span>
+        <input type="text" id="cfgSupaSyncId" placeholder="bijv. mijn-leefstijl-kluis-2026" />
       </div>
-      <div id="backupFeedback" class="status-msg"></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button type="button" class="btn btn-accent" id="btnSaveCloudConfig" style="margin-top:0;">Koppel &amp; Synchroniseer</button>
+        <button type="button" class="btn btn-hevy" id="btnForceCloudSync" style="margin-top:0;">Nu handmatig syncen</button>
+      </div>
+      <div id="cloudFeedback" class="status-msg"></div>
+
+      <details style="margin-top:10px; font-size:0.78rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">📋 Eenmalige SQL-setup voor Supabase (klik om te tonen)</summary>
+        <div style="margin-top:6px; background:#0f172a; padding:8px; border-radius:8px; border:1px solid var(--card-border);">
+          <div style="margin-bottom:4px;">Plak deze 4 regels in Supabase &rarr; <strong>SQL Editor</strong> en klik op <strong>Run</strong>:</div>
+          <textarea id="supaSqlSnippet" rows="5" readonly style="font-family:monospace; font-size:0.72rem; margin-bottom:4px;">create table if not exists leefstijl_sync (
+  sync_id text primary key,
+  updated_at timestamptz default now(),
+  payload jsonb not null
+);
+alter table leefstijl_sync disable row level security;</textarea>
+          <button type="button" class="btn-sm" id="btnCopySupaSql">Kopieer SQL</button>
+        </div>
+      </details>
+
+      <div style="border-top:1px solid var(--card-border); margin-top:12px; padding-top:10px;">
+        <span class="field-lbl" style="margin-bottom:6px;">Lokale JSON Backup (Optioneel):</span>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="btn btn-sm" id="btnExportBackup" style="padding:9px;">Backup Exporteren</button>
+          <label class="btn btn-sm" style="cursor:pointer; display:inline-block; text-align:center; padding:9px;">
+            Backup Importeren
+            <input type="file" id="inputImportBackup" accept=".json" style="display:none;" />
+          </label>
+        </div>
+        <div id="backupFeedback" class="status-msg"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -756,34 +1029,74 @@
   </div>
 
 <script>
-// === VEILIGE HELPERS ===
+// === HELPERS ===
 function safeParseJSON(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
-  } catch (e) {
-    return fallback;
-  }
+  } catch (e) { return fallback; }
 }
 
 function escapeHtml(str) {
   return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+
+function formatYMD(dt) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
+
+function formatShortNL(ymd) {
+  if (!ymd) return "";
+  const [y, m, d] = ymd.split("-");
+  const months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  return `${Number(d)} ${months[Number(m) - 1]} '${y.slice(2)}`;
+}
+
+// === STANDAARD DRANKEN & NEDERLANDSE VOEDINGS-DATABASE ===
+const DEFAULT_DRINKS = [
+  { id: "cappuccino", name: "Cappuccino", cat: "warm", kcal100: 32, p100: 1.8, c100: 2.6, f100: 1.6, vols: [150, 200, 250], fixedVol: null },
+  { id: "espresso", name: "Espresso", cat: "warm", kcal100: 5, p100: 0.3, c100: 0.5, f100: 0.1, vols: [35], fixedVol: 35 },
+  { id: "koffie_zwart", name: "Zwarte Koffie", cat: "warm", kcal100: 2, p100: 0.1, c100: 0.2, f100: 0, vols: [150, 250], fixedVol: null },
+  { id: "latte", name: "Koffie Verkeerd / Latte", cat: "warm", kcal100: 42, p100: 2.4, c100: 3.5, f100: 2.0, vols: [200, 250, 330], fixedVol: null },
+  { id: "thee_groen", name: "Groene / Kruidenthee", cat: "thee", kcal100: 1, p100: 0, c100: 0.1, f100: 0, vols: [250, 330, 500], fixedVol: null },
+  { id: "thee_munt", name: "Verse Muntthee", cat: "thee", kcal100: 2, p100: 0, c100: 0.4, f100: 0, vols: [250, 330], fixedVol: null },
+  { id: "water", name: "Water / Bruiswater", cat: "water", kcal100: 0, p100: 0, c100: 0, f100: 0, vols: [250, 330, 500, 750], fixedVol: null },
+  { id: "cola_zero", name: "Cola Zero / Light", cat: "fris", kcal100: 0.5, p100: 0, c100: 0, f100: 0, vols: [250, 330, 500], fixedVol: null },
+  { id: "cola_reg", name: "Cola / Frisdrank (Suiker)", cat: "fris", kcal100: 42, p100: 0, c100: 10.6, f100: 0, vols: [250, 330, 500], fixedVol: null },
+  { id: "sinas_zero", name: "Sinas / Ice Tea Zero", cat: "fris", kcal100: 1, p100: 0, c100: 0.1, f100: 0, vols: [250, 330, 500], fixedVol: null },
+  { id: "bier", name: "Pils / Biertje (5%)", cat: "fris", kcal100: 43, p100: 0.5, c100: 3.2, f100: 0, vols: [250, 330, 500], fixedVol: null },
+  { id: "melk_half", name: "Halfvolle Melk", cat: "water", kcal100: 46, p100: 3.4, c100: 4.8, f100: 1.5, vols: [200, 250, 330], fixedVol: null }
+];
+
+const LOCAL_FOOD_DB = [
+  { name: "Banaan (1 stuk, ~120g)", kcal: 108, p: 1.3, c: 24.0, f: 0.4 },
+  { name: "Appel (1 stuk, ~135g)", kcal: 72, p: 0.4, c: 16.2, f: 0.3 },
+  { name: "Gekookt Ei (1 stuk)", kcal: 78, p: 6.5, c: 0.6, f: 5.5 },
+  { name: "Handje Ongezouten Noten (25g)", kcal: 158, p: 4.5, c: 2.5, f: 14.2 },
+  { name: "Eiwitreep (gemiddeld, 55g)", kcal: 210, p: 20.0, c: 18.0, f: 6.5 },
+  { name: "Whey Protein Shake (1 scoop + water)", kcal: 120, p: 24.0, c: 2.0, f: 1.5 },
+  { name: "Rijstwafel (1 stuk)", kcal: 28, p: 0.6, c: 6.0, f: 0.2 },
+  { name: "Rijstwafel met Pindakaas (15g)", kcal: 122, p: 4.2, c: 7.5, f: 8.2 },
+  { name: "Kipfilet plakjes (50g)", kcal: 55, p: 11.5, c: 0.5, f: 0.8 },
+  { name: "30+ Kaas plak (30g)", kcal: 88, p: 8.5, c: 0, f: 6.0 },
+  { name: "Pure Chocolade (2 blokjes, 20g)", kcal: 112, p: 1.5, c: 9.0, f: 7.5 },
+  { name: "Griekse Yoghurt 0% (200g)", kcal: 114, p: 20.0, c: 8.0, f: 0.2 },
+  { name: "Skyr Naturel (200g)", kcal: 126, p: 22.0, c: 8.0, f: 0.4 }
+];
 
 // === CONFIGURATIE & STATE ===
 const CUTOFF_DATE = new Date("2025-02-21T00:00:00");
 const DB_NAME = "WorkoutAnalyticsDB";
 const DB_VERSION = 1;
+const TODAY_YMD = formatYMD(new Date());
 
 let state = {
   garminSets: [],
   hevySets: [],
-  bodyMeasurements: [], // [{ date, scanner, weight, smm, smmPct, fatMass, fatPct, waist, bmi, lArmS, rArmS, lBeenS, rBeenS, buikS, lArmV, rArmV, lBeenV, rBeenV, buikV, water, protein, minerals }]
+  bodyMeasurements: [],
   mappings: safeParseJSON("exercise_mappings", {}),
   favorites: safeParseJSON("exercise_favorites", []),
   globalTrend: safeParseJSON("global_trend", true),
@@ -796,13 +1109,33 @@ let state = {
   period: "all",
   periodOffset: 0,
   inspectedPoint: null,
-  // Totaalbeeld state
-  ovGranularity: "quarter", // "month" | "quarter" | "year"
+  ovGranularity: "quarter",
   ovOffset: 0,
   ovMuscleMetric: "sets",
-  // Lichaamsmetingen state
-  bodyMainMode: "kg",       // "kg" | "pct"
-  bodySegType: "spier"      // "spier" | "vet"
+  bodyMainMode: "kg",
+  // Voeding & Planner state
+  nutriGoals: safeParseJSON("nutri_goals_v1", {
+    kcalRest: 2250,
+    kcalTrain: 2550,
+    protein: 155,
+    carbs: 240,
+    fat: 75,
+    defaultKwark: 250,
+    defaultSmoothie: 1,
+    defaultBread: 4
+  }),
+  drinkFavorites: safeParseJSON("drink_favs_v1", ["cappuccino", "espresso", "water", "cola_zero"]),
+  customFoods: safeParseJSON("custom_foods_v1", []),
+  // foodLogs: { "2026-11-17": { kwarkGrams, smoothieCount, breadSlices, drinks: [...], extras: [...], dinner: { title, kcal, p, c, f, confirmed }, completed: false } }
+  foodLogs: safeParseJSON("food_logs_v1", {}),
+  // plannedWorkouts: { "2026-11-18": ["Upper Body"] }
+  plannedWorkouts: safeParseJSON("planned_workouts_v1", {}),
+  selectedNutriDate: TODAY_YMD,
+  selectedDrinkCat: "fav",
+  selectedDrinkId: null,
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  selectedPlannerDate: TODAY_YMD
 };
 
 let exerciseChartInstance = null;
@@ -814,41 +1147,13 @@ let bodySegArmsChartInstance = null;
 let bodySegLegsChartInstance = null;
 let bodySegTrunkChartInstance = null;
 
-// === PLUGINS REGISTREREN ===
-if (typeof Chart !== "undefined") {
-  const verticalCrosshairPlugin = {
-    id: "verticalCrosshair",
-    afterDatasetsDraw(chart) {
-      const active = chart.getActiveElements();
-      if (!active || active.length === 0) return;
-      const { ctx, chartArea: { top, bottom } } = chart;
-      const x = active[0].element.x;
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x, top);
-      ctx.lineTo(x, bottom);
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = "rgba(248, 250, 252, 0.55)";
-      ctx.setLineDash([4, 4]);
-      ctx.stroke();
-      ctx.restore();
-    }
-  };
-  Chart.register(verticalCrosshairPlugin);
-  if (typeof ChartZoom !== "undefined") {
-    try { Chart.register(ChartZoom); } catch (e) {}
-  }
-}
-
 // === INDEXEDDB OPSLAG ===
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = e => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains("datasets")) {
-        db.createObjectStore("datasets");
-      }
+      if (!db.objectStoreNames.contains("datasets")) db.createObjectStore("datasets");
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -876,87 +1181,611 @@ async function loadDataset(key) {
       req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
       req.onerror = () => reject(req.error);
     });
+  } catch (e) { return []; }
+}
+
+let cloudConfig = safeParseJSON("cloud_sync_cfg_v1", { url: "", key: "", syncId: "" });
+let supaClient = null;
+let cloudPushTimer = null;
+let isApplyingRemote = false;
+
+function setCloudBadge(text, color = "var(--muted)") {
+  const b1 = document.getElementById("cloudSyncBadge");
+  const b2 = document.getElementById("cloudCardBadge");
+  if (b1) { b1.textContent = text; b1.style.color = color; }
+  if (b2) { b2.textContent = text; b2.style.color = color; }
+}
+
+function initSupabaseClient() {
+  if (!cloudConfig.url || !cloudConfig.key || !cloudConfig.syncId || typeof supabase === "undefined") {
+    supaClient = null;
+    setCloudBadge("☁️ Lokaal", "var(--muted)");
+    return false;
+  }
+  try {
+    supaClient = supabase.createClient(cloudConfig.url.trim(), cloudConfig.key.trim());
+    setCloudBadge("☁️ Gekoppeld", "var(--accent-hevy)");
+    return true;
   } catch (e) {
-    return [];
+    supaClient = null;
+    setCloudBadge("⚠️ Config fout", "var(--danger)");
+    return false;
   }
 }
 
-// === DATUM PARSERS ===
+function buildFullSyncPayload() {
+  return {
+    version: 4,
+    updatedAt: new Date().toISOString(),
+    garminSets: state.garminSets,
+    hevySets: state.hevySets,
+    bodyMeasurements: state.bodyMeasurements,
+    mappings: state.mappings,
+    favorites: state.favorites,
+    globalTrend: state.globalTrend,
+    trendOverrides: state.trendOverrides,
+    pulleyGroups: state.pulleyGroups,
+    pointOverrides: state.pointOverrides,
+    foodLogs: state.foodLogs,
+    plannedWorkouts: state.plannedWorkouts,
+    nutriGoals: state.nutriGoals,
+    drinkFavorites: state.drinkFavorites,
+    customFoods: state.customFoods
+  };
+}
+
+async function applySyncPayload(d, saveLocally = true) {
+  if (!d || typeof d !== "object") return;
+  isApplyingRemote = true;
+  try {
+    if (Array.isArray(d.garminSets)) state.garminSets = d.garminSets;
+    if (Array.isArray(d.hevySets)) state.hevySets = d.hevySets;
+    if (Array.isArray(d.bodyMeasurements)) state.bodyMeasurements = d.bodyMeasurements.filter(m => m && m.date >= "2010-01-01" && m.weight >= 40);
+    if (d.mappings) state.mappings = d.mappings;
+    if (Array.isArray(d.favorites)) state.favorites = d.favorites;
+    if (d.globalTrend !== undefined) state.globalTrend = d.globalTrend;
+    if (d.trendOverrides) state.trendOverrides = d.trendOverrides;
+    if (Array.isArray(d.pulleyGroups)) state.pulleyGroups = d.pulleyGroups;
+    if (d.pointOverrides) state.pointOverrides = d.pointOverrides;
+    if (d.foodLogs) state.foodLogs = d.foodLogs;
+    if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
+    if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
+    if (Array.isArray(d.drinkFavorites)) state.drinkFavorites = d.drinkFavorites;
+    if (Array.isArray(d.customFoods)) state.customFoods = d.customFoods;
+
+    if (saveLocally) {
+      await saveDataset("garmin", state.garminSets);
+      await saveDataset("hevy", state.hevySets);
+      await saveDataset("bodyMeasurements", state.bodyMeasurements);
+    scheduleCloudPush();
+      localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
+      localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
+      localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
+      localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
+      localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
+      localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
+      localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
+    scheduleCloudPush();
+      localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
+      localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
+      localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+  scheduleCloudPush();
+      localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
+    scheduleCloudPush();
+    }
+  } finally {
+    isApplyingRemote = false;
+  }
+}
+
+async function pushToCloudNow() {
+  if (!supaClient || !cloudConfig.syncId || isApplyingRemote) return;
+  setCloudBadge("☁️ Opslaan...", "var(--accent)");
+  try {
+    const nowIso = new Date().toISOString();
+    const payload = buildFullSyncPayload();
+    payload.updatedAt = nowIso;
+    const { error } = await supaClient
+      .from("leefstijl_sync")
+      .upsert({ sync_id: cloudConfig.syncId.trim(), updated_at: nowIso, payload }, { onConflict: "sync_id" });
+    if (error) throw error;
+    localStorage.setItem("cloud_last_sync_at", nowIso);
+    setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
+  } catch (err) {
+    console.error("Cloud push error:", err);
+    setCloudBadge("⚠️ Sync fout", "var(--danger)");
+    const fb = document.getElementById("cloudFeedback");
+    if (fb) fb.textContent = "Cloud fout: " + (err.message || err);
+  }
+}
+
+function scheduleCloudPush() {
+  if (!supaClient || !cloudConfig.syncId || isApplyingRemote) return;
+  setCloudBadge("☁️ Wacht...", "var(--accent-garmin)");
+  if (cloudPushTimer) clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(() => { pushToCloudNow(); }, 1200);
+}
+
+async function pullFromCloud(forceOverwriteLocal = false) {
+  if (!supaClient || !cloudConfig.syncId) return;
+  setCloudBadge("☁️ Ophalen...", "var(--accent)");
+  try {
+    const { data, error } = await supaClient
+      .from("leefstijl_sync")
+      .select("updated_at, payload")
+      .eq("sync_id", cloudConfig.syncId.trim())
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data || !data.payload) {
+      // Nog niets in de cloud -> upload huidige lokale data als eerste versie
+      await pushToCloudNow();
+      return;
+    }
+
+    const remoteTs = new Date(data.updated_at).getTime() || 0;
+    const localTs = new Date(localStorage.getItem("cloud_last_sync_at") || 0).getTime() || 0;
+
+    if (forceOverwriteLocal || remoteTs > localTs) {
+      await applySyncPayload(data.payload, true);
+      localStorage.setItem("cloud_last_sync_at", data.updated_at);
+      refreshAll();
+    }
+    setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
+  } catch (err) {
+    console.error("Cloud pull error:", err);
+    setCloudBadge("⚠️ Sync fout", "var(--danger)");
+    const fb = document.getElementById("cloudFeedback");
+    if (fb) fb.textContent = "Cloud fout: " + (err.message || err);
+  }
+}
+
+function saveFoodState() {
+  localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
+  localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
+  localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
+  localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
+  localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
+  scheduleCloudPush();
+}
+
+// === VOEDING LOGICA & MACRO BEREKENINGEN ===
+function getOrCreateFoodDay(ymd) {
+  if (!state.foodLogs[ymd]) {
+    state.foodLogs[ymd] = {
+      kwarkGrams: Number(state.nutriGoals.defaultKwark ?? 250),
+      smoothieCount: Number(state.nutriGoals.defaultSmoothie ?? 1),
+      breadSlices: Number(state.nutriGoals.defaultBread ?? 4),
+      drinks: [],
+      extras: [],
+      dinner: null,
+      completed: false,
+      touched: false
+    };
+  }
+  return state.foodLogs[ymd];
+}
+
+function computeDayNutrition(ymd) {
+  const log = state.foodLogs[ymd];
+  const kwarkG = log ? Number(log.kwarkGrams) : Number(state.nutriGoals.defaultKwark ?? 250);
+  const smoothC = log ? Number(log.smoothieCount) : Number(state.nutriGoals.defaultSmoothie ?? 1);
+  const breadS = log ? Number(log.breadSlices) : Number(state.nutriGoals.defaultBread ?? 4);
+
+  // Magere kwark per 100g: 52 kcal, 8.8g eiwit, 4.0g kh, 0.1g vet
+  const kwark = {
+    kcal: (kwarkG / 100) * 52,
+    p: (kwarkG / 100) * 8.8,
+    c: (kwarkG / 100) * 4.0,
+    f: (kwarkG / 100) * 0.1
+  };
+  // Ontbijt-extra / smoothie per portie: 260 kcal, 12g eiwit, 38g kh, 6g vet
+  const smoothie = {
+    kcal: smoothC * 260,
+    p: smoothC * 12,
+    c: smoothC * 38,
+    f: smoothC * 6
+  };
+  // Volkoren brood + beleg per snede: 135 kcal, 7g eiwit, 16g kh, 4g vet
+  const bread = {
+    kcal: breadS * 135,
+    p: breadS * 7,
+    c: breadS * 16,
+    f: breadS * 4
+  };
+
+  let totalKcal = kwark.kcal + smoothie.kcal + bread.kcal;
+  let totalP = kwark.p + smoothie.p + bread.p;
+  let totalC = kwark.c + smoothie.c + bread.c;
+  let totalF = kwark.f + smoothie.f + bread.f;
+  let totalDrinkMl = 0;
+
+  if (log) {
+    (log.drinks || []).forEach(d => {
+      totalKcal += Number(d.kcal || 0);
+      totalP += Number(d.p || 0);
+      totalC += Number(d.c || 0);
+      totalF += Number(d.f || 0);
+      totalDrinkMl += Number(d.ml || 0);
+    });
+    (log.extras || []).forEach(ex => {
+      totalKcal += Number(ex.kcal || 0);
+      totalP += Number(ex.p || 0);
+      totalC += Number(ex.c || 0);
+      totalF += Number(ex.f || 0);
+    });
+    // Avondeten telt pas mee zodra bevestigd!
+    if (log.dinner && log.dinner.confirmed) {
+      totalKcal += Number(log.dinner.kcal || 0);
+      totalP += Number(log.dinner.p || 0);
+      totalC += Number(log.dinner.c || 0);
+      totalF += Number(log.dinner.f || 0);
+    }
+  }
+
+  return {
+    kwark, smoothie, bread,
+    kcal: Math.round(totalKcal),
+    p: Math.round(totalP),
+    c: Math.round(totalC),
+    f: Math.round(totalF),
+    drinkMl: totalDrinkMl,
+    completed: Boolean(log && log.completed),
+    touched: Boolean(log && (log.touched || log.completed || (log.drinks && log.drinks.length > 0) || (log.extras && log.extras.length > 0) || (log.dinner && log.dinner.confirmed)))
+  };
+}
+
+function isTrainingDay(ymd) {
+  const hasActual = state.garminSets.some(s => s.dateDay === ymd) || state.hevySets.some(s => s.dateDay === ymd);
+  const hasPlanned = Array.isArray(state.plannedWorkouts[ymd]) && state.plannedWorkouts[ymd].length > 0;
+  return hasActual || hasPlanned;
+}
+
+// === WEEKMENU PARSER (GEMINI TEKST -> MAANDAG T/M ZONDAG AVONDETEN) ===
+function parseWeekmenuText(rawText) {
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const dayNames = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
+  const foundByDayIdx = {};
+
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    const dIdx = dayNames.findIndex(dn => lower.startsWith(dn) || lower.includes(`**${dn}`));
+    if (dIdx === -1) continue;
+
+    // Strip dagnaam en markdown tekens
+    let clean = line.replace(/\*\*/g, "").replace(/^[-•*]\s*/, "");
+    clean = clean.replace(new RegExp(`^${dayNames[dIdx]}\s*[:\-–]?\s*`, "i"), "");
+
+    // Extraheer eventuele macro's tussen haakjes of achteraan
+    const mKcal = clean.match(/(\d{3,4})\s*kcal/i);
+    const mProt = clean.match(/(\d{1,3})\s*g?\s*(?:eiwit|protein|e\b)/i);
+    const mCarb = clean.match(/(\d{1,3})\s*g?\s*(?:koolhydraten|kh\b|carbs)/i);
+    const mFat = clean.match(/(\d{1,3})\s*g?\s*(?:vet|vetten|v\b|fat)/i);
+
+    const kcal = mKcal ? Number(mKcal[1]) : 620;
+    const p = mProt ? Number(mProt[1]) : 42;
+    const c = mCarb ? Number(mCarb[1]) : 58;
+    const f = mFat ? Number(mFat[1]) : 20;
+
+    // Verwijder haakjes met macro-info uit de titel
+    const title = clean.replace(/\([^)]*kcal[^)]*\)/gi, "").replace(/\s*[-–]\s*\d+\s*kcal.*$/i, "").trim();
+    if (title) {
+      foundByDayIdx[dIdx] = { title, kcal, p, c, f, confirmed: false };
+    }
+  }
+
+  return foundByDayIdx;
+}
+
+function getMondayOfDate(ymd) {
+  const d = new Date(ymd + "T12:00:00");
+  const day = d.getDay(); // 0=zo, 1=ma..6=za
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
+// === RENDER VOEDING TAB ===
+function renderNutritionTab() {
+  const ymd = state.selectedNutriDate;
+  const log = getOrCreateFoodDay(ymd);
+  const totals = computeDayNutrition(ymd);
+  const trainDay = isTrainingDay(ymd);
+
+  document.getElementById("nutriDateLabel").textContent =
+    ymd === TODAY_YMD ? `Vandaag (${formatShortNL(ymd)})` : formatShortNL(ymd);
+  document.getElementById("nutriDayTypeBadge").textContent = trainDay ? "🏋️ Trainingsdag" : "🛋️ Rustdag";
+  document.getElementById("nutriDayTypeBadge").style.color = trainDay ? "var(--accent-hevy)" : "var(--muted)";
+
+  // Doelen & Voortgangsbalken
+  const goalKcal = trainDay ? Number(state.nutriGoals.kcalTrain || 2550) : Number(state.nutriGoals.kcalRest || 2250);
+  const goalP = Number(state.nutriGoals.protein || 155);
+  const goalC = Number(state.nutriGoals.carbs || 240);
+  const goalF = Number(state.nutriGoals.fat || 75);
+
+  document.getElementById("macKcalVal").textContent = totals.kcal;
+  document.getElementById("macKcalSub").textContent = `/ ${goalKcal} kcal`;
+  document.getElementById("macKcalBar").style.width = `${Math.min(100, (totals.kcal / goalKcal) * 100)}%`;
+
+  document.getElementById("macProtVal").textContent = `${totals.p}g`;
+  document.getElementById("macProtSub").textContent = `/ ${goalP}g`;
+  document.getElementById("macProtBar").style.width = `${Math.min(100, (totals.p / goalP) * 100)}%`;
+
+  document.getElementById("macCarbVal").textContent = `${totals.c}g`;
+  document.getElementById("macCarbSub").textContent = `/ ${goalC}g`;
+  document.getElementById("macCarbBar").style.width = `${Math.min(100, (totals.c / goalC) * 100)}%`;
+
+  document.getElementById("macFatVal").textContent = `${totals.f}g`;
+  document.getElementById("macFatSub").textContent = `/ ${goalF}g`;
+  document.getElementById("macFatBar").style.width = `${Math.min(100, (totals.f / goalF) * 100)}%`;
+
+  // Basisdag items
+  document.getElementById("inputKwarkGrams").value = log.kwarkGrams;
+  document.getElementById("kwarkMacroTxt").textContent =
+    `${log.kwarkGrams}g · ${Math.round(totals.kwark.kcal)} kcal · ${Math.round(totals.kwark.p)}g E · ${Math.round(totals.kwark.c)}g KH · ${Math.round(totals.kwark.f)}g V`;
+
+  document.getElementById("smoothieCountSpan").textContent = `${log.smoothieCount}×`;
+  document.getElementById("smoothieMacroTxt").textContent =
+    `${log.smoothieCount} portie · ${Math.round(totals.smoothie.kcal)} kcal · ${Math.round(totals.smoothie.p)}g E · ${Math.round(totals.smoothie.c)}g KH · ${Math.round(totals.smoothie.f)}g V`;
+
+  document.getElementById("breadCountSpan").textContent = log.breadSlices;
+  document.getElementById("breadMacroTxt").textContent =
+    `${log.breadSlices} snedes · ${Math.round(totals.bread.kcal)} kcal · ${Math.round(totals.bread.p)}g E · ${Math.round(totals.bread.c)}g KH · ${Math.round(totals.bread.f)}g V`;
+
+  // Avondeten (Weekmenu) weergave + Dag wisselen dropdown
+  const dinnerBox = document.getElementById("dinnerContainer");
+  const mon = getMondayOfDate(ymd);
+  const weekOptions = [];
+  const dayLabels = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    const dStr = formatYMD(d);
+    if (dStr !== ymd) {
+      const otherTitle = state.foodLogs[dStr]?.dinner?.title || "Geen gerecht";
+      weekOptions.push(`<option value="${dStr}">Wissel met ${dayLabels[i]} (${formatShortNL(dStr)}: ${escapeHtml(otherTitle.slice(0, 22))})</option>`);
+    }
+  }
+
+  if (log.dinner && log.dinner.title) {
+    const isConf = Boolean(log.dinner.confirmed);
+    dinnerBox.innerHTML = `
+      <div class="dinner-box ${isConf ? "" : "unconfirmed"}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+          <div>
+            <div style="font-size:0.7rem; font-weight:700; color:${isConf ? "var(--accent-hevy)" : "var(--accent-garmin)"};">
+              ${isConf ? "✓ BEVESTIGD AVONDETEN" : "⏳ VOORSTEL UIT WEEKMENU (NOG BEVESTIGEN)"}
+            </div>
+            <div style="font-weight:700; font-size:0.9rem; margin-top:2px;">${escapeHtml(log.dinner.title)}</div>
+            <div style="font-size:0.74rem; color:var(--muted); margin-top:3px;">
+              ${log.dinner.kcal} kcal · ${log.dinner.p}g E · ${log.dinner.c}g KH · ${log.dinner.f}g V
+            </div>
+          </div>
+          <button type="button" class="btn-sm" id="btnRemoveDinner" style="color:var(--danger); padding:3px 7px;">✕</button>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1.3fr; gap:6px; margin-top:9px;">
+          <button type="button" class="btn ${isConf ? "btn-sm" : "btn-hevy"}" id="btnConfirmDinner" style="margin-top:0; padding:7px;">
+            ${isConf ? "Bevestigd ✓" : "Bevestig maaltijd"}
+          </button>
+          <select id="selSwapDinnerDay" style="margin-bottom:0; padding:6px; font-size:0.76rem;">
+            <option value="">⇄ Wissel van dag...</option>
+            ${weekOptions.join("")}
+          </select>
+        </div>
+      </div>
+    `;
+  } else {
+    dinnerBox.innerHTML = `
+      <div style="font-size:0.8rem; color:var(--muted); padding:6px 0;">
+        Nog geen avondeten ingepland voor deze dag. Klik op <strong>+ Plak Weekmenu</strong> of voeg hieronder een gerecht toe.
+      </div>
+    `;
+  }
+
+  // Dranken grid & lijst
+  document.getElementById("drinksTotalBadge").textContent = `${totals.drinkMl} ml`;
+  const filteredDrinks = DEFAULT_DRINKS.filter(d =>
+    state.selectedDrinkCat === "fav" ? state.drinkFavorites.includes(d.id) : d.cat === state.selectedDrinkCat
+  );
+  document.getElementById("drinkGrid").innerHTML = filteredDrinks.map(d => {
+    const isFav = state.drinkFavorites.includes(d.id);
+    const isSel = state.selectedDrinkId === d.id;
+    return `
+      <div class="drink-card ${isSel ? "selected" : ""}" data-select-drink="${d.id}">
+        <span>
+          <span class="drink-fav-star" data-fav-drink="${d.id}">${isFav ? "★" : "☆"}</span>
+          ${escapeHtml(d.name)}
+        </span>
+        <span style="font-size:0.7rem; color:var(--muted);">${d.fixedVol ? d.fixedVol + "ml" : "+"}</span>
+      </div>
+    `;
+  }).join("");
+
+  const volPicker = document.getElementById("drinkVolumePicker");
+  if (state.selectedDrinkId) {
+    const dr = DEFAULT_DRINKS.find(x => x.id === state.selectedDrinkId);
+    if (dr) {
+      volPicker.style.display = "flex";
+      document.getElementById("selectedDrinkTitle").textContent = `${dr.name} – kies hoeveelheid:`;
+      document.getElementById("drinkVolButtons").innerHTML = dr.vols.map(v => `
+        <button type="button" class="btn-sm btn-accent" data-add-drink-ml="${v}" style="color:#0f172a;">+${v} ml</button>
+      `).join("") + `<button type="button" class="btn-sm" id="btnCancelDrinkPick">Annuleer</button>`;
+    }
+  } else {
+    volPicker.style.display = "none";
+  }
+
+  const loggedDrinksEl = document.getElementById("loggedDrinksList");
+  if (log.drinks && log.drinks.length > 0) {
+    loggedDrinksEl.innerHTML = log.drinks.map((d, idx) => `
+      <div class="pref-row" style="padding:5px 2px;">
+        <span style="font-size:0.8rem;">🥤 ${escapeHtml(d.name)} (<strong>${d.ml} ml</strong>) · <span style="color:var(--muted);">${Math.round(d.kcal)} kcal, ${Number(d.p).toFixed(1)}g E</span></span>
+        <button type="button" class="btn-sm" data-del-drink="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
+      </div>
+    `).join("");
+  } else {
+    loggedDrinksEl.innerHTML = "";
+  }
+
+  // Extra gelogde producten
+  const extraListEl = document.getElementById("loggedExtraFoodsList");
+  if (log.extras && log.extras.length > 0) {
+    extraListEl.innerHTML = log.extras.map((ex, idx) => `
+      <div class="pref-row" style="padding:6px 2px;">
+        <span style="font-size:0.8rem;">🍽️ <strong>${escapeHtml(ex.name)}</strong> · <span style="color:var(--muted);">${ex.kcal} kcal · ${ex.p}g E · ${ex.c}g KH · ${ex.f}g V</span></span>
+        <button type="button" class="btn-sm" data-del-extra="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
+      </div>
+    `).join("");
+  } else {
+    extraListEl.innerHTML = "";
+  }
+
+  document.getElementById("chkCompleteFoodDay").checked = Boolean(log.completed);
+}
+
+// === RENDER PLANNER TAB ===
+function renderPlannerTab() {
+  const year = state.calYear;
+  const month = state.calMonth;
+  const monthNames = ["Januari", "Februari", "Maart", "April", "Mei", "Juni", "Juli", "Augustus", "September", "Oktober", "November", "December"];
+  document.getElementById("calMonthLabel").textContent = `${monthNames[month]} ${year}`;
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // Maandag = 0
+  const startDate = new Date(year, month, 1 - startOffset);
+
+  const actualWorkoutDays = new Set([
+    ...state.garminSets.map(s => s.dateDay),
+    ...state.hevySets.map(s => s.dateDay)
+  ]);
+
+  let cellsHtml = "";
+  for (let i = 0; i < 42; i++) {
+    const cur = new Date(startDate);
+    cur.setDate(startDate.getDate() + i);
+    const ymd = formatYMD(cur);
+    const inMonth = cur.getMonth() === month;
+    const isToday = ymd === TODAY_YMD;
+    const isSelected = ymd === state.selectedPlannerDate;
+
+    const foodInfo = computeDayNutrition(ymd);
+    const hasActualWo = actualWorkoutDays.has(ymd);
+    const plannedList = state.plannedWorkouts[ymd] || [];
+
+    let foodIcon = "";
+    if (foodInfo.completed) {
+      foodIcon = `<span class="food-dot-green" title="Voeding afgerond">🍽️</span>`;
+    } else if (foodInfo.touched) {
+      foodIcon = `<span class="food-dot-orange" title="Voeding bezig">🍽️</span>`;
+    }
+
+    let barsHtml = "";
+    if (hasActualWo) barsHtml += `<div class="cal-bar" style="background:var(--accent-hevy);"></div>`;
+    if (plannedList.length > 0) barsHtml += `<div class="cal-bar" style="background:var(--accent);"></div>`;
+
+    cellsHtml += `
+      <div class="cal-cell ${inMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}" data-cal-day="${ymd}">
+        <div class="cal-icons">
+          <span>${foodIcon}</span>
+          <span class="cal-day-num">${cur.getDate()}</span>
+        </div>
+        <div class="cal-bars">${barsHtml}</div>
+      </div>
+    `;
+  }
+  document.getElementById("calGrid").innerHTML = cellsHtml;
+
+  // Detailkaart geselecteerde dag
+  const selYmd = state.selectedPlannerDate;
+  document.getElementById("plannerSelectedDateLabel").textContent = formatShortNL(selYmd);
+  const fTotals = computeDayNutrition(selYmd);
+  const hasActual = actualWorkoutDays.has(selYmd);
+  const statusTxt = fTotals.completed ? "✅ Voeding afgerond" : (fTotals.touched ? "🟠 Voeding deels gelogd" : "⚪ Nog geen voeding gelogd");
+  document.getElementById("plannerDaySummary").innerHTML = `
+    <div>${statusTxt} · <strong>${fTotals.kcal} kcal</strong> (${fTotals.p}g E · ${fTotals.c}g KH · ${fTotals.f}g V)</div>
+    <div style="margin-top:4px;">${hasActual ? "🏋️ <strong>Krachttraining voltooid</strong> op deze dag" : "Geen geregistreerde workout op deze dag"}</div>
+  `;
+
+  const pList = state.plannedWorkouts[selYmd] || [];
+  const pEl = document.getElementById("plannedWorkoutsList");
+  pEl.innerHTML = pList.map((w, idx) => `
+    <div class="pref-row" style="padding:5px 4px;">
+      <span style="font-size:0.82rem; color:var(--accent);">📅 Gepland: <strong>${escapeHtml(w)}</strong></span>
+      <button type="button" class="btn-sm" data-del-plan="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
+    </div>
+  `).join("");
+}
+
+// === PROGRESSIVE OVERLOAD ADVIES BEREKENEN ===
+function computeOverloadAdvice(chosenExercise, setsForExercise) {
+  const box = document.getElementById("overloadAdviceBox");
+  const txtEl = document.getElementById("overloadAdviceText");
+  if (!setsForExercise || setsForExercise.length === 0) {
+    box.style.display = "none";
+    return;
+  }
+
+  // Groepeer op dag en pak de laatste sessie
+  const byDay = {};
+  setsForExercise.forEach(s => {
+    if (!byDay[s.dateDay]) byDay[s.dateDay] = [];
+    byDay[s.dateDay].push(s);
+  });
+  const days = Object.keys(byDay).sort();
+  const lastDay = days[days.length - 1];
+  const lastSets = byDay[lastDay].filter(s => s.weight > 0 && s.reps > 0);
+
+  if (lastSets.length === 0) {
+    box.style.display = "none";
+    return;
+  }
+
+  const maxW = Math.max(...lastSets.map(s => s.weight));
+  const topSets = lastSets.filter(s => s.weight === maxW);
+  const avgReps = Math.round(topSets.reduce((a, b) => a + b.reps, 0) / topSets.length);
+
+  let advice = "";
+  if (avgReps >= 12) {
+    const nextW = (maxW + 2.5).toFixed(1).replace(".0", "");
+    advice = `Laatste (${formatShortNL(lastDay)}): ${maxW} kg × ${avgReps} reps → Verhoog naar <strong>${nextW} kg × 8–10 reps</strong>`;
+  } else {
+    advice = `Laatste (${formatShortNL(lastDay)}): ${maxW} kg × ${avgReps} reps → Streef naar <strong>${maxW} kg × ${avgReps + 1}–${avgReps + 2} reps</strong>`;
+  }
+
+  txtEl.innerHTML = advice;
+  box.style.display = "flex";
+}
+
+// === BESTAANDE PARSERS & OVERIGE MODULES ===
 function parseWorkoutDate(str) {
   if (str === null || str === undefined || str === "") return null;
   if (str instanceof Date && !isNaN(str.getTime())) return str;
-
-  // Excel serieel datumnummer (bijv. 44726 = 14-06-2022)
   if (typeof str === "number" || /^\d{5}(?:\.\d+)?$/.test(String(str).trim())) {
     const serial = Number(str);
     if (serial > 20000 && serial < 90000) {
-      // Excel epoch is 30 dec 1899 (86400000 ms per dag)
       const utcMs = Math.round((serial - 25569) * 86400 * 1000);
       const d = new Date(utcMs);
       return isNaN(d.getTime()) ? null : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0);
     }
   }
-
-  const clean = String(str).replace(/^\uFEFF/, "").trim();
-
-  const months = {
-    jan:0, feb:1, mar:2, mrt:2, apr:3, may:4, mei:4, jun:5,
-    jul:6, aug:7, sep:8, oct:9, okt:9, nov:10, dec:11
-  };
+  const clean = String(str).replace(/^﻿/, "").trim();
+  const months = { jan:0, feb:1, mar:2, mrt:2, apr:3, may:4, mei:4, jun:5, jul:6, aug:7, sep:8, oct:9, okt:9, nov:10, dec:11 };
   const mText = clean.match(/^(\d{1,2})[\s\-]+([A-Za-z]{3})[\s\-]+(\d{4})(?:,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (mText) {
-    const mon = months[mText[2].toLowerCase()];
-    if (mon !== undefined) {
-      return new Date(
-        Number(mText[3]), mon, Number(mText[1]),
-        Number(mText[4] || 12), Number(mText[5] || 0), Number(mText[6] || 0)
-      );
-    }
+  if (mText && months[mText[2].toLowerCase()] !== undefined) {
+    return new Date(Number(mText[3]), months[mText[2].toLowerCase()], Number(mText[1]), Number(mText[4] || 12), Number(mText[5] || 0), Number(mText[6] || 0));
   }
-
   const mIso = clean.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (mIso) {
-    return new Date(
-      Number(mIso[1]), Number(mIso[2]) - 1, Number(mIso[3]),
-      Number(mIso[4] || 12), Number(mIso[5] || 0), Number(mIso[6] || 0)
-    );
-  }
-
+  if (mIso) return new Date(Number(mIso[1]), Number(mIso[2]) - 1, Number(mIso[3]), Number(mIso[4] || 12), Number(mIso[5] || 0), Number(mIso[6] || 0));
   const mEu = clean.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (mEu) {
     let yr = Number(mEu[3]);
     if (yr < 100) yr += 2000;
-    return new Date(
-      yr, Number(mEu[2]) - 1, Number(mEu[1]),
-      Number(mEu[4] || 12), Number(mEu[5] || 0), Number(mEu[6] || 0)
-    );
+    return new Date(yr, Number(mEu[2]) - 1, Number(mEu[1]), Number(mEu[4] || 12), Number(mEu[5] || 0), Number(mEu[6] || 0));
   }
-  const _skipOldEu = null;
-  if (_skipOldEu)
-  if (mEu) {
-    return new Date(
-      Number(mEu[3]), Number(mEu[2]) - 1, Number(mEu[1]),
-      Number(mEu[4] || 12), Number(mEu[5] || 0), Number(mEu[6] || 0)
-    );
-  }
-
   const fallback = new Date(clean);
   return isNaN(fallback.getTime()) ? null : fallback;
 }
 
-function formatYMD(dt) {
-  const pad = n => String(n).padStart(2, "0");
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-}
-
-function formatShortNL(ymd) {
-  if (!ymd) return "";
-  const [y, m, d] = ymd.split("-");
-  const months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-  return `${Number(d)} ${months[Number(m) - 1]} '${y.slice(2)}`;
-}
-
-// === SPIERGROEP CLASSIFICATIE (VOOR TOTAALBEELD) ===
 function classifyMuscleGroup(exName) {
   const n = String(exName || "").toLowerCase();
   if (/bench|chest|fly|pec|push.?up|dip/.test(n) && !/tricep/.test(n)) return "Borst";
@@ -968,18 +1797,11 @@ function classifyMuscleGroup(exName) {
   return "Overig";
 }
 
-// === EXCEL IMPORT VOOR LICHAAMSMETINGEN (Fitness_N.xlsx) ===
 function handleBodyXlsxUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   const feedback = document.getElementById("uploadFeedback");
   feedback.textContent = "Excel lichaamsmetingen uitlezen...";
-
-  if (typeof XLSX === "undefined") {
-    feedback.textContent = "Fout: Excel-bibliotheek niet geladen.";
-    return;
-  }
-
   const reader = new FileReader();
   reader.onload = async function(e) {
     try {
@@ -989,17 +1811,11 @@ function handleBodyXlsxUpload(event) {
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
 
-      // Zoek dynamisch de koprij en de kolom waarin 'Datum' staat (omdat kolom A in Excel leeg is en SheetJS bij kolom B start!)
-      let headerRowIdx = 2;
-      let dateCol = 1; // In B1:BL46 is Kolom B = index 0 (Scanner), Kolom C = index 1 (Datum), Kolom D = index 2 (Gewicht)
+      let headerRowIdx = 2, dateCol = 1;
       for (let r = 0; r < Math.min(10, rows.length); r++) {
         if (!rows[r]) continue;
         const foundIdx = rows[r].findIndex(cell => String(cell || "").trim().toLowerCase() === "datum");
-        if (foundIdx !== -1) {
-          headerRowIdx = r;
-          dateCol = foundIdx;
-          break;
-        }
+        if (foundIdx !== -1) { headerRowIdx = r; dateCol = foundIdx; break; }
       }
 
       const parsed = [];
@@ -1009,7 +1825,6 @@ function handleBodyXlsxUpload(event) {
         const rawDate = row[dateCol];
         const weight = parseFloat(row[dateCol + 1]);
         if (!rawDate || isNaN(weight) || weight <= 30) continue;
-
         const dt = parseWorkoutDate(rawDate);
         if (!dt || dt.getFullYear() < 2010) continue;
 
@@ -1043,144 +1858,85 @@ function handleBodyXlsxUpload(event) {
           lBeenV: parseFloat(row[dateCol + 15]) || null,
           rBeenV: parseFloat(row[dateCol + 16]) || null,
           buikV: parseFloat(row[dateCol + 17]) || null,
-          water: parseFloat(row[dateCol + 18]) || null,
-          protein: parseFloat(row[dateCol + 19]) || null,
-          minerals: parseFloat(row[dateCol + 20]) || null
+          water: parseFloat(row[dateCol + 18]) || null
         });
       }
-
       parsed.sort((a, b) => a.date.localeCompare(b.date));
       state.bodyMeasurements = parsed;
       await saveDataset("bodyMeasurements", parsed);
-
-      feedback.textContent = `Succes! ${parsed.length} lichaamsmetingen ingeladen uit tabblad '${sheetName}'.`;
+      scheduleCloudPush();
+      feedback.textContent = `Succes! ${parsed.length} lichaamsmetingen ingeladen.`;
       event.target.value = "";
       refreshAll();
-    } catch (err) {
-      feedback.textContent = "Fout bij lezen Excel: " + err.message;
-    }
+    } catch (err) { feedback.textContent = "Fout bij lezen Excel: " + err.message; }
   };
   reader.readAsArrayBuffer(file);
 }
 
-// === CSV UPLOAD VERWERKING (GARMIN & HEVY) ===
 function handleFileUpload(event, source) {
   const file = event.target.files[0];
   if (!file) return;
-
   const feedback = document.getElementById("uploadFeedback");
-  feedback.textContent = "Bestand verwerken...";
-
-  if (typeof Papa === "undefined") {
-    feedback.textContent = "Fout: CSV-bibliotheek niet geladen.";
-    return;
-  }
-
+  feedback.textContent = "CSV verwerken...";
   Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
+    header: true, skipEmptyLines: true,
     transformHeader: h => h.replace(/^﻿/, "").trim(),
     complete: async function(results) {
       const rows = results.data || [];
       const parsed = [];
-
       for (const r of rows) {
         const rawDate = r.start_time || r.Datum || r.Date || r.startTimeLocal;
         const dt = parseWorkoutDate(rawDate);
         if (!dt) continue;
-
         if (source === "garmin" && dt >= CUTOFF_DATE) continue;
         if (source === "hevy" && dt < CUTOFF_DATE) continue;
 
         const endDt = parseWorkoutDate(r.end_time);
         const setDurationSec = parseFloat(r.duration_seconds) || 0;
-        let workoutDurationMin = 0;
-        if (endDt && endDt > dt) {
-          workoutDurationMin = Math.round((endDt.getTime() - dt.getTime()) / 60000);
-        }
-
-        const rawWeight = r.weight_kg ?? r.Gewicht_KG ?? r.weight ?? "0";
-        const weight = parseFloat(String(rawWeight).replace(",", ".")) || 0;
+        let workoutDurationMin = (endDt && endDt > dt) ? Math.round((endDt.getTime() - dt.getTime()) / 60000) : 0;
+        const weight = parseFloat(String(r.weight_kg ?? r.Gewicht_KG ?? r.weight ?? "0").replace(",", ".")) || 0;
         const reps = parseInt(r.reps ?? r.Herhalingen ?? "0", 10) || 0;
         const rawExercise = String(r.exercise_title || r.OefeningNaam || r.OefeningCategorie || "Onbekend").trim();
-
         const pad = n => String(n).padStart(2, "0");
         const dateDay = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
         const monthKey = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`;
 
         parsed.push({
-          source,
-          dateMs: dt.getTime(),
-          dateDay,
-          monthKey,
+          source, dateMs: dt.getTime(), dateDay, monthKey,
           workoutTitle: String(r.title || r.WorkoutNaam || "Workout").trim(),
-          workoutDurationMin,
-          setDurationSec,
-          rawExercise,
-          weight,
-          reps
+          workoutDurationMin, setDurationSec, rawExercise, weight, reps
         });
       }
-
-      if (source === "garmin") {
-        state.garminSets = parsed;
-        await saveDataset("garmin", parsed);
-      } else {
-        state.hevySets = parsed;
-        await saveDataset("hevy", parsed);
-      }
-
-      const sortedDays = parsed.map(p => p.dateDay).sort();
-      const rangeInfo = sortedDays.length > 0
-        ? ` (${sortedDays[0]} t/m ${sortedDays[sortedDays.length - 1]})`
-        : "";
-
-      feedback.textContent = `Succes! ${parsed.length} sets opgeslagen voor ${source.toUpperCase()}${rangeInfo}.`;
+      if (source === "garmin") { state.garminSets = parsed; await saveDataset("garmin", parsed); scheduleCloudPush(); }
+      else { state.hevySets = parsed; await saveDataset("hevy", parsed); scheduleCloudPush(); }
+      feedback.textContent = `Succes! ${parsed.length} sets opgeslagen voor ${source.toUpperCase()}.`;
       event.target.value = "";
       refreshAll();
-    },
-    error: function(err) {
-      feedback.textContent = "Fout bij lezen CSV: " + err.message;
     }
   });
 }
 
-// === BEREKEN DE FACTOR VAN EEN BLOK ===
 function getSegmentFactor(group, segIdx) {
   if (!group || !Array.isArray(group.segments)) return 1;
   const curSeg = group.segments[segIdx];
   if (!curSeg) return 1;
-
-  if (curSeg.manualFactor !== undefined && curSeg.manualFactor !== null) {
-    return Number(curSeg.manualFactor);
-  }
+  if (curSeg.manualFactor !== undefined && curSeg.manualFactor !== null) return Number(curSeg.manualFactor);
   if (segIdx === group.refSegmentIdx) return 1;
   const refSeg = group.segments[group.refSegmentIdx];
   if (!refSeg || curSeg.medianWeight <= 0) return 1;
-
   const ratio = refSeg.medianWeight / curSeg.medianWeight;
   if (ratio >= 1.5) return 2;
   if (ratio <= 0.67) return 0.5;
   return 1;
 }
 
-// === DATA COMBINEREN, MAPPEN & CORRECTIES TOEPASSEN ===
 function getCombinedSets(skipAllCorrections = false) {
   const all = [...state.garminSets, ...state.hevySets];
-  const activeGroups = skipAllCorrections
-    ? []
-    : (state.pulleyGroups || []).filter(g => g && g.enabled && Array.isArray(g.segments));
-
+  const activeGroups = skipAllCorrections ? [] : (state.pulleyGroups || []).filter(g => g && g.enabled && Array.isArray(g.segments));
   const result = [];
-
   for (const s of all) {
-    const mappedName = (s.source === "garmin" && state.mappings[s.rawExercise])
-      ? state.mappings[s.rawExercise]
-      : s.rawExercise;
-
-    let factor = 1;
-    let hidden = false;
-
+    const mappedName = (s.source === "garmin" && state.mappings[s.rawExercise]) ? state.mappings[s.rawExercise] : s.rawExercise;
+    let factor = 1, hidden = false;
     if (!skipAllCorrections) {
       const ptKey = `${mappedName}|${s.dateDay}`;
       if (Object.prototype.hasOwnProperty.call(state.pointOverrides, ptKey)) {
@@ -1202,155 +1958,88 @@ function getCombinedSets(skipAllCorrections = false) {
         }
       }
     }
-
     if (hidden) continue;
-
     const adjWeight = s.weight * factor;
-    const e1rm = (adjWeight > 0 && s.reps > 0)
-      ? (s.reps === 1 ? adjWeight : adjWeight * (1 + s.reps / 30))
-      : 0;
-
+    const e1rm = (adjWeight > 0 && s.reps > 0) ? (s.reps === 1 ? adjWeight : adjWeight * (1 + s.reps / 30)) : 0;
     result.push({
-      ...s,
-      exercise: mappedName,
-      muscleGroup: classifyMuscleGroup(mappedName),
-      rawWeight: s.weight,
-      appliedFactor: factor,
-      weight: adjWeight,
-      corrected: factor !== 1,
-      volume: adjWeight * s.reps,
-      e1rm
+      ...s, exercise: mappedName, muscleGroup: classifyMuscleGroup(mappedName),
+      rawWeight: s.weight, appliedFactor: factor, weight: adjWeight,
+      corrected: factor !== 1, volume: adjWeight * s.reps, e1rm
     });
   }
-
   return result;
-}
-
-// === STATISTIEK & BASELINE HELPERS ===
-function median(arr) {
-  if (!arr.length) return 0;
-  const s = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
 function upperQuartile(arr) {
   if (!arr.length) return 0;
   const s = [...arr].sort((a, b) => a - b);
-  const idx = Math.min(s.length - 1, Math.floor(s.length * 0.72));
-  return s[idx];
+  return s[Math.min(s.length - 1, Math.floor(s.length * 0.72))];
 }
 
 function computeRollingBaseline(timeline, metricKey) {
   const n = timeline.length;
-  const windowHalf = 5;
   return timeline.map((entry, i) => {
-    const start = Math.max(0, i - windowHalf);
-    const end = Math.min(n, i + windowHalf + 1);
     const slice = [];
-    for (let j = start; j < end; j++) {
-      const val = timeline[j][metricKey];
-      if (val > 0) slice.push(val);
+    for (let j = Math.max(0, i - 5); j < Math.min(n, i + 6); j++) {
+      if (timeline[j][metricKey] > 0) slice.push(timeline[j][metricKey]);
     }
     const base = slice.length > 0 ? upperQuartile(slice) : entry[metricKey];
-    return {
-      base,
-      low: base * 0.65,
-      high: base * 1.45
-    };
+    return { base, low: base * 0.65, high: base * 1.45 };
   });
 }
 
-// === KATROL-DETECTIE ===
 function autoDetectPulleyGroups() {
   const rawSets = getCombinedSets(true);
   const byEx = {};
-
   for (const s of rawSets) {
     if (s.weight <= 0) continue;
     if (!byEx[s.exercise]) byEx[s.exercise] = {};
     byEx[s.exercise][s.dateDay] = Math.max(byEx[s.exercise][s.dateDay] || 0, s.weight);
   }
-
   state.pulleyGroups = state.pulleyGroups.filter(g => g && g.isManual);
   let foundGroups = 0;
-
   for (const [exercise, dayMap] of Object.entries(byEx)) {
     const days = Object.keys(dayMap).sort();
     if (days.length < 12) continue;
-
     const splitIndices = [];
     for (let i = 6; i <= days.length - 6; i++) {
-      const prevWeights = days.slice(i - 6, i).map(d => dayMap[d]);
-      const nextWeights = days.slice(i, i + 6).map(d => dayMap[d]);
-
-      const uqBefore = upperQuartile(prevWeights);
-      const uqAfter = upperQuartile(nextWeights);
+      const uqBefore = upperQuartile(days.slice(i - 6, i).map(d => dayMap[d]));
+      const uqAfter = upperQuartile(days.slice(i, i + 6).map(d => dayMap[d]));
       if (uqBefore <= 0 || uqAfter <= 0) continue;
-
       const ratio = uqAfter / uqBefore;
-      if ((ratio >= 1.65 && ratio <= 2.45) || (ratio >= 0.40 && ratio <= 0.62)) {
-        splitIndices.push(i);
-        i += 5;
-      }
+      if ((ratio >= 1.65 && ratio <= 2.45) || (ratio >= 0.40 && ratio <= 0.62)) { splitIndices.push(i); i += 5; }
     }
-
     if (splitIndices.length > 0) {
       const segments = [];
       let startIdx = 0;
       const boundaries = [...splitIndices, days.length];
-
       for (let b = 0; b < boundaries.length; b++) {
         const endIdx = boundaries[b] - 1;
         const sliceDays = days.slice(startIdx, endIdx + 1);
-        const sliceWeights = sliceDays.map(d => dayMap[d]);
         segments.push({
-          startDay: sliceDays[0],
-          endDay: sliceDays[sliceDays.length - 1],
-          sessionCount: sliceDays.length,
-          medianWeight: upperQuartile(sliceWeights)
+          startDay: sliceDays[0], endDay: sliceDays[sliceDays.length - 1],
+          sessionCount: sliceDays.length, medianWeight: upperQuartile(sliceDays.map(d => dayMap[d]))
         });
         startIdx = boundaries[b];
       }
-
       state.pulleyGroups.push({
         id: "grp_" + Date.now() + "_" + Math.floor(Math.random() * 100000),
-        exercise,
-        enabled: true,
-        refSegmentIdx: segments.length - 1,
-        segments
+        exercise, enabled: true, refSegmentIdx: segments.length - 1, segments
       });
       foundGroups++;
     }
   }
-
-  savePulleyGroups();
-  const msg = document.getElementById("pulleyScanMsg");
-  msg.textContent = foundGroups > 0
-    ? `${foundGroups} oefening(en) met grote katrol-wissel gevonden!`
-    : "Geen grote structurele katrol-wissels gevonden.";
+  localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+  scheduleCloudPush();
+  document.getElementById("pulleyScanMsg").textContent = foundGroups > 0 ? `${foundGroups} oefening(en) gevonden!` : "Geen grote wissels gevonden.";
   refreshAll();
 }
 
-function savePulleyGroups() {
-  localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
-}
-
-function savePointOverrides() {
-  localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
-}
-
-// =========================================================================
-// TOTAALBEELD LOGICA (AGGREGATIE PER MAAND / KWARTAAL / JAAR + METINGEN)
-// =========================================================================
 function getBucketKey(ymd, gran) {
   const [y, m] = ymd.split("-");
   if (gran === "year") return y;
-  if (gran === "quarter") {
-    const q = Math.floor((Number(m) - 1) / 3) + 1;
-    return `${y}-Q${q}`;
-  }
-  return `${y}-${m}`; // month
+  if (gran === "quarter") return `${y}-Q${Math.floor((Number(m) - 1) / 3) + 1}`;
+  return `${y}-${m}`;
 }
 
 function formatBucketLabel(key, gran) {
@@ -1363,25 +2052,10 @@ function formatBucketLabel(key, gran) {
 
 function renderOverviewDashboard(sets) {
   const gran = state.ovGranularity;
-  document.getElementById("ovPeriodBadge").textContent =
-    gran === "month" ? "Per Maand" : (gran === "quarter" ? "Per Kwartaal" : "Per Jaar");
-
-  // 1. Verzamel alle unieke buckets uit zowel trainingen als lichaamsmetingen
+  document.getElementById("ovPeriodBadge").textContent = gran === "month" ? "Per Maand" : (gran === "quarter" ? "Per Kwartaal" : "Per Jaar");
   const bucketMap = {};
   const ensureBucket = k => {
-    if (!bucketMap[k]) {
-      bucketMap[k] = {
-        key: k,
-        days: new Set(),
-        dayDurations: {},
-        volumeKg: 0,
-        setsCount: 0,
-        repsCount: 0,
-        musclesSets: {},
-        musclesVol: {},
-        bodyEntries: []
-      };
-    }
+    if (!bucketMap[k]) bucketMap[k] = { key: k, days: new Set(), dayDurations: {}, volumeKg: 0, setsCount: 0, repsCount: 0, musclesSets: {}, musclesVol: {}, bodyEntries: [], foodDays: [] };
     return bucketMap[k];
   };
 
@@ -1389,111 +2063,60 @@ function renderOverviewDashboard(sets) {
     const k = getBucketKey(s.dateDay, gran);
     const b = ensureBucket(k);
     b.days.add(s.dateDay);
-    if (s.workoutDurationMin > 0) {
-      b.dayDurations[s.dateDay] = Math.max(b.dayDurations[s.dateDay] || 0, s.workoutDurationMin);
-    } else if (s.setDurationSec > 0) {
-      b.dayDurations[s.dateDay] = (b.dayDurations[s.dateDay] || 0) + (s.setDurationSec / 60);
-    }
-    b.volumeKg += s.volume;
-    b.setsCount += 1;
-    b.repsCount += s.reps;
-
-    const mg = s.muscleGroup;
-    b.musclesSets[mg] = (b.musclesSets[mg] || 0) + 1;
-    b.musclesVol[mg] = (b.musclesVol[mg] || 0) + (s.volume / 1000);
+    if (s.workoutDurationMin > 0) b.dayDurations[s.dateDay] = Math.max(b.dayDurations[s.dateDay] || 0, s.workoutDurationMin);
+    b.volumeKg += s.volume; b.setsCount += 1; b.repsCount += s.reps;
+    b.musclesSets[s.muscleGroup] = (b.musclesSets[s.muscleGroup] || 0) + 1;
+    b.musclesVol[s.muscleGroup] = (b.musclesVol[s.muscleGroup] || 0) + (s.volume / 1000);
   }
-
-  for (const m of state.bodyMeasurements) {
-    const k = getBucketKey(m.date, gran);
-    const b = ensureBucket(k);
-    b.bodyEntries.push(m);
+  for (const m of state.bodyMeasurements) ensureBucket(getBucketKey(m.date, gran)).bodyEntries.push(m);
+  for (const [fDate, fLog] of Object.entries(state.foodLogs)) {
+    const t = computeDayNutrition(fDate);
+    if (t.touched) ensureBucket(getBucketKey(fDate, gran)).foodDays.push(t);
   }
 
   const allKeys = Object.keys(bucketMap).sort();
-  // Bepaal zichtbaar venster (bijv. 12 maanden, 8 kwartalen, of alle jaren)
   const windowSize = gran === "month" ? 12 : (gran === "quarter" ? 8 : 10);
-  const maxOffset = Math.max(0, allKeys.length - windowSize);
-  state.ovOffset = Math.min(state.ovOffset, maxOffset);
-
+  state.ovOffset = Math.min(state.ovOffset, Math.max(0, allKeys.length - windowSize));
   const endIdx = allKeys.length - state.ovOffset;
   const startIdx = Math.max(0, endIdx - windowSize);
   const visibleKeys = allKeys.slice(startIdx, endIdx);
 
   document.getElementById("ovPrevBtn").disabled = startIdx === 0;
   document.getElementById("ovNextBtn").disabled = state.ovOffset === 0;
-  document.getElementById("ovRangeLabel").textContent = visibleKeys.length > 0
-    ? `${formatBucketLabel(visibleKeys[0], gran)} – ${formatBucketLabel(visibleKeys[visibleKeys.length - 1], gran)}`
-    : "Geen data";
+  document.getElementById("ovRangeLabel").textContent = visibleKeys.length > 0 ? `${formatBucketLabel(visibleKeys[0], gran)} – ${formatBucketLabel(visibleKeys[visibleKeys.length - 1], gran)}` : "Geen data";
 
-  // 2. KPI's over zichtbare periode berekenen
-  let totalSessions = 0;
-  let totalMinutes = 0;
-  let totalVolKg = 0;
-  let totalSets = 0;
-  let totalReps = 0;
+  let totalSessions = 0, totalMinutes = 0, totalVolKg = 0, totalSets = 0, totalReps = 0;
   const visibleBody = [];
-
   visibleKeys.forEach(k => {
     const b = bucketMap[k];
-    const sessCount = b.days.size;
-    totalSessions += sessCount;
-    let mins = 0;
-    b.days.forEach(d => {
-      mins += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; // Fallback ~55 min als horloge geen eindtijd gaf
-    });
-    totalMinutes += mins;
-    totalVolKg += b.volumeKg;
-    totalSets += b.setsCount;
-    totalReps += b.repsCount;
+    totalSessions += b.days.size;
+    let mins = 0; b.days.forEach(d => { mins += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; });
+    totalMinutes += mins; totalVolKg += b.volumeKg; totalSets += b.setsCount; totalReps += b.repsCount;
     visibleBody.push(...b.bodyEntries);
   });
 
   const weeksApprox = visibleKeys.length * (gran === "month" ? 4.33 : (gran === "quarter" ? 13 : 52));
-  const perWeek = weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0";
-
   document.getElementById("ovKpiSessions").textContent = `${totalSessions}×`;
-  document.getElementById("ovKpiMinutes").textContent = `${Math.round(totalMinutes / 60)} uur · ${perWeek}/wk`;
+  document.getElementById("ovKpiMinutes").textContent = `${Math.round(totalMinutes / 60)} uur · ${(weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0")}/wk`;
   document.getElementById("ovKpiVolume").textContent = `${(totalVolKg / 1000).toFixed(1)} t`;
   document.getElementById("ovKpiSetsReps").textContent = `${totalSets} sets · ${totalReps.toLocaleString("nl-NL")} reps`;
 
   visibleBody.sort((a, b) => a.date.localeCompare(b.date));
   if (visibleBody.length >= 2) {
-    const first = visibleBody[0];
-    const last = visibleBody[visibleBody.length - 1];
+    const first = visibleBody[0], last = visibleBody[visibleBody.length - 1];
     const dSmm = (last.smm && first.smm) ? (last.smm - first.smm) : null;
     const dFat = (last.fatMass && first.fatMass) ? (last.fatMass - first.fatMass) : null;
-    document.getElementById("ovKpiBodyDelta").innerHTML = dSmm !== null
-      ? `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`
-      : "-";
-    document.getElementById("ovKpiFatDelta").textContent = dFat !== null
-      ? `Vet: ${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg`
-      : `${visibleBody.length} metingen`;
-  } else if (visibleBody.length === 1) {
-    document.getElementById("ovKpiBodyDelta").textContent = `${visibleBody[0].smm ?? "-"} kg`;
-    document.getElementById("ovKpiFatDelta").textContent = "1 meting in periode";
+    document.getElementById("ovKpiBodyDelta").innerHTML = dSmm !== null ? `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>` : "-";
+    document.getElementById("ovKpiFatDelta").textContent = dFat !== null ? `Vet: ${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg` : `${visibleBody.length} metingen`;
   } else {
     document.getElementById("ovKpiBodyDelta").textContent = "-";
     document.getElementById("ovKpiFatDelta").textContent = "Geen metingen";
   }
 
-  // 3. Dual-Axis Grafiek (Trainingsinspanning vs. Lichaamsmeting)
   const trainMetric = document.getElementById("ovTrainMetric").value;
   const bodyMetric = document.getElementById("ovBodyMetric").value;
-
-  const trainLabels = {
-    volume: "Volume (ton)",
-    sessions: "Workouts",
-    minutes: "Minuten",
-    sets: "Sets",
-    reps: "Reps"
-  };
-  const bodyLabels = {
-    smm: "Skeletspier (kg)",
-    fatMass: "Vetmassa (kg)",
-    fatPct: "Vetpercentage (%)",
-    weight: "Gewicht (kg)",
-    smmPct: "Spierpercentage (%)"
-  };
+  const trainLabels = { volume: "Volume (ton)", sessions: "Workouts", minutes: "Minuten", sets: "Sets", reps: "Reps", avgKcal: "Gem. Kcal/dag", avgProtein: "Gem. Eiwit (g/dag)" };
+  const bodyLabels = { smm: "Skeletspier (kg)", fatMass: "Vetmassa (kg)", fatPct: "Vetpercentage (%)", weight: "Gewicht (kg)", smmPct: "Spierpercentage (%)" };
 
   const labels = visibleKeys.map(k => formatBucketLabel(k, gran));
   const trainData = visibleKeys.map(k => {
@@ -1502,190 +2125,91 @@ function renderOverviewDashboard(sets) {
     if (trainMetric === "sessions") return b.days.size;
     if (trainMetric === "sets") return b.setsCount;
     if (trainMetric === "reps") return b.repsCount;
-    if (trainMetric === "minutes") {
-      let m = 0;
-      b.days.forEach(d => { m += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; });
-      return m;
-    }
+    if (trainMetric === "minutes") { let m = 0; b.days.forEach(d => { m += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; }); return m; }
+    if (trainMetric === "avgKcal") return b.foodDays.length > 0 ? Math.round(b.foodDays.reduce((a, c) => a + c.kcal, 0) / b.foodDays.length) : null;
+    if (trainMetric === "avgProtein") return b.foodDays.length > 0 ? Math.round(b.foodDays.reduce((a, c) => a + c.p, 0) / b.foodDays.length) : null;
     return 0;
   });
 
   const bodyData = visibleKeys.map(k => {
     const entries = bucketMap[k].bodyEntries;
     if (!entries || entries.length === 0) return null;
-    // Gebruik het gemiddelde van de metingen binnen dat tijdvak
     const vals = entries.map(e => e[bodyMetric]).filter(v => v !== null && !isNaN(v));
-    if (vals.length === 0) return null;
-    const avg = vals.reduce((a, c) => a + c, 0) / vals.length;
-    return Number(avg.toFixed(1));
+    return vals.length > 0 ? Number((vals.reduce((a, c) => a + c, 0) / vals.length).toFixed(1)) : null;
   });
 
   const ctx1 = document.getElementById("ovCorrelationChart").getContext("2d");
   if (ovCorrChartInstance) ovCorrChartInstance.destroy();
-
   ovCorrChartInstance = new Chart(ctx1, {
     data: {
       labels,
       datasets: [
-        {
-          type: "bar",
-          label: trainLabels[trainMetric],
-          data: trainData,
-          backgroundColor: "rgba(56, 189, 248, 0.55)",
-          borderColor: "#38bdf8",
-          borderWidth: 1,
-          borderRadius: 5,
-          yAxisID: "y"
-        },
-        {
-          type: "line",
-          label: bodyLabels[bodyMetric],
-          data: bodyData,
-          borderColor: "#ec4899",
-          backgroundColor: "#ec4899",
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          borderWidth: 2.5,
-          spanGaps: true,
-          tension: 0.25,
-          yAxisID: "y1"
-        }
+        { type: "bar", label: trainLabels[trainMetric], data: trainData, backgroundColor: "rgba(56, 189, 248, 0.55)", borderColor: "#38bdf8", borderWidth: 1, borderRadius: 5, yAxisID: "y" },
+        { type: "line", label: bodyLabels[bodyMetric], data: bodyData, borderColor: "#ec4899", backgroundColor: "#ec4899", pointRadius: 5, borderWidth: 2.5, spanGaps: true, tension: 0.25, yAxisID: "y1" }
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
-      plugins: {
-        legend: { labels: { color: "#f8fafc", boxWidth: 12, font: { size: 11 } } },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.95)",
-          borderColor: "#334155",
-          borderWidth: 1
-        }
-      },
+      responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 12, font: { size: 11 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
       scales: {
         x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
-        y: {
-          type: "linear",
-          position: "left",
-          ticks: { color: "#38bdf8", font: { size: 10 } },
-          grid: { color: "#334155" }
-        },
-        y1: {
-          type: "linear",
-          position: "right",
-          ticks: { color: "#ec4899", font: { size: 10 } },
-          grid: { drawOnChartArea: false }
-        }
+        y: { type: "linear", position: "left", ticks: { color: "#38bdf8", font: { size: 10 } }, grid: { color: "#334155" } },
+        y1: { type: "linear", position: "right", ticks: { color: "#ec4899", font: { size: 10 } }, grid: { drawOnChartArea: false } }
       }
     }
   });
 
-  // 4. Gestapelde Spiergroepen Grafiek
   const muscleGroups = ["Borst", "Rug", "Benen", "Schouders", "Armen", "Core"];
-  const muscleColors = {
-    Borst: "#38bdf8",
-    Rug: "#10b981",
-    Benen: "#f59e0b",
-    Schouders: "#c084fc",
-    Armen: "#ec4899",
-    Core: "#94a3b8"
-  };
-
+  const muscleColors = { Borst: "#38bdf8", Rug: "#10b981", Benen: "#f59e0b", Schouders: "#c084fc", Armen: "#ec4899", Core: "#94a3b8" };
   const muscleDatasets = muscleGroups.map(mg => ({
     label: mg,
-    data: visibleKeys.map(k => {
-      const b = bucketMap[k];
-      const val = state.ovMuscleMetric === "sets" ? (b.musclesSets[mg] || 0) : (b.musclesVol[mg] || 0);
-      return Number(val.toFixed(1));
-    }),
-    backgroundColor: muscleColors[mg],
-    borderRadius: 3
+    data: visibleKeys.map(k => Number((state.ovMuscleMetric === "sets" ? (bucketMap[k].musclesSets[mg] || 0) : (bucketMap[k].musclesVol[mg] || 0)).toFixed(1))),
+    backgroundColor: muscleColors[mg], borderRadius: 3
   }));
 
   const ctx2 = document.getElementById("ovMuscleChart").getContext("2d");
   if (ovMuscleChartInstance) ovMuscleChartInstance.destroy();
-
   ovMuscleChartInstance = new Chart(ctx2, {
-    type: "bar",
-    data: { labels, datasets: muscleDatasets },
+    type: "bar", data: { labels, datasets: muscleDatasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
-      plugins: {
-        legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.95)",
-          borderColor: "#334155",
-          borderWidth: 1
-        }
-      },
-      scales: {
-        x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } }
-      }
+      responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
+      scales: { x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } } }
     }
   });
 }
 
-// =========================================================================
-// LICHAAMSMETINGEN TABBLAD RENDEREN
-// =========================================================================
 function renderBodyMeasurementsTab() {
   const list = [...state.bodyMeasurements].sort((a, b) => a.date.localeCompare(b.date));
   document.getElementById("bmCountLabel").textContent = list.length;
-  document.getElementById("bodyFileStatus").textContent = list.length > 0
-    ? `${list.length} metingen opgeslagen (${formatShortNL(list[0].date)} t/m ${formatShortNL(list[list.length - 1].date)})`
-    : "Nog geen lichaamsmetingen geladen";
+  document.getElementById("bodyFileStatus").textContent = list.length > 0 ? `${list.length} metingen opgeslagen` : "Nog geen metingen";
   const clearBodyBtn = document.getElementById("btnClearBodyData");
   if (clearBodyBtn) clearBodyBtn.style.display = list.length > 0 ? "inline-block" : "none";
 
-  // KPI's (laatste meting + verschil t.o.v. eerste meting)
   if (list.length > 0) {
-    const first = list[0];
-    const last = list[list.length - 1];
-
+    const first = list[0], last = list[list.length - 1];
     const dW = (last.weight - first.weight).toFixed(1);
     document.getElementById("bodyKpiWeight").textContent = `${last.weight} kg`;
-    document.getElementById("bodyKpiWeightSub").textContent = list.length > 1
-      ? `${dW >= 0 ? "+" : ""}${dW} kg sinds start`
-      : formatShortNL(last.date);
-
+    document.getElementById("bodyKpiWeightSub").textContent = list.length > 1 ? `${dW >= 0 ? "+" : ""}${dW} kg sinds start` : formatShortNL(last.date);
     if (last.smm) {
       const dS = first.smm ? (last.smm - first.smm).toFixed(1) : null;
       document.getElementById("bodyKpiSmm").textContent = `${last.smm} kg`;
-      document.getElementById("bodyKpiSmmSub").innerHTML = dS !== null
-        ? `<span class="${Number(dS) >= 0 ? "delta-pos" : "delta-neg"}">${Number(dS) >= 0 ? "+" : ""}${dS} kg</span> (${last.smmPct ?? "-"}%)`
-        : `${last.smmPct ?? "-"}%`;
-    } else {
-      document.getElementById("bodyKpiSmm").textContent = "-";
-    }
-
+      document.getElementById("bodyKpiSmmSub").innerHTML = dS !== null ? `<span class="${Number(dS) >= 0 ? "delta-pos" : "delta-neg"}">${Number(dS) >= 0 ? "+" : ""}${dS} kg</span>` : "";
+    } else { document.getElementById("bodyKpiSmm").textContent = "-"; }
     if (last.fatMass) {
       const dF = first.fatMass ? (last.fatMass - first.fatMass).toFixed(1) : null;
       document.getElementById("bodyKpiFat").textContent = `${last.fatMass} kg`;
-      document.getElementById("bodyKpiFatSub").innerHTML = dF !== null
-        ? `<span class="${Number(dF) <= 0 ? "delta-pos" : "delta-neg"}">${Number(dF) >= 0 ? "+" : ""}${dF} kg</span> (${last.fatPct ?? "-"}%)`
-        : `${last.fatPct ?? "-"}%`;
-    } else {
-      document.getElementById("bodyKpiFat").textContent = "-";
-    }
+      document.getElementById("bodyKpiFatSub").innerHTML = dF !== null ? `<span class="${Number(dF) <= 0 ? "delta-pos" : "delta-neg"}">${Number(dF) >= 0 ? "+" : ""}${dF} kg</span>` : "";
+    } else { document.getElementById("bodyKpiFat").textContent = "-"; }
   } else {
     document.getElementById("bodyKpiWeight").textContent = "-";
-    document.getElementById("bodyKpiWeightSub").textContent = "Laad Excel of voer in";
     document.getElementById("bodyKpiSmm").textContent = "-";
     document.getElementById("bodyKpiFat").textContent = "-";
   }
 
-  // Grafiek 1: Kernwaarden (kg of %)
   const labels = list.map(m => formatShortNL(m.date));
   const ctxMain = document.getElementById("bodyMainChart").getContext("2d");
   if (bodyMainChartInstance) bodyMainChartInstance.destroy();
-
   const mainDatasets = state.bodyMainMode === "kg"
     ? [
         { label: "Gewicht (kg)", data: list.map(m => m.weight), borderColor: "#94a3b8", tension: 0.25, pointRadius: 4 },
@@ -1696,353 +2220,167 @@ function renderBodyMeasurementsTab() {
         { label: "Spierpercentage (%)", data: list.map(m => m.smmPct), borderColor: "#10b981", tension: 0.25, pointRadius: 4 },
         { label: "Vetpercentage (%)", data: list.map(m => m.fatPct), borderColor: "#ec4899", tension: 0.25, pointRadius: 4 }
       ];
-
   bodyMainChartInstance = new Chart(ctxMain, {
-    type: "line",
-    data: { labels, datasets: mainDatasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
-      plugins: {
-        legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 11 } } },
-        tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", borderColor: "#334155", borderWidth: 1 }
-      },
-      scales: {
-        x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
-        y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } }
-      }
-    }
+    type: "line", data: { labels, datasets: mainDatasets },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 11 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } }, scales: { x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } }, y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } } } }
   });
 
-  // Grafiek 1B: Lichaamswater (L) met blauwe lijn
   const ctxWater = document.getElementById("bodyWaterChart").getContext("2d");
   if (bodyWaterChartInstance) bodyWaterChartInstance.destroy();
   const waterVals = list.map(m => m.water);
   const validWaters = waterVals.filter(v => v !== null && v !== undefined && !isNaN(v));
   document.getElementById("waterBadge").textContent = validWaters.length > 0 ? `${validWaters[validWaters.length - 1]} L` : "- L";
-
   bodyWaterChartInstance = new Chart(ctxWater, {
     type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Lichaamswater (L)",
-          data: waterVals,
-          borderColor: "#38bdf8",
-          backgroundColor: "rgba(56, 189, 248, 0.14)",
-          pointBackgroundColor: "#38bdf8",
-          pointBorderColor: "#38bdf8",
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          fill: true,
-          tension: 0.25,
-          spanGaps: true
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
-      plugins: {
-        legend: { display: false },
-        tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", borderColor: "#38bdf8", borderWidth: 1 }
-      },
-      scales: {
-        x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
-        y: {
-          title: { display: true, text: "Liters (L)", color: "#38bdf8", font: { size: 10 } },
-          ticks: { color: "#38bdf8" },
-          grid: { color: "#334155" }
-        }
-      }
-    }
+    data: { labels, datasets: [{ label: "Lichaamswater (L)", data: waterVals, borderColor: "#38bdf8", backgroundColor: "rgba(56, 189, 248, 0.14)", pointBackgroundColor: "#38bdf8", pointRadius: 4, fill: true, tension: 0.25, spanGaps: true }] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } }, scales: { x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } }, y: { ticks: { color: "#38bdf8" }, grid: { color: "#334155" } } } }
   });
 
-  // Hulpfunctie voor Dual-Axis Segmentale Grafieken (Links = Spier, Rechts = Vet)
   function createDualAxisSegChart(canvasId, prevInstance, datasets) {
     const ctx = document.getElementById(canvasId).getContext("2d");
     if (prevInstance) prevInstance.destroy();
     return new Chart(ctx, {
-      type: "line",
-      data: { labels, datasets },
+      type: "line", data: { labels, datasets },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
-        plugins: {
-          legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
-          tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", borderColor: "#334155", borderWidth: 1 }
-        },
+        responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
         scales: {
           x: { ticks: { color: "#94a3b8", maxTicksLimit: 6, font: { size: 10 } }, grid: { color: "#1e293b" } },
-          y: {
-            type: "linear",
-            position: "left",
-            title: { display: true, text: "Spier (kg)", color: "#10b981", font: { size: 10 } },
-            ticks: { color: "#10b981", font: { size: 10 } },
-            grid: { color: "#334155" }
-          },
-          y1: {
-            type: "linear",
-            position: "right",
-            title: { display: true, text: "Vet (kg)", color: "#ec4899", font: { size: 10 } },
-            ticks: { color: "#ec4899", font: { size: 10 } },
-            grid: { drawOnChartArea: false }
-          }
+          y: { type: "linear", position: "left", ticks: { color: "#10b981", font: { size: 10 } }, grid: { color: "#334155" } },
+          y1: { type: "linear", position: "right", ticks: { color: "#ec4899", font: { size: 10 } }, grid: { drawOnChartArea: false } }
         }
       }
     });
   }
 
-  // Grafiek 2A: Armen (Spier L/R op linker as, Vet L/R op rechter as)
   bodySegArmsChartInstance = createDualAxisSegChart("bodySegArmsChart", bodySegArmsChartInstance, [
     { label: "L-Arm Spier", data: list.map(m => m.lArmS), borderColor: "#10b981", tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
     { label: "R-Arm Spier", data: list.map(m => m.rArmS), borderColor: "#38bdf8", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
     { label: "L-Arm Vet", data: list.map(m => m.lArmV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true },
     { label: "R-Arm Vet", data: list.map(m => m.rArmV), borderColor: "#f59e0b", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true }
   ]);
-
-  // Grafiek 2B: Benen (Spier L/R op linker as, Vet L/R op rechter as)
   bodySegLegsChartInstance = createDualAxisSegChart("bodySegLegsChart", bodySegLegsChartInstance, [
     { label: "L-Been Spier", data: list.map(m => m.lBeenS), borderColor: "#10b981", tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
     { label: "R-Been Spier", data: list.map(m => m.rBeenS), borderColor: "#38bdf8", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y", spanGaps: true },
     { label: "L-Been Vet", data: list.map(m => m.lBeenV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true },
     { label: "R-Been Vet", data: list.map(m => m.rBeenV), borderColor: "#f59e0b", borderDash: [4, 3], tension: 0.25, pointRadius: 3, yAxisID: "y1", spanGaps: true }
   ]);
-
-  // Grafiek 2C: Romp / Buik (Spier op linker as, Vet op rechter as)
   bodySegTrunkChartInstance = createDualAxisSegChart("bodySegTrunkChart", bodySegTrunkChartInstance, [
     { label: "Romp Spier", data: list.map(m => m.buikS), borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.1)", fill: true, tension: 0.25, pointRadius: 3.5, yAxisID: "y", spanGaps: true },
     { label: "Romp Vet", data: list.map(m => m.buikV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3.5, yAxisID: "y1", spanGaps: true }
   ]);
 
-  // Tabel vullen (nieuwste bovenaan)
-  const tbody = document.getElementById("bmTableBody");
-  const reversed = [...list].reverse();
-  tbody.innerHTML = reversed.map(m => {
-    const badgeCls = m.scanner.toLowerCase().includes("evolt") ? "scanner-evolt" : "scanner-inbody";
+  document.getElementById("bmTableBody").innerHTML = [...list].reverse().map(m => `
+    <tr>
+      <td>${formatShortNL(m.date)}</td>
+      <td><span class="scanner-pill ${m.scanner.toLowerCase().includes("evolt") ? "scanner-evolt" : "scanner-inbody"}">${escapeHtml(m.scanner)}</span></td>
+      <td>${m.weight} kg</td>
+      <td>${m.smm ?? "-"} kg</td>
+      <td>${m.fatMass ?? "-"} kg (${m.fatPct ?? "-"}%)</td>
+      <td style="color:var(--accent);">${m.water ? m.water + " L" : "-"}</td>
+      <td><button type="button" class="btn-sm" data-del-bm="${escapeHtml(m.date)}" style="color:var(--danger); padding:2px 6px;">✕</button></td>
+    </tr>
+  `).join("");
+}
+
+function renderPulleyGroupsUI(allExercises) {
+  const container = document.getElementById("pulleyGroupsContainer");
+  if (!state.pulleyGroups || state.pulleyGroups.length === 0) {
+    container.innerHTML = `<div style="font-size:0.78rem; color:var(--muted);">Geen blok-regels actief.</div>`;
+    return;
+  }
+  container.innerHTML = state.pulleyGroups.map(grp => {
+    if (!grp || !Array.isArray(grp.segments)) return "";
+    const segmentsHtml = grp.segments.map((seg, idx) => {
+      const isRef = idx === grp.refSegmentIdx && !grp.isManual;
+      const factor = getSegmentFactor(grp, idx);
+      return `
+        <div class="seg-option ${isRef ? "is-ref" : (factor !== 1 ? "is-adjusted" : "")}" data-action="set-ref" data-gid="${escapeHtml(grp.id)}" data-sidx="${idx}">
+          <div><strong>${formatShortNL(seg.startDay)} t/m ${formatShortNL(seg.endDay)}</strong></div>
+          <div>${isRef ? "✓ Juist (1×)" : `Wordt ${factor === 2 ? "× 2" : "÷ 2"}`}</div>
+        </div>
+      `;
+    }).join("");
     return `
-      <tr>
-        <td>${formatShortNL(m.date)}</td>
-        <td><span class="scanner-pill ${badgeCls}">${escapeHtml(m.scanner)}</span></td>
-        <td>${m.weight} kg</td>
-        <td>${m.smm ?? "-"} kg</td>
-        <td>${m.fatMass ?? "-"} kg (${m.fatPct ?? "-"}%)</td>
-        <td style="color:var(--accent);">${m.water ? m.water + " L" : "-"}</td>
-        <td><button type="button" class="btn-sm" data-del-bm="${escapeHtml(m.date)}" style="color:var(--danger); padding:2px 6px;">✕</button></td>
-      </tr>
+      <div class="pulley-group">
+        <div class="pulley-group-header">
+          <span class="pulley-title">${escapeHtml(grp.exercise)}</span>
+          <button type="button" class="btn-sm" data-action="del-grp" data-gid="${escapeHtml(grp.id)}" style="color:var(--danger); padding:3px 7px;">✕</button>
+        </div>
+        ${segmentsHtml}
+      </div>
     `;
   }).join("");
 }
 
-// =========================================================================
-// BESTAANDE OEFENINGEN & INSTELLINGEN UI
-// =========================================================================
-function renderPulleyGroupsUI(allExercises) {
-  const container = document.getElementById("pulleyGroupsContainer");
-  const manualSelect = document.getElementById("manualPulleyEx");
-
-  const favEx = allExercises.filter(ex => state.favorites.includes(ex)).sort();
-  const otherEx = allExercises.filter(ex => !state.favorites.includes(ex)).sort();
-
-  let manualOptionsHtml = "";
-  if (favEx.length > 0) {
-    manualOptionsHtml += `<optgroup label="★ Favorieten">` +
-      favEx.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)}</option>`).join("") +
-      `</optgroup>`;
-  }
-  manualOptionsHtml += `<optgroup label="Alle oefeningen">` +
-    otherEx.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)}</option>`).join("") +
-    `</optgroup>`;
-  manualSelect.innerHTML = manualOptionsHtml;
-
-  if (!state.pulleyGroups || state.pulleyGroups.length === 0) {
-    container.innerHTML = `<div style="font-size:0.78rem; color:var(--muted);">Nog geen grote blok-regels actief.</div>`;
-  } else {
-    const sortedGroups = [...state.pulleyGroups].sort((a, b) => {
-      const aFav = state.favorites.includes(a?.exercise) ? 1 : 0;
-      const bFav = state.favorites.includes(b?.exercise) ? 1 : 0;
-      return bFav - aFav;
-    });
-
-    container.innerHTML = sortedGroups.map(grp => {
-      if (!grp || !Array.isArray(grp.segments)) return "";
-      const isFav = state.favorites.includes(grp.exercise);
-      const starBadge = isFav ? `<span style="color:var(--star); margin-right:4px;">★</span>` : "";
-
-      const segmentsHtml = grp.segments.map((seg, idx) => {
-        const isRef = idx === grp.refSegmentIdx && !grp.isManual;
-        const factor = getSegmentFactor(grp, idx);
-        const medTxt = seg.medianWeight > 0 ? ` · werkgewicht ~${seg.medianWeight.toFixed(1)} kg` : "";
-        const countTxt = seg.sessionCount ? ` (${seg.sessionCount}×)` : "";
-
-        let badgeHtml = "";
-        let cls = "";
-        if (factor === 0) {
-          badgeHtml = `<span class="seg-badge-adj" style="color:var(--danger);">Verborgen</span>`;
-        } else if (isRef) {
-          badgeHtml = `<span class="seg-badge-ref">✓ Juist (1×)</span>`;
-          cls = "is-ref";
-        } else if (factor !== 1) {
-          badgeHtml = `<span class="seg-badge-adj">Wordt ${factor === 2 ? "× 2" : "÷ 2"}</span>`;
-          cls = "is-adjusted";
-        } else {
-          badgeHtml = `<span class="seg-badge-adj" style="opacity:0.6;">1×</span>`;
-        }
-
-        return `
-          <div class="seg-option ${cls}" data-action="set-ref" data-gid="${escapeHtml(grp.id)}" data-sidx="${idx}">
-            <div>
-              <strong>${formatShortNL(seg.startDay)} t/m ${formatShortNL(seg.endDay)}</strong>
-              <div style="color:var(--muted); font-size:0.72rem;">${medTxt}${countTxt}</div>
-            </div>
-            ${badgeHtml}
-          </div>
-        `;
-      }).join("");
-
-      return `
-        <div class="pulley-group">
-          <div class="pulley-group-header">
-            <span class="pulley-title">${starBadge}${escapeHtml(grp.exercise)}</span>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <input type="checkbox" data-action="toggle-grp" data-gid="${escapeHtml(grp.id)}" ${grp.enabled ? "checked" : ""} style="width:17px; height:17px; accent-color:var(--accent);" />
-              <button type="button" class="btn-sm" data-action="del-grp" data-gid="${escapeHtml(grp.id)}" style="color:var(--danger); padding:3px 7px;">✕</button>
-            </div>
-          </div>
-          ${segmentsHtml}
-        </div>
-      `;
-    }).join("");
-  }
-
-  const ptKeys = Object.keys(state.pointOverrides);
-  const ptBox = document.getElementById("singlePointRulesBox");
-  if (ptKeys.length > 0) {
-    ptBox.innerHTML = `
-      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-        <span>${ptKeys.length} individuele stip-aanpassing(en) actief</span>
-        <button type="button" class="btn-sm" id="btnClearPointOverrides" style="color:var(--danger);">Alles herstellen</button>
-      </div>
-    `;
-  } else {
-    ptBox.innerHTML = "";
-  }
-}
-
 function isTrendEnabledFor(exerciseName) {
-  if (Object.prototype.hasOwnProperty.call(state.trendOverrides, exerciseName)) {
-    return state.trendOverrides[exerciseName];
-  }
-  return state.globalTrend;
+  return Object.prototype.hasOwnProperty.call(state.trendOverrides, exerciseName) ? state.trendOverrides[exerciseName] : state.globalTrend;
 }
 
 function getPeriodRange(allTimelineDays) {
-  if (state.period === "all" || allTimelineDays.length === 0) {
-    return { startStr: null, endStr: null, hasOlder: false };
-  }
-
+  if (state.period === "all" || allTimelineDays.length === 0) return { startStr: null, endStr: null, hasOlder: false };
   const latestDay = allTimelineDays[allTimelineDays.length - 1];
   const earliestDay = allTimelineDays[0];
   const anchor = new Date(latestDay + "T23:59:59");
   const monthsStep = state.period === "1m" ? 1 : (state.period === "3m" ? 3 : 12);
-
   const endDate = new Date(anchor);
   endDate.setMonth(endDate.getMonth() - (state.periodOffset * monthsStep));
-
   const startDate = new Date(endDate);
   startDate.setMonth(startDate.getMonth() - monthsStep);
   startDate.setDate(startDate.getDate() + 1);
-
   const toYMD = d => d.toISOString().slice(0, 10);
-  const startStr = toYMD(startDate);
-  const endStr = toYMD(endDate);
-
-  return {
-    startStr,
-    endStr,
-    hasOlder: earliestDay < startStr
-  };
+  return { startStr: toYMD(startDate), endStr: toYMD(endDate), hasOlder: earliestDay < toYMD(startDate) };
 }
 
 function refreshAll() {
   const sets = getCombinedSets();
-
   document.getElementById("totalBadge").textContent = `${sets.length} sets`;
 
-  if (state.garminSets.length > 0) {
-    const gDays = state.garminSets.map(s => s.dateDay).sort();
-    document.getElementById("garminStatus").textContent =
-      `${state.garminSets.length} sets (${formatShortNL(gDays[0])} t/m ${formatShortNL(gDays[gDays.length - 1])})`;
-  } else {
-    document.getElementById("garminStatus").textContent = "Nog geen Garmin-data geladen";
-  }
-
-  if (state.hevySets.length > 0) {
-    const hDays = state.hevySets.map(s => s.dateDay).sort();
-    document.getElementById("hevyStatus").textContent =
-      `${state.hevySets.length} sets (${formatShortNL(hDays[0])} t/m ${formatShortNL(hDays[hDays.length - 1])})`;
-  } else {
-    document.getElementById("hevyStatus").textContent = "Nog geen Hevy-data geladen";
-  }
-
+  document.getElementById("garminStatus").textContent = state.garminSets.length > 0 ? `${state.garminSets.length} sets geladen` : "Nog geen Garmin-data";
+  document.getElementById("hevyStatus").textContent = state.hevySets.length > 0 ? `${state.hevySets.length} sets geladen` : "Nog geen Hevy-data";
   document.getElementById("globalTrendToggle").checked = Boolean(state.globalTrend);
   document.getElementById("autoFilterOutliersToggle").checked = Boolean(state.autoFilterOutliers);
   document.getElementById("showBaselineBandToggle").checked = Boolean(state.showBaselineBand);
 
-  // KPI's
+  // Vul voedingsdoelen velden
+  document.getElementById("cfgKcalRest").value = state.nutriGoals.kcalRest ?? 2250;
+  document.getElementById("cfgKcalTrain").value = state.nutriGoals.kcalTrain ?? 2550;
+  document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
+  document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
+  document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
+  document.getElementById("cfgDefaultKwark").value = state.nutriGoals.defaultKwark ?? 250;
+  document.getElementById("cfgSupaUrl").value = cloudConfig.url || "";
+  document.getElementById("cfgSupaKey").value = cloudConfig.key || "";
+  document.getElementById("cfgSupaSyncId").value = cloudConfig.syncId || "";
+
   const garminDays = new Set(state.garminSets.map(s => s.dateDay)).size;
   const hevyDays = new Set(state.hevySets.map(s => s.dateDay)).size;
   const totalVolTons = sets.reduce((sum, s) => sum + s.volume, 0) / 1000;
-
   document.getElementById("kpiWorkouts").textContent = garminDays + hevyDays;
   document.getElementById("kpiWorkoutsSub").textContent = `${garminDays} Garmin · ${hevyDays} Hevy`;
   document.getElementById("kpiVolume").textContent = `${totalVolTons.toFixed(1)} t`;
   document.getElementById("kpiSetsSub").textContent = `${sets.length} actieve sets`;
 
-  // Oefeningen sorteren met Favorieten bovenaan
   const counts = {};
   sets.forEach(s => { counts[s.exercise] = (counts[s.exercise] || 0) + 1; });
   const allExercises = Object.keys(counts);
-
-  const favList = allExercises
-    .filter(ex => state.favorites.includes(ex))
-    .sort((a, b) => counts[b] - counts[a]);
-  const otherList = allExercises
-    .filter(ex => !state.favorites.includes(ex))
-    .sort((a, b) => counts[b] - counts[a]);
+  const favList = allExercises.filter(ex => state.favorites.includes(ex)).sort((a, b) => counts[b] - counts[a]);
+  const otherList = allExercises.filter(ex => !state.favorites.includes(ex)).sort((a, b) => counts[b] - counts[a]);
 
   const select = document.getElementById("exerciseSelect");
   const prevVal = select.value;
-
   let optionsHtml = "";
-  if (favList.length > 0) {
-    optionsHtml += `<optgroup label="★ Favorieten">` +
-      favList.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") +
-      `</optgroup>`;
-  }
-  optionsHtml += `<optgroup label="Alle oefeningen">` +
-    otherList.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") +
-    `</optgroup>`;
-
+  if (favList.length > 0) optionsHtml += `<optgroup label="★ Favorieten">` + favList.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
+  optionsHtml += `<optgroup label="Alle oefeningen">` + otherList.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
   select.innerHTML = optionsHtml;
-  if (allExercises.includes(prevVal)) {
-    select.value = prevVal;
-  } else if (favList.length > 0) {
-    select.value = favList[0];
-  } else if (otherList.length > 0) {
-    select.value = otherList[0];
-  }
+  if (allExercises.includes(prevVal)) select.value = prevVal;
+  else if (favList.length > 0) select.value = favList[0];
 
-  try { renderOverviewDashboard(sets); } catch (e) { console.error("Fout bij totaalbeeld:", e); }
-  try { renderExerciseChart(); } catch (e) { console.error("Fout bij oefening-grafiek:", e); }
-  try { renderBodyMeasurementsTab(); } catch (e) { console.error("Fout bij lichaamsmetingen:", e); }
+  try { renderOverviewDashboard(sets); } catch (e) {}
+  try { renderPlannerTab(); } catch (e) {}
+  try { renderNutritionTab(); } catch (e) {}
+  try { renderExerciseChart(); } catch (e) {}
+  try { renderBodyMeasurementsTab(); } catch (e) {}
   renderPrefsList();
   renderPulleyGroupsUI(allExercises);
   renderMappingUI();
@@ -2053,15 +2391,10 @@ function openPointInspector(exercise, day, entry) {
   const insp = document.getElementById("pointInspector");
   const curVal = Number(entry[state.selectedMetric].toFixed(1));
   const rawVal = Number((curVal / (entry.appliedFactor || 1)).toFixed(1));
-
   document.getElementById("inspTitle").textContent = `${formatShortNL(day)} · Huidig: ${curVal} kg`;
-  document.getElementById("inspSub").textContent = entry.appliedFactor !== 1
-    ? `Origineel uit CSV: ${rawVal} kg (nu ×${entry.appliedFactor})`
-    : `Origineel uit CSV: ${rawVal} kg`;
-
-  const activeFactor = Number(entry.appliedFactor || 1);
+  document.getElementById("inspSub").textContent = entry.appliedFactor !== 1 ? `Origineel: ${rawVal} kg (×${entry.appliedFactor})` : `Origineel: ${rawVal} kg`;
   document.querySelectorAll("#inspectorBtns .insp-btn").forEach(btn => {
-    btn.classList.toggle("active", Number(btn.getAttribute("data-factor")) === activeFactor);
+    btn.classList.toggle("active", Number(btn.getAttribute("data-factor")) === Number(entry.appliedFactor || 1));
   });
   insp.classList.add("visible");
 }
@@ -2070,27 +2403,17 @@ function renderExerciseChart() {
   if (typeof Chart === "undefined") return;
   const chosen = document.getElementById("exerciseSelect").value;
   const sets = getCombinedSets().filter(s => s.exercise === chosen);
+  computeOverloadAdvice(chosen, sets);
 
   const byDay = {};
   for (const s of sets) {
     if (!byDay[s.dateDay]) {
-      byDay[s.dateDay] = {
-        day: s.dateDay,
-        source: s.source,
-        corrected: false,
-        appliedFactor: s.appliedFactor || 1,
-        maxWeight: 0,
-        e1rm: 0,
-        volume: 0
-      };
+      byDay[s.dateDay] = { day: s.dateDay, source: s.source, corrected: false, appliedFactor: s.appliedFactor || 1, maxWeight: 0, e1rm: 0, volume: 0 };
     }
     byDay[s.dateDay].maxWeight = Math.max(byDay[s.dateDay].maxWeight, s.weight);
     byDay[s.dateDay].e1rm = Math.max(byDay[s.dateDay].e1rm, s.e1rm);
     byDay[s.dateDay].volume += s.volume;
-    if (s.corrected) {
-      byDay[s.dateDay].corrected = true;
-      byDay[s.dateDay].appliedFactor = s.appliedFactor;
-    }
+    if (s.corrected) { byDay[s.dateDay].corrected = true; byDay[s.dateDay].appliedFactor = s.appliedFactor; }
   }
 
   let fullTimeline = Object.values(byDay).sort((a, b) => a.day.localeCompare(b.day));
@@ -2098,19 +2421,15 @@ function renderExerciseChart() {
 
   if (state.autoFilterOutliers && fullTimeline.length >= 5) {
     for (let pass = 0; pass < 2; pass++) {
-      const filteredTimeline = [];
+      const filtered = [];
       for (let i = 0; i < fullTimeline.length; i++) {
         const val = fullTimeline[i][state.selectedMetric];
         const b = baselines[i];
         const ptKey = `${chosen}|${fullTimeline[i].day}`;
-        const hasManualOverride = Object.prototype.hasOwnProperty.call(state.pointOverrides, ptKey);
-
-        if (!hasManualOverride && b.base > 0 && (val < b.low || val > b.high)) {
-          continue;
-        }
-        filteredTimeline.push(fullTimeline[i]);
+        if (!Object.prototype.hasOwnProperty.call(state.pointOverrides, ptKey) && b.base > 0 && (val < b.low || val > b.high)) continue;
+        filtered.push(fullTimeline[i]);
       }
-      fullTimeline = filteredTimeline;
+      fullTimeline = filtered;
       baselines = computeRollingBaseline(fullTimeline, state.selectedMetric);
     }
   }
@@ -2122,147 +2441,49 @@ function renderExerciseChart() {
 
   if (state.period !== "all" && allDays.length > 0) {
     const range = getPeriodRange(allDays);
-    const slicedT = [];
-    const slicedB = [];
+    const slicedT = [], slicedB = [];
     for (let i = 0; i < fullTimeline.length; i++) {
       if (fullTimeline[i].day >= range.startStr && fullTimeline[i].day <= range.endStr) {
-        slicedT.push(fullTimeline[i]);
-        slicedB.push(baselines[i]);
+        slicedT.push(fullTimeline[i]); slicedB.push(baselines[i]);
       }
     }
-    timeline = slicedT;
-    visibleBaselines = slicedB;
-
+    timeline = slicedT; visibleBaselines = slicedB;
     navBar.style.display = "flex";
     document.getElementById("periodLabel").textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
     document.getElementById("prevPeriodBtn").disabled = !range.hasOlder;
     document.getElementById("nextPeriodBtn").disabled = state.periodOffset === 0;
-  } else {
-    navBar.style.display = "none";
-  }
+  } else { navBar.style.display = "none"; }
 
   const labels = timeline.map(d => d.day);
   const values = timeline.map(d => Number(d[state.selectedMetric].toFixed(1)));
-  const pointColors = timeline.map(d => {
-    if (d.corrected) return "#c084fc";
-    return d.source === "garmin" ? "#f59e0b" : "#10b981";
-  });
+  const pointColors = timeline.map(d => d.corrected ? "#c084fc" : (d.source === "garmin" ? "#f59e0b" : "#10b981"));
 
   const datasets = [{
-    label: chosen,
-    data: values,
-    borderColor: "#38bdf8",
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-    pointBackgroundColor: pointColors,
-    pointBorderColor: pointColors,
-    pointRadius: 4.5,
-    pointHoverRadius: 7,
-    tension: 0.25,
-    fill: !state.showBaselineBand
+    label: chosen, data: values, borderColor: "#38bdf8", backgroundColor: "rgba(56, 189, 248, 0.12)",
+    pointBackgroundColor: pointColors, pointBorderColor: pointColors, pointRadius: 4.5, pointHoverRadius: 7, tension: 0.25, fill: !state.showBaselineBand
   }];
 
   if (state.showBaselineBand && visibleBaselines.length >= 3) {
-    datasets.push({
-      label: "Baseline bovengrens",
-      data: visibleBaselines.map(b => Number(b.high.toFixed(1))),
-      borderColor: "rgba(16, 185, 129, 0.25)",
-      borderWidth: 1,
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      fill: false,
-      tension: 0.35
-    });
-    datasets.push({
-      label: "Baseline band",
-      data: visibleBaselines.map(b => Number(b.low.toFixed(1))),
-      borderColor: "rgba(16, 185, 129, 0.25)",
-      backgroundColor: "rgba(16, 185, 129, 0.08)",
-      borderWidth: 1,
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      fill: "-1",
-      tension: 0.35
-    });
+    datasets.push({ label: "Bovengrens", data: visibleBaselines.map(b => Number(b.high.toFixed(1))), borderColor: "rgba(16, 185, 129, 0.25)", borderWidth: 1, pointRadius: 0, fill: false, tension: 0.35 });
+    datasets.push({ label: "Baseline band", data: visibleBaselines.map(b => Number(b.low.toFixed(1))), borderColor: "rgba(16, 185, 129, 0.25)", backgroundColor: "rgba(16, 185, 129, 0.08)", borderWidth: 1, pointRadius: 0, fill: "-1", tension: 0.35 });
   }
 
   if (isTrendEnabledFor(chosen) && values.length >= 2) {
-    const trendData = values.map((_, idx) => {
-      if (idx === 0) return values[0];
-      if (idx === values.length - 1) return values[values.length - 1];
-      return null;
-    });
     datasets.push({
-      label: "Trend (eerste → laatste)",
-      data: trendData,
-      borderColor: "rgba(248, 250, 252, 0.55)",
-      borderWidth: 2,
-      borderDash: [6, 6],
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      spanGaps: true,
-      fill: false,
-      tension: 0
+      label: "Trend", data: values.map((_, idx) => idx === 0 ? values[0] : (idx === values.length - 1 ? values[values.length - 1] : null)),
+      borderColor: "rgba(248, 250, 252, 0.55)", borderWidth: 2, borderDash: [6, 6], pointRadius: 0, spanGaps: true, fill: false, tension: 0
     });
   }
 
   const ctx = document.getElementById("exerciseChart").getContext("2d");
   if (exerciseChartInstance) exerciseChartInstance.destroy();
-
-  const pluginsConfig = {
-    legend: { display: false },
-    tooltip: {
-      enabled: true,
-      backgroundColor: "rgba(15, 23, 42, 0.95)",
-      borderColor: "#38bdf8",
-      borderWidth: 1,
-      titleColor: "#f8fafc",
-      bodyColor: "#38bdf8",
-      filter: item => item.datasetIndex === 0,
-      callbacks: {
-        title: items => {
-          const idx = items[0].dataIndex;
-          const entry = timeline[idx];
-          const src = entry?.source === "garmin" ? "Garmin" : "Hevy";
-          const corrTag = entry?.corrected ? ` · ×${entry.appliedFactor}` : "";
-          return `${items[0].label} (${src}${corrTag})`;
-        },
-        label: item => `Waarde: ${item.formattedValue} kg`
-      }
-    }
-  };
-
-  if (typeof ChartZoom !== "undefined") {
-    pluginsConfig.zoom = {
-      pan: { enabled: true, mode: "x" },
-      zoom: {
-        wheel: { enabled: true },
-        pinch: { enabled: false },
-        mode: "x"
-      }
-    };
-  }
-
   exerciseChartInstance = new Chart(ctx, {
-    type: "line",
-    data: { labels, datasets },
+    type: "line", data: { labels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      events: ["mousemove", "mouseout", "click", "touchstart", "touchmove"],
-      onClick: (event, elements) => {
-        if (!elements || elements.length === 0) return;
-        const idx = elements[0].index;
-        const entry = timeline[idx];
-        if (entry) {
-          openPointInspector(chosen, entry.day, entry);
-        }
-      },
-      plugins: pluginsConfig,
-      scales: {
-        x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
-        y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } }
-      }
+      responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      onClick: (event, elements) => { if (elements && elements.length > 0) openPointInspector(chosen, timeline[elements[0].index].day, timeline[elements[0].index]); },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", filter: item => item.datasetIndex === 0 } },
+      scales: { x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } }, y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } } }
     }
   });
 }
@@ -2271,69 +2492,36 @@ function renderPrefsList() {
   const sets = getCombinedSets();
   const counts = {};
   sets.forEach(s => { counts[s.exercise] = (counts[s.exercise] || 0) + 1; });
-
   const search = (document.getElementById("prefSearch").value || "").toLowerCase();
-  const exercises = Object.keys(counts)
-    .filter(ex => ex.toLowerCase().includes(search))
-    .sort((a, b) => {
-      const aFav = state.favorites.includes(a) ? 1 : 0;
-      const bFav = state.favorites.includes(b) ? 1 : 0;
-      if (aFav !== bFav) return bFav - aFav;
-      return counts[b] - counts[a];
-    });
-
+  const exercises = Object.keys(counts).filter(ex => ex.toLowerCase().includes(search)).sort((a, b) => (state.favorites.includes(b) ? 1 : 0) - (state.favorites.includes(a) ? 1 : 0));
   const container = document.getElementById("prefsListContainer");
-  if (exercises.length === 0) {
-    container.innerHTML = `<div style="padding:10px; font-size:0.8rem; color:var(--muted);">Geen oefeningen gevonden.</div>`;
-    return;
-  }
-
-  container.innerHTML = exercises.map(ex => {
-    const isFav = state.favorites.includes(ex);
-    const trendOn = isTrendEnabledFor(ex);
-    const esc = escapeHtml(ex);
-    return `
-      <div class="pref-row">
-        <button type="button" class="star-btn ${isFav ? "active" : ""}" data-action="toggle-fav" data-ex="${esc}" title="Favoriet">★</button>
-        <span class="pref-name" title="${esc}">${esc}</span>
-        <label class="toggle-label">
-          <input type="checkbox" data-action="toggle-trend" data-ex="${esc}" ${trendOn ? "checked" : ""} />
-          Trend
-        </label>
-      </div>
-    `;
-  }).join("");
+  if (exercises.length === 0) { container.innerHTML = `<div style="padding:10px; font-size:0.8rem; color:var(--muted);">Geen oefeningen gevonden.</div>`; return; }
+  container.innerHTML = exercises.map(ex => `
+    <div class="pref-row">
+      <button type="button" class="star-btn ${state.favorites.includes(ex) ? "active" : ""}" data-action="toggle-fav" data-ex="${escapeHtml(ex)}">★</button>
+      <span class="pref-name">${escapeHtml(ex)}</span>
+      <label class="toggle-label"><input type="checkbox" data-action="toggle-trend" data-ex="${escapeHtml(ex)}" ${isTrendEnabledFor(ex) ? "checked" : ""} />Trend</label>
+    </div>
+  `).join("");
 }
 
 function renderMappingUI() {
   const uniqueGarmin = [...new Set(state.garminSets.map(s => s.rawExercise))].sort();
   const uniqueHevy = [...new Set(state.hevySets.map(s => s.rawExercise))].sort();
-
-  document.getElementById("hevyNamesList").innerHTML = uniqueHevy
-    .map(name => `<option value="${escapeHtml(name)}">`).join("");
-
+  document.getElementById("hevyNamesList").innerHTML = uniqueHevy.map(name => `<option value="${escapeHtml(name)}">`).join("");
   const container = document.getElementById("mappingContainer");
-  if (uniqueGarmin.length === 0) {
-    container.innerHTML = `<p style="font-size:0.82rem; color:var(--muted);">Laad eerst je Garmin CSV onder 'Data & Sync'.</p>`;
-    return;
-  }
-
-  container.innerHTML = uniqueGarmin.map(gName => {
-    const val = state.mappings[gName] || "";
-    return `
-      <div class="map-row">
-        <span>${escapeHtml(gName)}</span>
-        <input type="text" list="hevyNamesList" data-garmin="${escapeHtml(gName)}"
-               value="${escapeHtml(val)}" placeholder="Kies Hevy naam..." />
-      </div>
-    `;
-  }).join("");
+  if (uniqueGarmin.length === 0) { container.innerHTML = `<p style="font-size:0.82rem; color:var(--muted);">Laad eerst Garmin CSV.</p>`; return; }
+  container.innerHTML = uniqueGarmin.map(gName => `
+    <div class="map-row">
+      <span>${escapeHtml(gName)}</span>
+      <input type="text" list="hevyNamesList" data-garmin="${escapeHtml(gName)}" value="${escapeHtml(state.mappings[gName] || "")}" placeholder="Kies Hevy naam..." />
+    </div>
+  `).join("");
 }
 
 function switchTab(tabName) {
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName);
-  });
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName));
+  document.getElementById("btnOpenSettings").classList.toggle("active", tabName === "upload");
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   const target = document.getElementById(`tab-${tabName}`);
   if (target) target.classList.add("active");
@@ -2341,30 +2529,23 @@ function switchTab(tabName) {
 
 // === EVENT LISTENERS BINDEN ===
 function bindEvents() {
-  // Hoofdnavigatie
   document.getElementById("mainTabs").addEventListener("click", e => {
     const btn = e.target.closest(".tab-btn");
     if (btn) switchTab(btn.getAttribute("data-tab"));
   });
+  document.getElementById("btnOpenSettings").addEventListener("click", () => switchTab("upload"));
 
-  // Totaalbeeld (Overview) events
+  // Overview events
   document.getElementById("ovGranularityPills").addEventListener("click", e => {
     const pill = e.target.closest(".period-pill");
     if (!pill) return;
-    state.ovGranularity = pill.getAttribute("data-gran");
-    state.ovOffset = 0;
+    state.ovGranularity = pill.getAttribute("data-gran"); state.ovOffset = 0;
     document.querySelectorAll("#ovGranularityPills .period-pill").forEach(p => p.classList.remove("active"));
     pill.classList.add("active");
     renderOverviewDashboard(getCombinedSets());
   });
-  document.getElementById("ovPrevBtn").addEventListener("click", () => {
-    state.ovOffset += 1;
-    renderOverviewDashboard(getCombinedSets());
-  });
-  document.getElementById("ovNextBtn").addEventListener("click", () => {
-    state.ovOffset = Math.max(0, state.ovOffset - 1);
-    renderOverviewDashboard(getCombinedSets());
-  });
+  document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("ovNextBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovMuscleMetricPills").addEventListener("click", e => {
@@ -2376,88 +2557,359 @@ function bindEvents() {
     renderOverviewDashboard(getCombinedSets());
   });
 
-  // Lichaamsmetingen tab events
-  document.getElementById("bodyMainModePills").addEventListener("click", e => {
-    const pill = e.target.closest(".pill");
-    if (!pill) return;
-    state.bodyMainMode = pill.getAttribute("data-bmode");
-    document.querySelectorAll("#bodyMainModePills .pill").forEach(p => p.classList.remove("active"));
-    pill.classList.add("active");
-    renderBodyMeasurementsTab();
+  // Planner events
+  document.getElementById("calPrevMonthBtn").addEventListener("click", () => {
+    state.calMonth -= 1;
+    if (state.calMonth < 0) { state.calMonth = 11; state.calYear -= 1; }
+    renderPlannerTab();
+  });
+  document.getElementById("calNextMonthBtn").addEventListener("click", () => {
+    state.calMonth += 1;
+    if (state.calMonth > 11) { state.calMonth = 0; state.calYear += 1; }
+    renderPlannerTab();
+  });
+  document.getElementById("btnPlannerToday").addEventListener("click", () => {
+    const now = new Date();
+    state.calYear = now.getFullYear(); state.calMonth = now.getMonth();
+    state.selectedPlannerDate = TODAY_YMD;
+    renderPlannerTab();
+  });
+  document.getElementById("calGrid").addEventListener("click", e => {
+    const cell = e.target.closest("[data-cal-day]");
+    if (!cell) return;
+    state.selectedPlannerDate = cell.getAttribute("data-cal-day");
+    renderPlannerTab();
+  });
+  document.getElementById("btnGoToDayFood").addEventListener("click", () => {
+    state.selectedNutriDate = state.selectedPlannerDate;
+    renderNutritionTab();
+    switchTab("nutrition");
+  });
+  document.getElementById("btnAddPlannedWorkout").addEventListener("click", () => {
+    const val = document.getElementById("planWorkoutSelect").value;
+    if (!val) return;
+    const d = state.selectedPlannerDate;
+    if (!state.plannedWorkouts[d]) state.plannedWorkouts[d] = [];
+    state.plannedWorkouts[d].push(val);
+    saveFoodState();
+    renderPlannerTab();
+    renderNutritionTab();
+  });
+  document.getElementById("plannedWorkoutsList").addEventListener("click", e => {
+    const del = e.target.closest("[data-del-plan]");
+    if (!del) return;
+    const d = state.selectedPlannerDate;
+    state.plannedWorkouts[d].splice(Number(del.getAttribute("data-del-plan")), 1);
+    saveFoodState();
+    renderPlannerTab();
+    renderNutritionTab();
   });
 
+  // Voeding events
+  document.getElementById("nutriPrevDayBtn").addEventListener("click", () => {
+    const d = new Date(state.selectedNutriDate + "T12:00:00");
+    d.setDate(d.getDate() - 1);
+    state.selectedNutriDate = formatYMD(d);
+    renderNutritionTab();
+  });
+  document.getElementById("nutriNextDayBtn").addEventListener("click", () => {
+    const d = new Date(state.selectedNutriDate + "T12:00:00");
+    d.setDate(d.getDate() + 1);
+    state.selectedNutriDate = formatYMD(d);
+    renderNutritionTab();
+  });
 
-  document.getElementById("btnAddBodyMeasurement").addEventListener("click", async () => {
-    const date = document.getElementById("bmDate").value;
-    const weight = parseFloat(document.getElementById("bmWeight").value);
-    const smm = parseFloat(document.getElementById("bmSmm").value) || null;
-    const fatMass = parseFloat(document.getElementById("bmFat").value) || null;
-    const fb = document.getElementById("bmSaveFeedback");
+  // Kwark -50 / +50 & exact getal
+  document.getElementById("btnKwarkMinus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.kwarkGrams = Math.max(0, Number(log.kwarkGrams) - 50);
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnKwarkPlus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.kwarkGrams = Number(log.kwarkGrams) + 50;
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("inputKwarkGrams").addEventListener("change", e => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.kwarkGrams = Math.max(0, Number(e.target.value) || 0);
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
 
-    if (!date || isNaN(weight) || weight <= 0) {
-      fb.textContent = "Vul minimaal een datum en gewicht in.";
+  // Smoothie / Ontbijt-extra - / +
+  document.getElementById("btnSmoothieMinus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.smoothieCount = Math.max(0, Number(log.smoothieCount) - 1);
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnSmoothiePlus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.smoothieCount = Number(log.smoothieCount) + 1;
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+
+  // Brood - / +
+  document.getElementById("btnBreadMinus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.breadSlices = Math.max(0, Number(log.breadSlices) - 1);
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnBreadPlus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.breadSlices = Number(log.breadSlices) + 1;
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+
+  document.getElementById("btnResetDayDefaults").addEventListener("click", () => {
+    delete state.foodLogs[state.selectedNutriDate];
+    saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+
+  // Weekmenu plakken, bevestigen & dag wisselen
+  document.getElementById("btnToggleWeekmenuPaste").addEventListener("click", () => {
+    const box = document.getElementById("weekmenuPasteBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  });
+  document.getElementById("btnCloseWeekmenuPaste").addEventListener("click", () => {
+    document.getElementById("weekmenuPasteBox").style.display = "none";
+  });
+  document.getElementById("btnParseWeekmenu").addEventListener("click", () => {
+    const txt = document.getElementById("weekmenuPasteText").value;
+    const parsedDays = parseWeekmenuText(txt);
+    const keys = Object.keys(parsedDays);
+    if (keys.length === 0) {
+      alert("Geen dagen herkend. Zorg dat de regels beginnen met Maandag:, Dinsdag:, etc.");
       return;
     }
-
-    const entry = {
-      date,
-      scanner: document.getElementById("bmScanner").value,
-      weight: Number(weight.toFixed(2)),
-      smm: smm ? Number(smm.toFixed(2)) : null,
-      smmPct: smm ? Number(((smm / weight) * 100).toFixed(1)) : null,
-      fatMass: fatMass ? Number(fatMass.toFixed(2)) : null,
-      fatPct: fatMass ? Number(((fatMass / weight) * 100).toFixed(1)) : null,
-      waist: parseFloat(document.getElementById("bmWaist").value) || null,
-      bmi: parseFloat(document.getElementById("bmBmi").value) || null,
-      water: parseFloat(document.getElementById("bmWater").value) || null,
-      lArmS: parseFloat(document.getElementById("bmLArmS").value) || null,
-      rArmS: parseFloat(document.getElementById("bmRArmS").value) || null,
-      lBeenS: parseFloat(document.getElementById("bmLBeenS").value) || null,
-      rBeenS: parseFloat(document.getElementById("bmRBeenS").value) || null,
-      buikS: parseFloat(document.getElementById("bmBuikS").value) || null,
-      lArmV: parseFloat(document.getElementById("bmLArmV").value) || null,
-      rArmV: parseFloat(document.getElementById("bmRArmV").value) || null,
-      lBeenV: parseFloat(document.getElementById("bmLBeenV").value) || null,
-      rBeenV: parseFloat(document.getElementById("bmRBeenV").value) || null,
-      buikV: parseFloat(document.getElementById("bmBuikV").value) || null
-    };
-
-    // Vervang bestaande meting op dezelfde datum of voeg toe
-    state.bodyMeasurements = state.bodyMeasurements.filter(m => m.date !== date);
-    state.bodyMeasurements.push(entry);
-    state.bodyMeasurements.sort((a, b) => a.date.localeCompare(b.date));
-    await saveDataset("bodyMeasurements", state.bodyMeasurements);
-
-    fb.textContent = `Meting van ${formatShortNL(date)} opgeslagen!`;
-    refreshAll();
+    const mon = getMondayOfDate(state.selectedNutriDate);
+    keys.forEach(idxStr => {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + Number(idxStr));
+      const dStr = formatYMD(d);
+      const log = getOrCreateFoodDay(dStr);
+      log.dinner = parsedDays[idxStr];
+    });
+    saveFoodState();
+    document.getElementById("weekmenuPasteBox").style.display = "none";
+    document.getElementById("weekmenuPasteText").value = "";
+    renderNutritionTab();
+    renderPlannerTab();
   });
 
-  document.getElementById("bmTableBody").addEventListener("click", async e => {
-    const delBtn = e.target.closest("[data-del-bm]");
-    if (!delBtn) return;
-    const d = delBtn.getAttribute("data-del-bm");
-    state.bodyMeasurements = state.bodyMeasurements.filter(m => m.date !== d);
-    await saveDataset("bodyMeasurements", state.bodyMeasurements);
-    refreshAll();
+  document.getElementById("dinnerContainer").addEventListener("click", e => {
+    if (e.target.id === "btnConfirmDinner") {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      if (log.dinner) {
+        log.dinner.confirmed = !log.dinner.confirmed;
+        log.touched = true;
+        saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      }
+    } else if (e.target.id === "btnRemoveDinner") {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.dinner = null;
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+    }
+  });
+  document.getElementById("dinnerContainer").addEventListener("change", e => {
+    if (e.target.id === "selSwapDinnerDay" && e.target.value) {
+      const targetYmd = e.target.value;
+      const curLog = getOrCreateFoodDay(state.selectedNutriDate);
+      const targetLog = getOrCreateFoodDay(targetYmd);
+      const temp = curLog.dinner;
+      curLog.dinner = targetLog.dinner;
+      targetLog.dinner = temp;
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+    }
   });
 
-  // Oefeningen zoom & selectie
-  document.getElementById("btnZoomIn").addEventListener("click", () => {
-    if (exerciseChartInstance && exerciseChartInstance.zoom) exerciseChartInstance.zoom(1.25);
+  // Dranken selectie, favorieten & toevoegen
+  document.getElementById("drinkCatPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.selectedDrinkCat = pill.getAttribute("data-dcat");
+    state.selectedDrinkId = null;
+    document.querySelectorAll("#drinkCatPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderNutritionTab();
   });
-  document.getElementById("btnZoomOut").addEventListener("click", () => {
-    if (exerciseChartInstance && exerciseChartInstance.zoom) exerciseChartInstance.zoom(0.8);
+  document.getElementById("drinkGrid").addEventListener("click", e => {
+    const favStar = e.target.closest("[data-fav-drink]");
+    if (favStar) {
+      e.stopPropagation();
+      const dId = favStar.getAttribute("data-fav-drink");
+      const idx = state.drinkFavorites.indexOf(dId);
+      if (idx === -1) state.drinkFavorites.push(dId); else state.drinkFavorites.splice(idx, 1);
+      saveFoodState(); renderNutritionTab();
+      return;
+    }
+    const card = e.target.closest("[data-select-drink]");
+    if (!card) return;
+    const dId = card.getAttribute("data-select-drink");
+    const dr = DEFAULT_DRINKS.find(x => x.id === dId);
+    if (!dr) return;
+    // Als vaste hoeveelheid (zoals Espresso): direct toevoegen!
+    if (dr.fixedVol) {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const f = dr.fixedVol / 100;
+      log.drinks.push({ name: dr.name, ml: dr.fixedVol, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
+      log.touched = true;
+      state.selectedDrinkId = null;
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+    } else {
+      state.selectedDrinkId = dId;
+      renderNutritionTab();
+    }
   });
-  document.getElementById("btnZoomResetEx").addEventListener("click", () => {
-    if (exerciseChartInstance && exerciseChartInstance.resetZoom) exerciseChartInstance.resetZoom();
+  document.getElementById("drinkVolButtons").addEventListener("click", e => {
+    if (e.target.id === "btnCancelDrinkPick") { state.selectedDrinkId = null; renderNutritionTab(); return; }
+    const btn = e.target.closest("[data-add-drink-ml]");
+    if (!btn || !state.selectedDrinkId) return;
+    const ml = Number(btn.getAttribute("data-add-drink-ml"));
+    const dr = DEFAULT_DRINKS.find(x => x.id === state.selectedDrinkId);
+    if (!dr) return;
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    const f = ml / 100;
+    log.drinks.push({ name: dr.name, ml, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
+    log.touched = true;
+    state.selectedDrinkId = null;
+    saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("loggedDrinksList").addEventListener("click", e => {
+    const del = e.target.closest("[data-del-drink]");
+    if (!del) return;
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.drinks.splice(Number(del.getAttribute("data-del-drink")), 1);
+    saveFoodState(); renderNutritionTab(); renderPlannerTab();
   });
 
-  document.getElementById("exerciseSelect").addEventListener("change", () => {
-    state.periodOffset = 0;
-    document.getElementById("pointInspector").classList.remove("visible");
-    renderExerciseChart();
+  // Aanvullend eten zoeken (Lokaal + Open Food Facts)
+  function renderLocalFoodMatches(query) {
+    const q = query.trim().toLowerCase();
+    const resEl = document.getElementById("foodSearchResults");
+    if (!q) { resEl.innerHTML = ""; return; }
+    const pool = [...state.customFoods, ...LOCAL_FOOD_DB];
+    const matches = pool.filter(item => item.name.toLowerCase().includes(q)).slice(0, 8);
+    resEl.innerHTML = matches.map((item, idx) => `
+      <div class="pref-row" style="padding:6px 4px;">
+        <span style="font-size:0.78rem;"><strong>${escapeHtml(item.name)}</strong><br><span style="color:var(--muted);">${item.kcal} kcal · ${item.p}g E · ${item.c}g KH · ${item.f}g V</span></span>
+        <button type="button" class="btn-sm btn-hevy" data-add-pool-food="${escapeHtml(JSON.stringify(item))}" style="color:#0f172a;">+ Voeg toe</button>
+      </div>
+    `).join("");
+  }
+  document.getElementById("foodSearchInput").addEventListener("input", e => renderLocalFoodMatches(e.target.value));
+
+  document.getElementById("btnSearchFoodApi").addEventListener("click", async () => {
+    const q = document.getElementById("foodSearchInput").value.trim();
+    const resEl = document.getElementById("foodSearchResults");
+    if (!q) return;
+    resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--accent); padding:6px;">Zoeken in Open Food Facts...</div>`;
+    try {
+      const resp = await fetch(`https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=6`);
+      const data = await resp.json();
+      const prods = (data.products || []).filter(p => p.product_name && p.nutriments);
+      if (prods.length === 0) {
+        resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:6px;">Geen online resultaten gevonden.</div>`;
+        return;
+      }
+      resEl.innerHTML = prods.map(p => {
+        const n = p.nutriments;
+        const item = {
+          name: `${p.product_name} (100g)`,
+          kcal: Math.round(n["energy-kcal_100g"] || 0),
+          p: Number((n.proteins_100g || 0).toFixed(1)),
+          c: Number((n.carbohydrates_100g || 0).toFixed(1)),
+          f: Number((n.fat_100g || 0).toFixed(1))
+        };
+        return `
+          <div class="pref-row" style="padding:6px 4px;">
+            <span style="font-size:0.78rem;"><strong>${escapeHtml(item.name)}</strong><br><span style="color:var(--muted);">${item.kcal} kcal · ${item.p}g E · ${item.c}g KH · ${item.f}g V</span></span>
+            <button type="button" class="btn-sm btn-accent" data-add-pool-food="${escapeHtml(JSON.stringify(item))}" style="color:#0f172a;">+ 100g</button>
+          </div>
+        `;
+      }).join("");
+    } catch (err) {
+      resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--danger); padding:6px;">Online zoeken mislukt (controleer internet).</div>`;
+    }
   });
 
+  document.getElementById("foodSearchResults").addEventListener("click", e => {
+    const btn = e.target.closest("[data-add-pool-food]");
+    if (!btn) return;
+    const item = JSON.parse(btn.getAttribute("data-add-pool-food"));
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.extras.push(item);
+    log.touched = true;
+    saveFoodState();
+    document.getElementById("foodSearchInput").value = "";
+    document.getElementById("foodSearchResults").innerHTML = "";
+    renderNutritionTab(); renderPlannerTab();
+  });
+
+  document.getElementById("btnAddCustomFood").addEventListener("click", () => {
+    const name = document.getElementById("customFoodName").value.trim();
+    const kcal = Number(document.getElementById("customFoodKcal").value) || 0;
+    const p = Number(document.getElementById("customFoodProt").value) || 0;
+    const c = Number(document.getElementById("customFoodCarb").value) || 0;
+    const f = Number(document.getElementById("customFoodFat").value) || 0;
+    if (!name || kcal <= 0) { alert("Vul een naam en calorieën in."); return; }
+
+    const item = { name, kcal, p, c, f };
+    state.customFoods.unshift(item);
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.extras.push(item);
+    log.touched = true;
+    saveFoodState();
+    document.getElementById("customFoodName").value = "";
+    document.getElementById("customFoodKcal").value = "";
+    document.getElementById("customFoodProt").value = "";
+    document.getElementById("customFoodCarb").value = "";
+    document.getElementById("customFoodFat").value = "";
+    renderNutritionTab(); renderPlannerTab();
+  });
+
+  document.getElementById("loggedExtraFoodsList").addEventListener("click", e => {
+    const del = e.target.closest("[data-del-extra]");
+    if (!del) return;
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.extras.splice(Number(del.getAttribute("data-del-extra")), 1);
+    saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+
+  document.getElementById("chkCompleteFoodDay").addEventListener("change", e => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.completed = e.target.checked;
+    log.touched = true;
+    saveFoodState(); renderPlannerTab();
+  });
+
+  // Voedingsdoelen opslaan
+  document.getElementById("btnSaveNutriGoals").addEventListener("click", () => {
+    state.nutriGoals.kcalRest = Number(document.getElementById("cfgKcalRest").value) || 2250;
+    state.nutriGoals.kcalTrain = Number(document.getElementById("cfgKcalTrain").value) || 2550;
+    state.nutriGoals.protein = Number(document.getElementById("cfgProtGoal").value) || 155;
+    state.nutriGoals.carbs = Number(document.getElementById("cfgCarbGoal").value) || 240;
+    state.nutriGoals.fat = Number(document.getElementById("cfgFatGoal").value) || 75;
+    state.nutriGoals.defaultKwark = Number(document.getElementById("cfgDefaultKwark").value) || 250;
+    saveFoodState();
+    document.getElementById("uploadFeedback").textContent = "Voedingsdoelen opgeslagen!";
+    renderNutritionTab();
+  });
+
+  // Kopieer laatste sessie samenvatting voor Gemini
+  document.getElementById("btnCopyWorkoutSummary").addEventListener("click", () => {
+    const chosen = document.getElementById("exerciseSelect").value;
+    const sets = getCombinedSets().filter(s => s.exercise === chosen).slice(-12);
+    const lines = sets.map(s => `${s.dateDay}: ${s.weight}kg x ${s.reps}`).join("\n");
+    const text = `Oefening: ${chosen}\nLaatste sets:\n${lines}`;
+    navigator.clipboard?.writeText(text);
+    alert("Laatste sets gekopieerd naar klembord!");
+  });
+
+  // Bestaande training, body & backup events
+  document.getElementById("btnZoomIn").addEventListener("click", () => { if (exerciseChartInstance?.zoom) exerciseChartInstance.zoom(1.25); });
+  document.getElementById("btnZoomOut").addEventListener("click", () => { if (exerciseChartInstance?.zoom) exerciseChartInstance.zoom(0.8); });
+  document.getElementById("btnZoomResetEx").addEventListener("click", () => { if (exerciseChartInstance?.resetZoom) exerciseChartInstance.resetZoom(); });
+  document.getElementById("exerciseSelect").addEventListener("change", () => { state.periodOffset = 0; document.getElementById("pointInspector").classList.remove("visible"); renderExerciseChart(); });
   document.getElementById("metricPills").addEventListener("click", e => {
     const pill = e.target.closest(".pill");
     if (!pill) return;
@@ -2466,281 +2918,233 @@ function bindEvents() {
     pill.classList.add("active");
     renderExerciseChart();
   });
-
-  document.getElementById("btnCloseInspector").addEventListener("click", () => {
-    document.getElementById("pointInspector").classList.remove("visible");
-  });
-
+  document.getElementById("btnCloseInspector").addEventListener("click", () => document.getElementById("pointInspector").classList.remove("visible"));
   document.getElementById("inspectorBtns").addEventListener("click", e => {
     const btn = e.target.closest(".insp-btn");
     if (!btn || !state.inspectedPoint) return;
-    const factor = Number(btn.getAttribute("data-factor"));
-    const ptKey = `${state.inspectedPoint.exercise}|${state.inspectedPoint.day}`;
-
-    state.pointOverrides[ptKey] = factor;
-    savePointOverrides();
-
-    if (factor === 0) {
-      document.getElementById("pointInspector").classList.remove("visible");
-    }
+    state.pointOverrides[`${state.inspectedPoint.exercise}|${state.inspectedPoint.day}`] = Number(btn.getAttribute("data-factor"));
+    localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
+    scheduleCloudPush();
     refreshAll();
   });
-
   document.getElementById("periodPills").addEventListener("click", e => {
     const pill = e.target.closest(".period-pill");
     if (!pill) return;
-    state.period = pill.getAttribute("data-period");
-    state.periodOffset = 0;
+    state.period = pill.getAttribute("data-period"); state.periodOffset = 0;
     document.querySelectorAll("#periodPills .period-pill").forEach(p => p.classList.remove("active"));
-    pill.classList.add("active");
-    renderExerciseChart();
+    pill.classList.add("active"); renderExerciseChart();
   });
-  document.getElementById("prevPeriodBtn").addEventListener("click", () => {
-    state.periodOffset += 1;
-    renderExerciseChart();
+  document.getElementById("prevPeriodBtn").addEventListener("click", () => { state.periodOffset += 1; renderExerciseChart(); });
+  document.getElementById("nextPeriodBtn").addEventListener("click", () => { state.periodOffset = Math.max(0, state.periodOffset - 1); renderExerciseChart(); });
+
+  document.getElementById("bodyMainModePills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.bodyMainMode = pill.getAttribute("data-bmode");
+    document.querySelectorAll("#bodyMainModePills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active"); renderBodyMeasurementsTab();
   });
-  document.getElementById("nextPeriodBtn").addEventListener("click", () => {
-    state.periodOffset = Math.max(0, state.periodOffset - 1);
-    renderExerciseChart();
+  document.getElementById("btnAddBodyMeasurement").addEventListener("click", async () => {
+    const date = document.getElementById("bmDate").value;
+    const weight = parseFloat(document.getElementById("bmWeight").value);
+    const smm = parseFloat(document.getElementById("bmSmm").value) || null;
+    const fatMass = parseFloat(document.getElementById("bmFat").value) || null;
+    if (!date || isNaN(weight) || weight <= 0) return;
+    state.bodyMeasurements = state.bodyMeasurements.filter(m => m.date !== date);
+    state.bodyMeasurements.push({
+      date, scanner: document.getElementById("bmScanner").value, weight: Number(weight.toFixed(2)),
+      smm, smmPct: smm ? Number(((smm / weight) * 100).toFixed(1)) : null,
+      fatMass, fatPct: fatMass ? Number(((fatMass / weight) * 100).toFixed(1)) : null,
+      waist: parseFloat(document.getElementById("bmWaist").value) || null,
+      bmi: parseFloat(document.getElementById("bmBmi").value) || null,
+      water: parseFloat(document.getElementById("bmWater").value) || null
+    });
+    state.bodyMeasurements.sort((a, b) => a.date.localeCompare(b.date));
+    await saveDataset("bodyMeasurements", state.bodyMeasurements);
+    scheduleCloudPush();
+    refreshAll();
+  });
+  document.getElementById("bmTableBody").addEventListener("click", async e => {
+    const del = e.target.closest("[data-del-bm]");
+    if (!del) return;
+    state.bodyMeasurements = state.bodyMeasurements.filter(m => m.date !== del.getAttribute("data-del-bm"));
+    await saveDataset("bodyMeasurements", state.bodyMeasurements);
+    scheduleCloudPush();
+    refreshAll();
   });
 
-  // Uploads & Excel verwijderen
   document.getElementById("inputBodyXlsx").addEventListener("change", handleBodyXlsxUpload);
   document.getElementById("btnClearBodyData").addEventListener("click", async () => {
-    if (!confirm("Weet je zeker dat je alle ingeladen lichaamsmetingen (Excel-data) wilt verwijderen?")) return;
-    state.bodyMeasurements = [];
-    await saveDataset("bodyMeasurements", []);
-    document.getElementById("uploadFeedback").textContent = "Lichaamsmetingen verwijderd.";
-    refreshAll();
+    if (!confirm("Lichaamsmetingen wissen?")) return;
+    state.bodyMeasurements = []; await saveDataset("bodyMeasurements", []); refreshAll();
   });
   document.getElementById("inputGarminFile").addEventListener("change", e => handleFileUpload(e, "garmin"));
   document.getElementById("inputHevyFile").addEventListener("change", e => handleFileUpload(e, "hevy"));
 
-  // Instellingen & correcties
   document.getElementById("globalTrendToggle").addEventListener("change", e => {
-    state.globalTrend = e.target.checked;
-    state.trendOverrides = {};
+    state.globalTrend = e.target.checked; state.trendOverrides = {};
     localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
-    localStorage.setItem("trend_overrides", JSON.stringify({}));
-    renderPrefsList();
-    renderExerciseChart();
+    refreshAll();
   });
-
   document.getElementById("autoFilterOutliersToggle").addEventListener("change", e => {
     state.autoFilterOutliers = e.target.checked;
     localStorage.setItem("auto_filter_outliers", JSON.stringify(state.autoFilterOutliers));
     renderExerciseChart();
   });
-
   document.getElementById("showBaselineBandToggle").addEventListener("change", e => {
     state.showBaselineBand = e.target.checked;
     localStorage.setItem("show_baseline_band", JSON.stringify(state.showBaselineBand));
     renderExerciseChart();
   });
-
   document.getElementById("prefSearch").addEventListener("input", renderPrefsList);
-
   document.getElementById("prefsListContainer").addEventListener("click", e => {
     const star = e.target.closest("[data-action='toggle-fav']");
     if (!star) return;
-    const exName = star.getAttribute("data-ex");
-    const idx = state.favorites.indexOf(exName);
-    if (idx === -1) state.favorites.push(exName);
-    else state.favorites.splice(idx, 1);
+    const ex = star.getAttribute("data-ex");
+    const idx = state.favorites.indexOf(ex);
+    if (idx === -1) state.favorites.push(ex); else state.favorites.splice(idx, 1);
     localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
+    scheduleCloudPush();
     refreshAll();
   });
-
-  document.getElementById("prefsListContainer").addEventListener("change", e => {
-    const cb = e.target.closest("[data-action='toggle-trend']");
-    if (!cb) return;
-    const exName = cb.getAttribute("data-ex");
-    state.trendOverrides[exName] = cb.checked;
-    localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
-    renderExerciseChart();
-  });
-
   document.getElementById("btnAutoDetect").addEventListener("click", autoDetectPulleyGroups);
-
   document.getElementById("pulleyGroupsContainer").addEventListener("click", e => {
-    const delBtn = e.target.closest("[data-action='del-grp']");
-    if (delBtn) {
-      const gid = delBtn.getAttribute("data-gid");
-      state.pulleyGroups = state.pulleyGroups.filter(g => g.id !== gid);
-      savePulleyGroups();
-      refreshAll();
-      return;
-    }
-
-    const segOpt = e.target.closest("[data-action='set-ref']");
-    if (segOpt) {
-      const gid = segOpt.getAttribute("data-gid");
-      const sidx = Number(segOpt.getAttribute("data-sidx"));
-      const grp = state.pulleyGroups.find(g => g.id === gid);
-      if (grp && !grp.isManual) {
-        grp.refSegmentIdx = sidx;
-        grp.enabled = true;
-        savePulleyGroups();
-        refreshAll();
-      }
+    const del = e.target.closest("[data-action='del-grp']");
+    if (del) { state.pulleyGroups = state.pulleyGroups.filter(g => g.id !== del.getAttribute("data-gid")); localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+  scheduleCloudPush(); refreshAll(); return; }
+    const seg = e.target.closest("[data-action='set-ref']");
+    if (seg) {
+      const grp = state.pulleyGroups.find(g => g.id === seg.getAttribute("data-gid"));
+      if (grp) { grp.refSegmentIdx = Number(seg.getAttribute("data-sidx")); localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+  scheduleCloudPush(); refreshAll(); }
     }
   });
-
-  document.getElementById("pulleyGroupsContainer").addEventListener("change", e => {
-    const cb = e.target.closest("[data-action='toggle-grp']");
-    if (!cb) return;
-    const gid = cb.getAttribute("data-gid");
-    const grp = state.pulleyGroups.find(g => g.id === gid);
-    if (grp) {
-      grp.enabled = cb.checked;
-      savePulleyGroups();
-      refreshAll();
-    }
-  });
-
-  document.getElementById("singlePointRulesBox").addEventListener("click", e => {
-    if (e.target.id === "btnClearPointOverrides") {
-      state.pointOverrides = {};
-      savePointOverrides();
-      refreshAll();
-    }
-  });
-
-  document.getElementById("btnAddManualRange").addEventListener("click", () => {
-    const ex = document.getElementById("manualPulleyEx").value;
-    const startDay = document.getElementById("manualStart").value;
-    const endDay = document.getElementById("manualEnd").value;
-    const factor = Number(document.getElementById("manualFactor").value);
-    if (!ex || !startDay || !endDay) return;
-
-    state.pulleyGroups.push({
-      id: "manual_" + Date.now(),
-      exercise: ex,
-      enabled: true,
-      isManual: true,
-      refSegmentIdx: -1,
-      segments: [{
-        startDay: startDay <= endDay ? startDay : endDay,
-        endDay: startDay <= endDay ? endDay : startDay,
-        medianWeight: 0,
-        manualFactor: factor
-      }]
-    });
-    savePulleyGroups();
-    refreshAll();
-  });
-
   document.getElementById("btnSaveMappings").addEventListener("click", () => {
-    const inputs = document.querySelectorAll("#mappingContainer input");
     const updated = {};
-    inputs.forEach(inp => {
-      const g = inp.getAttribute("data-garmin");
-      const h = inp.value.trim();
-      if (h) updated[g] = h;
-    });
-    state.mappings = updated;
-    localStorage.setItem("exercise_mappings", JSON.stringify(updated));
-    refreshAll();
-    switchTab("charts");
+    document.querySelectorAll("#mappingContainer input").forEach(inp => { if (inp.value.trim()) updated[inp.getAttribute("data-garmin")] = inp.value.trim(); });
+    state.mappings = updated; localStorage.setItem("exercise_mappings", JSON.stringify(updated));
+    scheduleCloudPush(); refreshAll();
   });
 
-  // Backup export / import
-  document.getElementById("btnExportBackup").addEventListener("click", async () => {
-    try {
-      const backup = {
-        version: 2,
-        exportedAt: new Date().toISOString(),
-        garminSets: state.garminSets,
-        hevySets: state.hevySets,
-        bodyMeasurements: state.bodyMeasurements,
-        mappings: state.mappings,
-        favorites: state.favorites,
-        globalTrend: state.globalTrend,
-        trendOverrides: state.trendOverrides,
-        pulleyGroups: state.pulleyGroups,
-        pointOverrides: state.pointOverrides
-      };
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `fitness_backup_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      document.getElementById("backupFeedback").textContent = "Backup succesvol geëxporteerd!";
-    } catch (err) {
-      document.getElementById("backupFeedback").textContent = "Fout bij exporteren: " + err.message;
+  // Cloud Sync knoppen
+  document.getElementById("cloudSyncBadge").addEventListener("click", () => {
+    if (supaClient) pullFromCloud(true);
+    else switchTab("upload");
+  });
+
+  document.getElementById("btnCopySupaSql").addEventListener("click", () => {
+    const sql = document.getElementById("supaSqlSnippet").value;
+    navigator.clipboard?.writeText(sql);
+    document.getElementById("cloudFeedback").textContent = "SQL gekopieerd! Plak dit in Supabase SQL Editor en klik op Run.";
+  });
+
+  document.getElementById("btnSaveCloudConfig").addEventListener("click", async () => {
+    cloudConfig = {
+      url: document.getElementById("cfgSupaUrl").value.trim(),
+      key: document.getElementById("cfgSupaKey").value.trim(),
+      syncId: document.getElementById("cfgSupaSyncId").value.trim()
+    };
+    localStorage.setItem("cloud_sync_cfg_v1", JSON.stringify(cloudConfig));
+    const fb = document.getElementById("cloudFeedback");
+    if (initSupabaseClient()) {
+      fb.textContent = "Verbonden met Supabase! Data synchroniseren...";
+      await pullFromCloud(false);
+      fb.textContent = "Cloud Sync actief! Wijzigingen worden nu automatisch gedeeld tussen PC en Mobiel.";
+    } else {
+      fb.textContent = "Vul zowel Project URL, Anon Key als Sync-Sleutel in.";
     }
+  });
+
+  document.getElementById("btnForceCloudSync").addEventListener("click", async () => {
+    const fb = document.getElementById("cloudFeedback");
+    if (!supaClient) { fb.textContent = "Sla eerst je Supabase gegevens op."; return; }
+    fb.textContent = "Synchroniseren...";
+    await pushToCloudNow();
+    fb.textContent = "Laatste status succesvol naar de cloud gestuurd (" + new Date().toLocaleTimeString("nl-NL") + ").";
+  });
+
+  // Auto-pull wanneer je terugkeert naar het tabblad (bijv. van PC naar Mobiel wisselt)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && supaClient) {
+      pullFromCloud(false);
+    }
+  });
+
+  // Backup Export / Import (inclusief voeding, doelen & planner!)
+  document.getElementById("btnExportBackup").addEventListener("click", () => {
+    const backup = {
+      version: 3, exportedAt: new Date().toISOString(),
+      garminSets: state.garminSets, hevySets: state.hevySets, bodyMeasurements: state.bodyMeasurements,
+      mappings: state.mappings, favorites: state.favorites, pulleyGroups: state.pulleyGroups,
+      pointOverrides: state.pointOverrides, foodLogs: state.foodLogs, plannedWorkouts: state.plannedWorkouts,
+      nutriGoals: state.nutriGoals, drinkFavorites: state.drinkFavorites, customFoods: state.customFoods
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `fitness_voeding_backup_${TODAY_YMD}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    document.getElementById("backupFeedback").textContent = "Backup geëxporteerd!";
   });
 
   document.getElementById("inputImportBackup").addEventListener("change", e => {
     const file = e.target.files[0];
     if (!file) return;
-    const fb = document.getElementById("backupFeedback");
-    fb.textContent = "Backup inlezen...";
     const reader = new FileReader();
     reader.onload = async function(evt) {
       try {
-        const data = JSON.parse(evt.target.result);
-        if (!data || typeof data !== "object") throw new Error("Ongeldig backup-bestand");
-
-        state.garminSets = Array.isArray(data.garminSets) ? data.garminSets : [];
-        state.hevySets = Array.isArray(data.hevySets) ? data.hevySets : [];
-        state.bodyMeasurements = Array.isArray(data.bodyMeasurements) ? data.bodyMeasurements : [];
-        if (data.mappings) state.mappings = data.mappings;
-        if (Array.isArray(data.favorites)) state.favorites = data.favorites;
-        if (data.globalTrend !== undefined) state.globalTrend = data.globalTrend;
-        if (data.trendOverrides) state.trendOverrides = data.trendOverrides;
-        if (Array.isArray(data.pulleyGroups)) state.pulleyGroups = data.pulleyGroups;
-        if (data.pointOverrides) state.pointOverrides = data.pointOverrides;
+        const d = JSON.parse(evt.target.result);
+        state.garminSets = d.garminSets || []; state.hevySets = d.hevySets || []; state.bodyMeasurements = d.bodyMeasurements || [];
+        if (d.mappings) state.mappings = d.mappings;
+        if (d.favorites) state.favorites = d.favorites;
+        if (d.pulleyGroups) state.pulleyGroups = d.pulleyGroups;
+        if (d.pointOverrides) state.pointOverrides = d.pointOverrides;
+        if (d.foodLogs) state.foodLogs = d.foodLogs;
+        if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
+        if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
+        if (d.drinkFavorites) state.drinkFavorites = d.drinkFavorites;
+        if (d.customFoods) state.customFoods = d.customFoods;
 
         await saveDataset("garmin", state.garminSets);
         await saveDataset("hevy", state.hevySets);
         await saveDataset("bodyMeasurements", state.bodyMeasurements);
+    scheduleCloudPush();
+        saveFoodState();
         localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
         localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
-        localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
-        localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
+    scheduleCloudPush();
         localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
+  scheduleCloudPush();
         localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
-
-        fb.textContent = `Backup succesvol geïmporteerd! (${state.garminSets.length} Garmin, ${state.hevySets.length} Hevy, ${state.bodyMeasurements.length} metingen)`;
-        event.target.value = "";
+    scheduleCloudPush();
+        document.getElementById("backupFeedback").textContent = "Backup succesvol geïmporteerd!";
         refreshAll();
-      } catch (err) {
-        fb.textContent = "Fout bij importeren backup: " + err.message;
-      }
+      } catch (err) { document.getElementById("backupFeedback").textContent = "Fout: " + err.message; }
     };
     reader.readAsText(file);
   });
 
   document.getElementById("btnClearAll").addEventListener("click", async () => {
-    if (!confirm("Weet je zeker dat je alle opgeslagen data (workouts + metingen) wilt wissen?")) return;
-    state.garminSets = [];
-    state.hevySets = [];
-    state.bodyMeasurements = [];
-    await saveDataset("garmin", []);
-    await saveDataset("hevy", []);
-    await saveDataset("bodyMeasurements", []);
-    refreshAll();
+    if (!confirm("Alle opgeslagen data wissen?")) return;
+    state.garminSets = []; state.hevySets = []; state.bodyMeasurements = []; state.foodLogs = {}; state.plannedWorkouts = {};
+    await saveDataset("garmin", []); await saveDataset("hevy", []); await saveDataset("bodyMeasurements", []);
+    saveFoodState(); refreshAll();
   });
 }
 
 // === STARTUP ===
 (async function init() {
-  document.getElementById("bmDate").value = formatYMD(new Date());
+  document.getElementById("bmDate").value = TODAY_YMD;
   bindEvents();
   state.garminSets = await loadDataset("garmin");
   state.hevySets = await loadDataset("hevy");
   const loadedBody = await loadDataset("bodyMeasurements");
-  // Verwijder automatisch foutieve 1970-1977 metingen uit een eerdere import
   state.bodyMeasurements = loadedBody.filter(m => m && m.date >= "2010-01-01" && m.weight >= 40);
-  if (state.bodyMeasurements.length !== loadedBody.length) {
-    await saveDataset("bodyMeasurements", state.bodyMeasurements);
-  }
   refreshAll();
+  if (initSupabaseClient()) {
+    await pullFromCloud(false);
+  }
 })();
 </script>
 </body>
