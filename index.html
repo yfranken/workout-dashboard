@@ -602,6 +602,19 @@
         </div>
       </div>
 
+      <!-- Jumbo Pure Chocolade Muesli (-10g / +10g + exact getalveld) -->
+      <div class="meal-row">
+        <div class="meal-info">
+          <div class="meal-title">Jumbo Pure Chocolade Muesli (Ontbijt)</div>
+          <div class="meal-macros" id="muesliMacroTxt">40g · 170 kcal · 4g E · 25g KH · 6g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" id="btnMuesliMinus">-10</button>
+          <input type="number" id="inputMuesliGrams" class="step-val-input" step="5" min="0" value="40" />
+          <button type="button" class="step-btn" id="btnMuesliPlus">+10</button>
+        </div>
+      </div>
+
       <!-- Ontbijt-toppings / Smoothie -->
       <div class="meal-row">
         <div class="meal-info">
@@ -1121,6 +1134,7 @@ let state = {
     carbs: 240,
     fat: 75,
     defaultKwark: 250,
+    defaultMuesli: 40,
     defaultSmoothie: 1,
     defaultBread: 4
   }),
@@ -1355,6 +1369,7 @@ function getOrCreateFoodDay(ymd) {
   if (!state.foodLogs[ymd]) {
     state.foodLogs[ymd] = {
       kwarkGrams: Number(state.nutriGoals.defaultKwark ?? 250),
+      muesliGrams: Number(state.nutriGoals.defaultMuesli ?? 40),
       smoothieCount: Number(state.nutriGoals.defaultSmoothie ?? 1),
       breadSlices: Number(state.nutriGoals.defaultBread ?? 4),
       drinks: [],
@@ -1369,9 +1384,10 @@ function getOrCreateFoodDay(ymd) {
 
 function computeDayNutrition(ymd) {
   const log = state.foodLogs[ymd];
-  const kwarkG = log ? Number(log.kwarkGrams) : Number(state.nutriGoals.defaultKwark ?? 250);
-  const smoothC = log ? Number(log.smoothieCount) : Number(state.nutriGoals.defaultSmoothie ?? 1);
-  const breadS = log ? Number(log.breadSlices) : Number(state.nutriGoals.defaultBread ?? 4);
+  const kwarkG = (log && log.kwarkGrams !== undefined) ? Number(log.kwarkGrams) : Number(state.nutriGoals.defaultKwark ?? 250);
+  const muesliG = (log && log.muesliGrams !== undefined) ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
+  const smoothC = (log && log.smoothieCount !== undefined) ? Number(log.smoothieCount) : Number(state.nutriGoals.defaultSmoothie ?? 1);
+  const breadS = (log && log.breadSlices !== undefined) ? Number(log.breadSlices) : Number(state.nutriGoals.defaultBread ?? 4);
 
   // Magere kwark per 100g: 52 kcal, 8.8g eiwit, 4.0g kh, 0.1g vet
   const kwark = {
@@ -1379,6 +1395,13 @@ function computeDayNutrition(ymd) {
     p: (kwarkG / 100) * 8.8,
     c: (kwarkG / 100) * 4.0,
     f: (kwarkG / 100) * 0.1
+  };
+  // Jumbo Pure Chocolade Muesli per 100g: 425 kcal, 9.5g eiwit, 62.0g kh, 14.0g vet
+  const muesli = {
+    kcal: (muesliG / 100) * 425,
+    p: (muesliG / 100) * 9.5,
+    c: (muesliG / 100) * 62.0,
+    f: (muesliG / 100) * 14.0
   };
   // Ontbijt-extra / smoothie per portie: 260 kcal, 12g eiwit, 38g kh, 6g vet
   const smoothie = {
@@ -1395,10 +1418,10 @@ function computeDayNutrition(ymd) {
     f: breadS * 4
   };
 
-  let totalKcal = kwark.kcal + smoothie.kcal + bread.kcal;
-  let totalP = kwark.p + smoothie.p + bread.p;
-  let totalC = kwark.c + smoothie.c + bread.c;
-  let totalF = kwark.f + smoothie.f + bread.f;
+  let totalKcal = kwark.kcal + muesli.kcal + smoothie.kcal + bread.kcal;
+  let totalP = kwark.p + muesli.p + smoothie.p + bread.p;
+  let totalC = kwark.c + muesli.c + smoothie.c + bread.c;
+  let totalF = kwark.f + muesli.f + smoothie.f + bread.f;
   let totalDrinkMl = 0;
 
   if (log) {
@@ -1425,7 +1448,7 @@ function computeDayNutrition(ymd) {
   }
 
   return {
-    kwark, smoothie, bread,
+    kwark, muesli, smoothie, bread,
     kcal: Math.round(totalKcal),
     p: Math.round(totalP),
     c: Math.round(totalC),
@@ -1523,6 +1546,11 @@ function renderNutritionTab() {
   document.getElementById("inputKwarkGrams").value = log.kwarkGrams;
   document.getElementById("kwarkMacroTxt").textContent =
     `${log.kwarkGrams}g · ${Math.round(totals.kwark.kcal)} kcal · ${Math.round(totals.kwark.p)}g E · ${Math.round(totals.kwark.c)}g KH · ${Math.round(totals.kwark.f)}g V`;
+
+  const curMuesliG = log.muesliGrams !== undefined ? log.muesliGrams : Number(state.nutriGoals.defaultMuesli ?? 40);
+  document.getElementById("inputMuesliGrams").value = curMuesliG;
+  document.getElementById("muesliMacroTxt").textContent =
+    `${curMuesliG}g · ${Math.round(totals.muesli.kcal)} kcal · ${totals.muesli.p.toFixed(1)}g E · ${Math.round(totals.muesli.c)}g KH · ${totals.muesli.f.toFixed(1)}g V`;
 
   document.getElementById("smoothieCountSpan").textContent = `${log.smoothieCount}×`;
   document.getElementById("smoothieMacroTxt").textContent =
@@ -1627,15 +1655,34 @@ function renderNutritionTab() {
     loggedDrinksEl.innerHTML = "";
   }
 
-  // Extra gelogde producten
+  // Extra gelogde producten (met aanpasbare grammen / hoeveelheid!)
   const extraListEl = document.getElementById("loggedExtraFoodsList");
   if (log.extras && log.extras.length > 0) {
-    extraListEl.innerHTML = log.extras.map((ex, idx) => `
-      <div class="pref-row" style="padding:6px 2px;">
-        <span style="font-size:0.8rem;">🍽️ <strong>${escapeHtml(ex.name)}</strong> · <span style="color:var(--muted);">${ex.kcal} kcal · ${ex.p}g E · ${ex.c}g KH · ${ex.f}g V</span></span>
-        <button type="button" class="btn-sm" data-del-extra="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
-      </div>
-    `).join("");
+    extraListEl.innerHTML = log.extras.map((ex, idx) => {
+      const hasGrams = ex.grams !== undefined && ex.grams !== null;
+      const qtyControl = hasGrams
+        ? `<div class="stepper" style="padding:2px;">
+             <button type="button" class="step-btn" data-extra-step="-10" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">-10</button>
+             <input type="number" data-extra-grams="${idx}" value="${ex.grams}" step="5" min="1" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.76rem !important;" />
+             <button type="button" class="step-btn" data-extra-step="10" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">+10</button>
+           </div>`
+        : `<div class="stepper" style="padding:2px;">
+             <button type="button" class="step-btn" data-extra-mult="-0.5" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">-</button>
+             <span style="font-size:0.74rem; font-weight:700; padding:0 4px;">${ex.mult || 1}×</span>
+             <button type="button" class="step-btn" data-extra-mult="0.5" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">+</button>
+           </div>`;
+
+      return `
+        <div class="pref-row" style="padding:6px 2px; gap:6px;">
+          <div style="flex:1; min-width:0; font-size:0.78rem;">
+            <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🍽️ ${escapeHtml(ex.baseName || ex.name)}</div>
+            <div style="color:var(--muted); font-size:0.71rem;">${hasGrams ? ex.grams + "g · " : ""}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
+          </div>
+          ${qtyControl}
+          <button type="button" class="btn-sm" data-del-extra="${idx}" style="color:var(--danger); padding:3px 6px;">✕</button>
+        </div>
+      `;
+    }).join("");
   } else {
     extraListEl.innerHTML = "";
   }
@@ -2636,6 +2683,25 @@ function bindEvents() {
     log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
   });
 
+  // Muesli -10 / +10 & exact getal
+  document.getElementById("btnMuesliMinus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
+    log.muesliGrams = Math.max(0, cur - 10);
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnMuesliPlus").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
+    log.muesliGrams = cur + 10;
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("inputMuesliGrams").addEventListener("change", e => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.muesliGrams = Math.max(0, Number(e.target.value) || 0);
+    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+
   // Smoothie / Ontbijt-extra - / +
   document.getElementById("btnSmoothieMinus").addEventListener("click", () => {
     const log = getOrCreateFoodDay(state.selectedNutriDate);
@@ -2782,16 +2848,16 @@ function bindEvents() {
     saveFoodState(); renderNutritionTab(); renderPlannerTab();
   });
 
-  // Aanvullend eten zoeken (Lokaal + Open Food Facts)
+  // Aanvullend eten zoeken (Lokaal + Open Food Facts met instelbare grammen)
   function renderLocalFoodMatches(query) {
     const q = query.trim().toLowerCase();
     const resEl = document.getElementById("foodSearchResults");
     if (!q) { resEl.innerHTML = ""; return; }
     const pool = [...state.customFoods, ...LOCAL_FOOD_DB];
     const matches = pool.filter(item => item.name.toLowerCase().includes(q)).slice(0, 8);
-    resEl.innerHTML = matches.map((item, idx) => `
-      <div class="pref-row" style="padding:6px 4px;">
-        <span style="font-size:0.78rem;"><strong>${escapeHtml(item.name)}</strong><br><span style="color:var(--muted);">${item.kcal} kcal · ${item.p}g E · ${item.c}g KH · ${item.f}g V</span></span>
+    resEl.innerHTML = matches.map(item => `
+      <div class="pref-row" style="padding:6px 4px; gap:6px;">
+        <span style="flex:1; font-size:0.78rem;"><strong>${escapeHtml(item.name)}</strong><br><span style="color:var(--muted);">${item.kcal} kcal · ${item.p}g E · ${item.c}g KH · ${item.f}g V</span></span>
         <button type="button" class="btn-sm btn-hevy" data-add-pool-food="${escapeHtml(JSON.stringify(item))}" style="color:#0f172a;">+ Voeg toe</button>
       </div>
     `).join("");
@@ -2811,19 +2877,23 @@ function bindEvents() {
         resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:6px;">Geen online resultaten gevonden.</div>`;
         return;
       }
-      resEl.innerHTML = prods.map(p => {
+      resEl.innerHTML = prods.map((p, idx) => {
         const n = p.nutriments;
-        const item = {
-          name: `${p.product_name} (100g)`,
-          kcal: Math.round(n["energy-kcal_100g"] || 0),
-          p: Number((n.proteins_100g || 0).toFixed(1)),
-          c: Number((n.carbohydrates_100g || 0).toFixed(1)),
-          f: Number((n.fat_100g || 0).toFixed(1))
+        const per100 = {
+          baseName: p.product_name,
+          kcal100: Math.round(n["energy-kcal_100g"] || 0),
+          p100: Number((n.proteins_100g || 0).toFixed(1)),
+          c100: Number((n.carbohydrates_100g || 0).toFixed(1)),
+          f100: Number((n.fat_100g || 0).toFixed(1))
         };
         return `
-          <div class="pref-row" style="padding:6px 4px;">
-            <span style="font-size:0.78rem;"><strong>${escapeHtml(item.name)}</strong><br><span style="color:var(--muted);">${item.kcal} kcal · ${item.p}g E · ${item.c}g KH · ${item.f}g V</span></span>
-            <button type="button" class="btn-sm btn-accent" data-add-pool-food="${escapeHtml(JSON.stringify(item))}" style="color:#0f172a;">+ 100g</button>
+          <div class="pref-row" style="padding:6px 4px; gap:6px;">
+            <div style="flex:1; min-width:0; font-size:0.78rem;">
+              <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(per100.baseName)}</strong>
+              <span style="color:var(--muted); font-size:0.71rem;">Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E</span>
+            </div>
+            <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram" />
+            <button type="button" class="btn-sm btn-accent" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g</button>
           </div>
         `;
       }).join("");
@@ -2833,9 +2903,47 @@ function bindEvents() {
   });
 
   document.getElementById("foodSearchResults").addEventListener("click", e => {
+    const apiBtn = e.target.closest("[data-add-api-food]");
+    if (apiBtn) {
+      const per100 = JSON.parse(apiBtn.getAttribute("data-add-api-food"));
+      const inpId = apiBtn.getAttribute("data-grams-input");
+      const grams = Math.max(1, Number(document.getElementById(inpId)?.value) || 100);
+      const factor = grams / 100;
+      const item = {
+        name: `${per100.baseName} (${grams}g)`,
+        baseName: per100.baseName,
+        grams,
+        kcal100: per100.kcal100,
+        p100: per100.p100,
+        c100: per100.c100,
+        f100: per100.f100,
+        kcal: Math.round(per100.kcal100 * factor),
+        p: Number((per100.p100 * factor).toFixed(1)),
+        c: Number((per100.c100 * factor).toFixed(1)),
+        f: Number((per100.f100 * factor).toFixed(1))
+      };
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.extras.push(item);
+      log.touched = true;
+      saveFoodState();
+      document.getElementById("foodSearchInput").value = "";
+      document.getElementById("foodSearchResults").innerHTML = "";
+      renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+
     const btn = e.target.closest("[data-add-pool-food]");
     if (!btn) return;
-    const item = JSON.parse(btn.getAttribute("data-add-pool-food"));
+    const rawItem = JSON.parse(btn.getAttribute("data-add-pool-food"));
+    const item = {
+      ...rawItem,
+      baseName: rawItem.baseName || rawItem.name,
+      mult: 1,
+      baseKcal: rawItem.kcal,
+      baseP: rawItem.p,
+      baseC: rawItem.c,
+      baseF: rawItem.f
+    };
     const log = getOrCreateFoodDay(state.selectedNutriDate);
     log.extras.push(item);
     log.touched = true;
@@ -2867,12 +2975,65 @@ function bindEvents() {
     renderNutritionTab(); renderPlannerTab();
   });
 
+  function updateExtraItemGrams(idx, newGrams) {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    const ex = log.extras[idx];
+    if (!ex || ex.kcal100 === undefined) return;
+    ex.grams = Math.max(1, newGrams);
+    const f = ex.grams / 100;
+    ex.kcal = Math.round(ex.kcal100 * f);
+    ex.p = Number((ex.p100 * f).toFixed(1));
+    ex.c = Number((ex.c100 * f).toFixed(1));
+    ex.f = Number((ex.f100 * f).toFixed(1));
+    ex.name = `${ex.baseName} (${ex.grams}g)`;
+    saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  }
+
   document.getElementById("loggedExtraFoodsList").addEventListener("click", e => {
     const del = e.target.closest("[data-del-extra]");
-    if (!del) return;
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.extras.splice(Number(del.getAttribute("data-del-extra")), 1);
-    saveFoodState(); renderNutritionTab(); renderPlannerTab();
+    if (del) {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.extras.splice(Number(del.getAttribute("data-del-extra")), 1);
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+    const stepBtn = e.target.closest("[data-extra-step]");
+    if (stepBtn) {
+      const idx = Number(stepBtn.getAttribute("data-extra-idx"));
+      const delta = Number(stepBtn.getAttribute("data-extra-step"));
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const ex = log.extras[idx];
+      if (ex && ex.grams !== undefined) updateExtraItemGrams(idx, Number(ex.grams) + delta);
+      return;
+    }
+    const multBtn = e.target.closest("[data-extra-mult]");
+    if (multBtn) {
+      const idx = Number(multBtn.getAttribute("data-extra-idx"));
+      const delta = Number(multBtn.getAttribute("data-extra-mult"));
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const ex = log.extras[idx];
+      if (ex) {
+        const newMult = Math.max(0.5, (Number(ex.mult) || 1) + delta);
+        ex.mult = newMult;
+        const bK = ex.baseKcal ?? ex.kcal;
+        const bP = ex.baseP ?? ex.p;
+        const bC = ex.baseC ?? ex.c;
+        const bF = ex.baseF ?? ex.f;
+        ex.baseKcal = bK; ex.baseP = bP; ex.baseC = bC; ex.baseF = bF;
+        ex.kcal = Math.round(bK * newMult);
+        ex.p = Number((bP * newMult).toFixed(1));
+        ex.c = Number((bC * newMult).toFixed(1));
+        ex.f = Number((bF * newMult).toFixed(1));
+        saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      }
+    }
+  });
+
+  document.getElementById("loggedExtraFoodsList").addEventListener("change", e => {
+    const inp = e.target.closest("[data-extra-grams]");
+    if (!inp) return;
+    const idx = Number(inp.getAttribute("data-extra-grams"));
+    updateExtraItemGrams(idx, Number(inp.value) || 100);
   });
 
   document.getElementById("chkCompleteFoodDay").addEventListener("change", e => {
@@ -3149,3 +3310,4 @@ function bindEvents() {
 </script>
 </body>
 </html>
+Verwerkt en geanalyseerd in code
