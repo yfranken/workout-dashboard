@@ -371,6 +371,23 @@
     }
     .scanner-inbody { background: rgba(56, 189, 248, 0.18); color: var(--accent); }
     .scanner-evolt { background: rgba(236, 72, 153, 0.18); color: var(--accent-body); }
+
+    /* Tooltip styles for (i) */
+    .tooltip-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%; background: #334155;
+      color: var(--text); font-size: 0.65rem; font-weight: 700; cursor: help;
+      position: relative; margin-left: 5px;
+    }
+    .tooltip-icon:hover::after {
+      content: attr(data-tooltip);
+      position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+      background: #0f172a; border: 1px solid var(--card-border); color: var(--text);
+      padding: 6px 10px; border-radius: 8px; font-size: 0.72rem; font-weight: 400;
+      white-space: normal; width: 220px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+
   </style>
 </head>
 <body>
@@ -582,15 +599,15 @@
       </div>
     </div>
 
-    <!-- 1. Vaste Basis (Ontbijt, Tussendoortje, Lunch) met + / - stappen -->
+    <!-- 1. Vaste Basis (Ontbijt, Tussendoortje, Lunch) met + / - stappen en rode verwijderknop -->
     <div class="card">
       <h2>
         <span>Basisdag (Ontbijt, Tussendoor &amp; Lunch)</span>
         <button type="button" class="btn-sm" id="btnResetDayDefaults" title="Herstel standaardwaarden">Reset dag</button>
       </h2>
 
-      <!-- Magere Kwark (-50g / +50g + exact getalveld) -->
-      <div class="meal-row">
+      <!-- Magere Kwark -->
+      <div class="meal-row" id="rowBaseKwark">
         <div class="meal-info">
           <div class="meal-title">Magere Kwark (Ontbijt)</div>
           <div class="meal-macros" id="kwarkMacroTxt">250g · 130 kcal · 22g E · 10g KH · 0g V</div>
@@ -599,37 +616,41 @@
           <button type="button" class="step-btn" id="btnKwarkMinus">-50</button>
           <input type="number" id="inputKwarkGrams" class="step-val-input" step="10" min="0" value="250" />
           <button type="button" class="step-btn" id="btnKwarkPlus">+50</button>
+          <button type="button" class="step-btn" id="btnClearKwark" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
         </div>
       </div>
 
-      <!-- Jumbo Pure Chocolade Muesli (-10g / +10g + exact getalveld) -->
-      <div class="meal-row">
+      <!-- Jumbo Pure Chocolade Muesli -->
+      <div class="meal-row" id="rowBaseMuesli">
         <div class="meal-info">
           <div class="meal-title">Jumbo Pure Chocolade Muesli (Ontbijt)</div>
-          <div class="meal-macros" id="muesliMacroTxt">40g · 170 kcal · 4g E · 25g KH · 6g V</div>
+          <div class="meal-macros" id="muesliMacroTxt">40g · 170 kcal · 3.8g E · 25g KH · 5.6g V</div>
         </div>
         <div class="stepper">
           <button type="button" class="step-btn" id="btnMuesliMinus">-10</button>
           <input type="number" id="inputMuesliGrams" class="step-val-input" step="5" min="0" value="40" />
           <button type="button" class="step-btn" id="btnMuesliPlus">+10</button>
+          <button type="button" class="step-btn" id="btnClearMuesli" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
         </div>
       </div>
 
-      <!-- Ontbijt-toppings / Smoothie -->
-      <div class="meal-row">
+      <!-- Smoothie (250g volle yoghurt + 50g vriesfruit + 20g haver + 0,5 banaan) -->
+      <div class="meal-row" id="rowBaseSmoothie">
         <div class="meal-info">
-          <div class="meal-title">Ontbijt-extra (Havermout / Fruit / Smoothie)</div>
-          <div class="meal-macros" id="smoothieMacroTxt">1 portie · 260 kcal · 12g E · 38g KH · 6g V</div>
+          <div class="meal-title">Smoothie</div>
+          <div class="meal-macros" id="smoothieMacroTxt">1 portie · 304 kcal · 13.2g E · 40g KH · 9.2g V</div>
+          <div style="font-size:0.65rem; color:var(--muted); margin-top:1px;">250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan</div>
         </div>
         <div class="stepper">
           <button type="button" class="step-btn" id="btnSmoothieMinus">-</button>
           <span id="smoothieCountSpan" style="padding:0 6px; font-weight:700; font-size:0.85rem;">1×</span>
           <button type="button" class="step-btn" id="btnSmoothiePlus">+</button>
+          <button type="button" class="step-btn" id="btnClearSmoothie" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
         </div>
       </div>
 
-      <!-- Brood Snedes (- / +) -->
-      <div class="meal-row">
+      <!-- Brood Snedes -->
+      <div class="meal-row" id="rowBaseBread">
         <div class="meal-info">
           <div class="meal-title">Volkoren Brood + Beleg (Lunch)</div>
           <div class="meal-macros" id="breadMacroTxt">4 snedes · 540 kcal · 28g E · 64g KH · 16g V</div>
@@ -638,6 +659,7 @@
           <button type="button" class="step-btn" id="btnBreadMinus">-</button>
           <span id="breadCountSpan" style="padding:0 6px; font-weight:700; font-size:0.85rem;">4</span>
           <button type="button" class="step-btn" id="btnBreadPlus">+</button>
+          <button type="button" class="step-btn" id="btnClearBread" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
         </div>
       </div>
     </div>
@@ -664,55 +686,77 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       <div id="dinnerContainer"></div>
     </div>
 
-    <!-- 3. Dranken Kiezer (Favorieten + Categorieën + Inhoudskeuze) -->
+    <!-- 3. Aanvullend Eten & Dranken Toevoegen (Samengevoegd met Favorieten & Online Zoeken) -->
     <div class="card">
       <h2>
-        <span>Dranken Toevoegen</span>
-        <span class="badge" id="drinksTotalBadge">0 ml</span>
+        <span>+ Aanvullend Eten &amp; Dranken</span>
+        <span class="badge" id="drinksTotalBadge">0 ml vocht</span>
       </h2>
-      <div class="pill-row" id="drinkCatPills">
-        <span class="pill active" data-dcat="fav">★ Favorieten</span>
-        <span class="pill" data-dcat="warm">Warme dranken</span>
-        <span class="pill" data-dcat="thee">Thee</span>
-        <span class="pill" data-dcat="fris">Frisdranken</span>
-        <span class="pill" data-dcat="water">Water</span>
+
+      <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
+      <div style="display:flex; gap:6px; margin-bottom:4px;">
+        <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. banaan, skyr, cappuccino)..." style="margin-bottom:4px;" />
+        <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
       </div>
-      <div class="drink-grid" id="drinkGrid"></div>
+      <div id="unifiedSearchResults" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
 
-      <!-- Hoeveelheid-kiezer na selectie van drank -->
-      <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
-        <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
-        <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
+      <!-- SUBKOPJE: DRANKEN (in mL) -->
+      <div style="border-top:1px solid var(--card-border); padding-top:10px; margin-top:6px;">
+        <div style="font-size:0.82rem; font-weight:700; color:var(--accent); margin-bottom:6px;">🥤 Dranken (mL)</div>
+        <div class="pill-row" id="drinkCatPills">
+          <span class="pill active" data-dcat="fav">★ Favorieten</span>
+          <span class="pill" data-dcat="warm">Warme dranken</span>
+          <span class="pill" data-dcat="thee">Thee</span>
+          <span class="pill" data-dcat="fris">Frisdranken</span>
+          <span class="pill" data-dcat="water">Water</span>
+        </div>
+        <div class="drink-grid" id="drinkGrid"></div>
+
+        <!-- Hoeveelheid-kiezer na selectie van drank -->
+        <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
+          <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
+          <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
+        </div>
       </div>
 
-      <!-- Gelogde dranken vandaag -->
-      <div id="loggedDrinksList" style="margin-top:8px;"></div>
-    </div>
-
-    <!-- 4. Aanvullend Eten & Producten Zoeken (Lokaal + Open Food Facts) -->
-    <div class="card">
-      <h2><span>+ Aanvullend Eten Toevoegen</span></h2>
-      <div style="display:flex; gap:6px;">
-        <input type="text" id="foodSearchInput" placeholder="Zoek product (bijv. banaan, ei, Lidl skyr)..." style="margin-bottom:6px;" />
-        <button type="button" class="btn-sm btn-accent" id="btnSearchFoodApi" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek online</button>
+      <!-- SUBKOPJE: ETEN (in stuk of gram) -->
+      <div style="border-top:1px solid var(--card-border); padding-top:10px; margin-top:10px;">
+        <div style="font-size:0.82rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Eten (stuk / gram)</div>
+        <div class="pill-row" id="foodCatPills">
+          <span class="pill active" data-fcat="fav">★ Favorieten</span>
+          <span class="pill" data-fcat="fruit">Fruit &amp; Stuks</span>
+          <span class="pill" data-fcat="zuivel">Zuivel &amp; Eiwit</span>
+          <span class="pill" data-fcat="snack">Tussendoor</span>
+        </div>
+        <div class="drink-grid" id="foodQuickGrid"></div>
       </div>
-      <div id="foodSearchResults" style="max-height:190px; overflow-y:auto;"></div>
 
-      <details style="margin-top:8px; font-size:0.8rem; color:var(--muted);">
-        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig item / alle macro's invullen</summary>
+      <details style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
         <div style="margin-top:8px;">
-          <input type="text" id="customFoodName" placeholder="Naam gerecht of tussendoortje" />
+          <input type="text" id="customFoodName" placeholder="Naam product of drank" />
           <div class="manual-grid">
+            <div>
+              <span class="field-lbl">Type &amp; Eenheid:</span>
+              <select id="customFoodUnitType" style="margin-bottom:4px; padding:8px; font-size:0.8rem;">
+                <option value="gram">Eten per 100 gram</option>
+                <option value="stuk">Eten per 1 stuk / portie</option>
+                <option value="ml">Drank per 100 mL</option>
+              </select>
+            </div>
+            <div><span class="field-lbl">Standaard hoeveelheid:</span><input type="number" id="customFoodDefaultQty" value="100" /></div>
             <div><span class="field-lbl">Kcal*:</span><input type="number" id="customFoodKcal" placeholder="250" /></div>
             <div><span class="field-lbl">Eiwitten (g):</span><input type="number" step="0.1" id="customFoodProt" placeholder="15" /></div>
             <div><span class="field-lbl">Koolhydraten (g):</span><input type="number" step="0.1" id="customFoodCarb" placeholder="25" /></div>
             <div><span class="field-lbl">Vetten (g):</span><input type="number" step="0.1" id="customFoodFat" placeholder="8" /></div>
           </div>
-          <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Toevoegen aan vandaag</button>
+          <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Opslaan &amp; Toevoegen</button>
         </div>
       </details>
 
-      <div id="loggedExtraFoodsList" style="margin-top:8px;"></div>
+      <!-- Gelogde aanvullende dranken & eten vandaag -->
+      <div id="loggedDrinksList" style="margin-top:10px;"></div>
+      <div id="loggedExtraFoodsList" style="margin-top:4px;"></div>
     </div>
 
     <!-- 5. Dag Afronden voor Planner -->
@@ -968,9 +1012,14 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
           <input type="checkbox" id="autoFilterOutliersToggle" />
           Verberg losse uitschieters (&lt; 65% of &gt; 145% van werkgewicht)
         </label>
-        <label class="toggle-label" style="color:var(--muted);">
+        <label class="toggle-label" style="color:var(--muted); margin-bottom:8px;">
           <input type="checkbox" id="showBaselineBandToggle" />
           Toon baseline-band in grafiek
+        </label>
+        <label class="toggle-label" style="color:var(--text); font-weight:600;">
+          <input type="checkbox" id="smartOverloadToggle" />
+          <span>Slim compound (6-8r) vs. isolatie (10-15r) advies</span>
+          <span class="tooltip-icon" data-tooltip="Bepaalt progressieve overload op basis van oefeningstype: Compound oefeningen richten zich op 6-8 reps voor kracht/massa; isolatie oefeningen richten zich op 10-15 reps.">i</span>
         </label>
       </div>
       <button type="button" class="btn btn-accent" id="btnAutoDetect">Analyseer grote katrol-wissels</button>
@@ -1085,19 +1134,18 @@ const DEFAULT_DRINKS = [
 ];
 
 const LOCAL_FOOD_DB = [
-  { name: "Banaan (1 stuk, ~120g)", kcal: 108, p: 1.3, c: 24.0, f: 0.4 },
-  { name: "Appel (1 stuk, ~135g)", kcal: 72, p: 0.4, c: 16.2, f: 0.3 },
-  { name: "Gekookt Ei (1 stuk)", kcal: 78, p: 6.5, c: 0.6, f: 5.5 },
-  { name: "Handje Ongezouten Noten (25g)", kcal: 158, p: 4.5, c: 2.5, f: 14.2 },
-  { name: "Eiwitreep (gemiddeld, 55g)", kcal: 210, p: 20.0, c: 18.0, f: 6.5 },
-  { name: "Whey Protein Shake (1 scoop + water)", kcal: 120, p: 24.0, c: 2.0, f: 1.5 },
-  { name: "Rijstwafel (1 stuk)", kcal: 28, p: 0.6, c: 6.0, f: 0.2 },
-  { name: "Rijstwafel met Pindakaas (15g)", kcal: 122, p: 4.2, c: 7.5, f: 8.2 },
-  { name: "Kipfilet plakjes (50g)", kcal: 55, p: 11.5, c: 0.5, f: 0.8 },
-  { name: "30+ Kaas plak (30g)", kcal: 88, p: 8.5, c: 0, f: 6.0 },
-  { name: "Pure Chocolade (2 blokjes, 20g)", kcal: 112, p: 1.5, c: 9.0, f: 7.5 },
-  { name: "Griekse Yoghurt 0% (200g)", kcal: 114, p: 20.0, c: 8.0, f: 0.2 },
-  { name: "Skyr Naturel (200g)", kcal: 126, p: 22.0, c: 8.0, f: 0.4 }
+  { id: "banaan", name: "Banaan", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 108, pUnit: 1.3, cUnit: 24.0, fUnit: 0.4 },
+  { id: "appel", name: "Appel", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 72, pUnit: 0.4, cUnit: 16.2, fUnit: 0.3 },
+  { id: "ei_gekookt", name: "Gekookt Ei", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 78, pUnit: 6.5, cUnit: 0.6, fUnit: 5.5 },
+  { id: "rijstwafel", name: "Rijstwafel", cat: "snack", unitType: "stuk", defaultQty: 2, kcalUnit: 28, pUnit: 0.6, cUnit: 6.0, fUnit: 0.2 },
+  { id: "eiwitreep", name: "Eiwitreep", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 210, pUnit: 20.0, cUnit: 18.0, fUnit: 6.5 },
+  { id: "whey_shake", name: "Whey Protein Scoop", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 120, pUnit: 24.0, cUnit: 2.0, fUnit: 1.5 },
+  { id: "noten_mix", name: "Ongezouten Noten", cat: "snack", unitType: "gram", defaultQty: 25, kcal100: 632, p100: 18.0, c100: 10.0, f100: 56.8 },
+  { id: "kipfilet_plak", name: "Kipfilet vleeswaren", cat: "zuivel", unitType: "gram", defaultQty: 50, kcal100: 110, p100: 23.0, c100: 1.0, f100: 1.6 },
+  { id: "kaas_30", name: "30+ Kaas", cat: "zuivel", unitType: "gram", defaultQty: 30, kcal100: 293, p100: 28.3, c100: 0, f100: 20.0 },
+  { id: "pure_choco", name: "Pure Chocolade", cat: "snack", unitType: "gram", defaultQty: 20, kcal100: 560, p100: 7.5, c100: 45.0, f100: 37.5 },
+  { id: "griekse_yog0", name: "Griekse Yoghurt 0%", cat: "zuivel", unitType: "gram", defaultQty: 200, kcal100: 57, p100: 10.0, c100: 4.0, f100: 0.1 },
+  { id: "skyr_nat", name: "Skyr Naturel", cat: "zuivel", unitType: "gram", defaultQty: 200, kcal100: 63, p100: 11.0, c100: 4.0, f100: 0.2 }
 ];
 
 // === CONFIGURATIE & STATE ===
@@ -1118,6 +1166,7 @@ let state = {
   pointOverrides: safeParseJSON("point_overrides_v2", {}),
   autoFilterOutliers: safeParseJSON("auto_filter_outliers", true),
   showBaselineBand: safeParseJSON("show_baseline_band", true),
+  smartOverload: safeParseJSON("smart_overload_v1", true),
   selectedMetric: "e1rm",
   period: "all",
   periodOffset: 0,
@@ -1139,6 +1188,7 @@ let state = {
     defaultBread: 4
   }),
   drinkFavorites: safeParseJSON("drink_favs_v1", ["cappuccino", "espresso", "water", "cola_zero"]),
+  foodFavorites: safeParseJSON("food_favs_v1", ["banaan", "ei_gekookt", "eiwitreep", "noten_mix"]),
   customFoods: safeParseJSON("custom_foods_v1", []),
   // foodLogs: { "2026-11-17": { kwarkGrams, smoothieCount, breadSlices, drinks: [...], extras: [...], dinner: { title, kcal, p, c, f, confirmed }, completed: false } }
   foodLogs: safeParseJSON("food_logs_v1", {}),
@@ -1147,6 +1197,7 @@ let state = {
   selectedNutriDate: TODAY_YMD,
   selectedDrinkCat: "fav",
   selectedDrinkId: null,
+  selectedFoodCat: "fav",
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   selectedPlannerDate: TODAY_YMD
@@ -1264,7 +1315,9 @@ async function applySyncPayload(d, saveLocally = true) {
     if (d.foodLogs) state.foodLogs = d.foodLogs;
     if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
     if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
+        if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
     if (Array.isArray(d.drinkFavorites)) state.drinkFavorites = d.drinkFavorites;
+    if (Array.isArray(d.foodFavorites)) state.foodFavorites = d.foodFavorites;
     if (Array.isArray(d.customFoods)) state.customFoods = d.customFoods;
 
     if (saveLocally) {
@@ -1275,6 +1328,7 @@ async function applySyncPayload(d, saveLocally = true) {
       localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
       localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
       localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
+  localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
       localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
       localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
       localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
@@ -1359,6 +1413,7 @@ function saveFoodState() {
   localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
   localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
   localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
+  localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
   localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
   localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
   scheduleCloudPush();
@@ -1403,12 +1458,12 @@ function computeDayNutrition(ymd) {
     c: (muesliG / 100) * 62.0,
     f: (muesliG / 100) * 14.0
   };
-  // Ontbijt-extra / smoothie per portie: 260 kcal, 12g eiwit, 38g kh, 6g vet
+  // Smoothie (250g volle yoghurt + 50g vriesfruit + 20g haver + 0.5 banaan): 304 kcal, 13.2g E, 40.3g KH, 9.2g V
   const smoothie = {
-    kcal: smoothC * 260,
-    p: smoothC * 12,
-    c: smoothC * 38,
-    f: smoothC * 6
+    kcal: smoothC * 304,
+    p: smoothC * 13.2,
+    c: smoothC * 40.3,
+    f: smoothC * 9.2
   };
   // Volkoren brood + beleg per snede: 135 kcal, 7g eiwit, 16g kh, 4g vet
   const bread = {
@@ -1554,7 +1609,7 @@ function renderNutritionTab() {
 
   document.getElementById("smoothieCountSpan").textContent = `${log.smoothieCount}×`;
   document.getElementById("smoothieMacroTxt").textContent =
-    `${log.smoothieCount} portie · ${Math.round(totals.smoothie.kcal)} kcal · ${Math.round(totals.smoothie.p)}g E · ${Math.round(totals.smoothie.c)}g KH · ${Math.round(totals.smoothie.f)}g V`;
+    `${log.smoothieCount} portie · ${Math.round(totals.smoothie.kcal)} kcal · ${totals.smoothie.p.toFixed(1)}g E · ${Math.round(totals.smoothie.c)}g KH · ${totals.smoothie.f.toFixed(1)}g V`;
 
   document.getElementById("breadCountSpan").textContent = log.breadSlices;
   document.getElementById("breadMacroTxt").textContent =
@@ -1655,6 +1710,28 @@ function renderNutritionTab() {
     loggedDrinksEl.innerHTML = "";
   }
 
+  // Snelkeuze Eten grid (Favorieten + Categorieën, in stuk of gram)
+  const allFoodPool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
+  const filteredFoods = allFoodPool.filter(item =>
+    state.selectedFoodCat === "fav"
+      ? state.foodFavorites.includes(item.id || item.name)
+      : (item.cat || "snack") === state.selectedFoodCat
+  );
+  document.getElementById("foodQuickGrid").innerHTML = filteredFoods.map(item => {
+    const fKey = item.id || item.name;
+    const isFav = state.foodFavorites.includes(fKey);
+    const unitBadge = item.unitType === "stuk" ? `${item.defaultQty || 1} stuk` : `${item.defaultQty || 100}g`;
+    return `
+      <div class="drink-card" data-quick-food="${escapeHtml(fKey)}">
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          <span class="drink-fav-star" data-fav-food="${escapeHtml(fKey)}">${isFav ? "★" : "☆"}</span>
+          ${escapeHtml(item.name)}
+        </span>
+        <span style="font-size:0.7rem; color:var(--muted); margin-left:4px;">+${unitBadge}</span>
+      </div>
+    `;
+  }).join("");
+
   // Extra gelogde producten (met aanpasbare grammen / hoeveelheid!)
   const extraListEl = document.getElementById("loggedExtraFoodsList");
   if (log.extras && log.extras.length > 0) {
@@ -1668,7 +1745,7 @@ function renderNutritionTab() {
            </div>`
         : `<div class="stepper" style="padding:2px;">
              <button type="button" class="step-btn" data-extra-mult="-0.5" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">-</button>
-             <span style="font-size:0.74rem; font-weight:700; padding:0 4px;">${ex.mult || 1}×</span>
+             <span style="font-size:0.74rem; font-weight:700; padding:0 4px;">${ex.mult || 1} st</span>
              <button type="button" class="step-btn" data-extra-mult="0.5" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">+</button>
            </div>`;
 
@@ -1676,7 +1753,7 @@ function renderNutritionTab() {
         <div class="pref-row" style="padding:6px 2px; gap:6px;">
           <div style="flex:1; min-width:0; font-size:0.78rem;">
             <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🍽️ ${escapeHtml(ex.baseName || ex.name)}</div>
-            <div style="color:var(--muted); font-size:0.71rem;">${hasGrams ? ex.grams + "g · " : ""}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
+            <div style="color:var(--muted); font-size:0.71rem;">${hasGrams ? ex.grams + "g · " : (ex.mult || 1) + " stuk · "}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
           </div>
           ${qtyControl}
           <button type="button" class="btn-sm" data-del-extra="${idx}" style="color:var(--danger); padding:3px 6px;">✕</button>
@@ -1764,6 +1841,12 @@ function renderPlannerTab() {
 }
 
 // === PROGRESSIVE OVERLOAD ADVIES BEREKENEN ===
+function isCompoundExercise(name) {
+  const n = String(name || "").toLowerCase();
+  // Compound keywords: squat, bench, deadlift, press, row, pullup, chinup, dip, rdl, romania, leg press, lunge, thrust
+  return /squat|bench|deadlift|press|row|pull.?up|chin.?up|dip|rdl|romanian|leg press|lunge|thrust|clean|snatch/.test(n);
+}
+
 function computeOverloadAdvice(chosenExercise, setsForExercise) {
   const box = document.getElementById("overloadAdviceBox");
   const txtEl = document.getElementById("overloadAdviceText");
@@ -1772,7 +1855,6 @@ function computeOverloadAdvice(chosenExercise, setsForExercise) {
     return;
   }
 
-  // Groepeer op dag en pak de laatste sessie
   const byDay = {};
   setsForExercise.forEach(s => {
     if (!byDay[s.dateDay]) byDay[s.dateDay] = [];
@@ -1792,11 +1874,34 @@ function computeOverloadAdvice(chosenExercise, setsForExercise) {
   const avgReps = Math.round(topSets.reduce((a, b) => a + b.reps, 0) / topSets.length);
 
   let advice = "";
-  if (avgReps >= 12) {
-    const nextW = (maxW + 2.5).toFixed(1).replace(".0", "");
-    advice = `Laatste (${formatShortNL(lastDay)}): ${maxW} kg × ${avgReps} reps → Verhoog naar <strong>${nextW} kg × 8–10 reps</strong>`;
+  const isCompound = isCompoundExercise(chosenExercise);
+
+  if (state.smartOverload) {
+    if (isCompound) {
+      // Compound: target 6-8 reps. If >= 8 reps, increase weight by 2.5kg and reset to 6 reps. Else +1 rep.
+      if (avgReps >= 8) {
+        const nextW = (maxW + 2.5).toFixed(1).replace(".0", "");
+        advice = `Laatste (${formatShortNL(lastDay)}, Compound): ${maxW} kg × ${avgReps} reps → Verhoog naar <strong>${nextW} kg × 6–8 reps</strong>`;
+      } else {
+        advice = `Laatste (${formatShortNL(lastDay)}, Compound): ${maxW} kg × ${avgReps} reps → Streef naar <strong>${maxW} kg × ${avgReps + 1} reps</strong> (doel: 6–8r)`;
+      }
+    } else {
+      // Isolation: target 10-15 reps. If >= 15 reps, increase weight by 2.5kg and reset to 10-12 reps. Else +1 rep.
+      if (avgReps >= 15) {
+        const nextW = (maxW + 2.5).toFixed(1).replace(".0", "");
+        advice = `Laatste (${formatShortNL(lastDay)}, Isolatie): ${maxW} kg × ${avgReps} reps → Verhoog naar <strong>${nextW} kg × 10–12 reps</strong>`;
+      } else {
+        advice = `Laatste (${formatShortNL(lastDay)}, Isolatie): ${maxW} kg × ${avgReps} reps → Streef naar <strong>${maxW} kg × ${avgReps + 1} reps</strong> (doel: 10–15r)`;
+      }
+    }
   } else {
-    advice = `Laatste (${formatShortNL(lastDay)}): ${maxW} kg × ${avgReps} reps → Streef naar <strong>${maxW} kg × ${avgReps + 1}–${avgReps + 2} reps</strong>`;
+    // Old fallback logic
+    if (avgReps >= 12) {
+      const nextW = (maxW + 2.5).toFixed(1).replace(".0", "");
+      advice = `Laatste (${formatShortNL(lastDay)}): ${maxW} kg × ${avgReps} reps → Verhoog naar <strong>${nextW} kg × 8–10 reps</strong>`;
+    } else {
+      advice = `Laatste (${formatShortNL(lastDay)}): ${maxW} kg × ${avgReps} reps → Streef naar <strong>${maxW} kg × ${avgReps + 1}–${avgReps + 2} reps</strong>`;
+    }
   }
 
   txtEl.innerHTML = advice;
@@ -2388,6 +2493,7 @@ function refreshAll() {
   document.getElementById("globalTrendToggle").checked = Boolean(state.globalTrend);
   document.getElementById("autoFilterOutliersToggle").checked = Boolean(state.autoFilterOutliers);
   document.getElementById("showBaselineBandToggle").checked = Boolean(state.showBaselineBand);
+  document.getElementById("smartOverloadToggle").checked = Boolean(state.smartOverload);
 
   // Vul voedingsdoelen velden
   document.getElementById("cfgKcalRest").value = state.nutriGoals.kcalRest ?? 2250;
@@ -2726,6 +2832,23 @@ function bindEvents() {
     log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
   });
 
+  document.getElementById("btnClearKwark").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.kwarkGrams = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnClearMuesli").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.muesliGrams = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnClearSmoothie").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.smoothieCount = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+  document.getElementById("btnClearBread").addEventListener("click", () => {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    log.breadSlices = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  });
+
   document.getElementById("btnResetDayDefaults").addEventListener("click", () => {
     delete state.foodLogs[state.selectedNutriDate];
     saveFoodState(); renderNutritionTab(); renderPlannerTab();
@@ -2848,131 +2971,348 @@ function bindEvents() {
     saveFoodState(); renderNutritionTab(); renderPlannerTab();
   });
 
-  // Aanvullend eten zoeken (Lokaal + Open Food Facts met instelbare grammen)
-  function renderLocalFoodMatches(query) {
-    const q = query.trim().toLowerCase();
-    const resEl = document.getElementById("foodSearchResults");
-    if (!q) { resEl.innerHTML = ""; return; }
-    const pool = [...state.customFoods, ...LOCAL_FOOD_DB];
-    const matches = pool.filter(item => item.name.toLowerCase().includes(q)).slice(0, 8);
-    resEl.innerHTML = matches.map(item => `
-      <div class="pref-row" style="padding:6px 4px; gap:6px;">
-        <span style="flex:1; font-size:0.78rem;"><strong>${escapeHtml(item.name)}</strong><br><span style="color:var(--muted);">${item.kcal} kcal · ${item.p}g E · ${item.c}g KH · ${item.f}g V</span></span>
-        <button type="button" class="btn-sm btn-hevy" data-add-pool-food="${escapeHtml(JSON.stringify(item))}" style="color:#0f172a;">+ Voeg toe</button>
-      </div>
-    `).join("");
+  // Helper om een eten-item (stuk of gram) toe te voegen aan vandaag
+  function addFoodItemToLog(item, customQty = null) {
+    const log = getOrCreateFoodDay(state.selectedNutriDate);
+    if (item.unitType === "stuk") {
+      const qty = customQty !== null ? customQty : (item.defaultQty || 1);
+      const uK = item.kcalUnit ?? item.kcal ?? 0;
+      const uP = item.pUnit ?? item.p ?? 0;
+      const uC = item.cUnit ?? item.c ?? 0;
+      const uF = item.fUnit ?? item.f ?? 0;
+      log.extras.push({
+        name: item.name,
+        baseName: item.name,
+        mult: qty,
+        baseKcal: uK,
+        baseP: uP,
+        baseC: uC,
+        baseF: uF,
+        kcal: Math.round(uK * qty),
+        p: Number((uP * qty).toFixed(1)),
+        c: Number((uC * qty).toFixed(1)),
+        f: Number((uF * qty).toFixed(1))
+      });
+    } else {
+      const grams = customQty !== null ? customQty : (item.defaultQty || item.grams || 100);
+      const k100 = item.kcal100 ?? item.kcal ?? 0;
+      const p100 = item.p100 ?? item.p ?? 0;
+      const c100 = item.c100 ?? item.c ?? 0;
+      const f100 = item.f100 ?? item.f ?? 0;
+      const factor = grams / 100;
+      log.extras.push({
+        name: `${item.baseName || item.name} (${grams}g)`,
+        baseName: item.baseName || item.name,
+        grams,
+        kcal100: k100,
+        p100,
+        c100,
+        f100,
+        kcal: Math.round(k100 * factor),
+        p: Number((p100 * factor).toFixed(1)),
+        c: Number((c100 * factor).toFixed(1)),
+        f: Number((f100 * factor).toFixed(1))
+      });
+    }
+    log.touched = true;
+    saveFoodState();
+    renderNutritionTab();
+    renderPlannerTab();
   }
-  document.getElementById("foodSearchInput").addEventListener("input", e => renderLocalFoodMatches(e.target.value));
 
-  document.getElementById("btnSearchFoodApi").addEventListener("click", async () => {
-    const q = document.getElementById("foodSearchInput").value.trim();
-    const resEl = document.getElementById("foodSearchResults");
-    if (!q) return;
-    resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--accent); padding:6px;">Zoeken in Open Food Facts...</div>`;
-    try {
-      const resp = await fetch(`https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=6`);
-      const data = await resp.json();
-      const prods = (data.products || []).filter(p => p.product_name && p.nutriments);
-      if (prods.length === 0) {
-        resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:6px;">Geen online resultaten gevonden.</div>`;
+  // Snelkeuze Eten grid (Favorieten + Categorieën)
+  document.getElementById("foodCatPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.selectedFoodCat = pill.getAttribute("data-fcat");
+    document.querySelectorAll("#foodCatPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderNutritionTab();
+  });
+
+  document.getElementById("foodQuickGrid").addEventListener("click", e => {
+    const favStar = e.target.closest("[data-fav-food]");
+    if (favStar) {
+      e.stopPropagation();
+      const fKey = favStar.getAttribute("data-fav-food");
+      const idx = state.foodFavorites.indexOf(fKey);
+      if (idx === -1) state.foodFavorites.push(fKey); else state.foodFavorites.splice(idx, 1);
+      saveFoodState();
+      renderNutritionTab();
+      return;
+    }
+    const card = e.target.closest("[data-quick-food]");
+    if (!card) return;
+    const fKey = card.getAttribute("data-quick-food");
+    const allFoodPool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
+    const item = allFoodPool.find(x => (x.id || x.name) === fKey);
+    if (item) addFoodItemToLog(item);
+  });
+
+  // Gecombineerd zoeken (Dranken + Lokaal eten + Directe Open Food Facts API zonder 1e-klik fout)
+  let searchDebounceTimer = null;
+  let activeSearchAbort = null;
+
+  function renderLocalUnifiedMatches(query) {
+    const q = query.trim().toLowerCase();
+    const resEl = document.getElementById("unifiedSearchResults");
+    if (!q) { resEl.innerHTML = ""; return []; }
+
+    const drinkMatches = DEFAULT_DRINKS.filter(d => d.name.toLowerCase().includes(q));
+    const foodPool = [...state.customFoods, ...LOCAL_FOOD_DB];
+    const foodMatches = foodPool.filter(item => item.name.toLowerCase().includes(q));
+
+    let html = "";
+    drinkMatches.forEach(d => {
+      const isFav = state.drinkFavorites.includes(d.id);
+      const defMl = d.fixedVol || d.vols[0] || 250;
+      html += `
+        <div class="pref-row" style="padding:6px 4px; gap:6px;">
+          <span class="drink-fav-star" data-search-fav-drink="${d.id}" style="font-size:1.1rem;">${isFav ? "★" : "☆"}</span>
+          <div style="flex:1; font-size:0.78rem;">
+            <strong>🥤 ${escapeHtml(d.name)}</strong> <span style="color:var(--muted);">(${Math.round((d.kcal100 * defMl) / 100)} kcal / ${defMl} ml)</span>
+          </div>
+          <button type="button" class="btn-sm btn-accent" data-search-add-drink="${d.id}" data-ml="${defMl}" style="color:#0f172a;">+${defMl} ml</button>
+        </div>
+      `;
+    });
+
+    foodMatches.forEach(item => {
+      const fKey = item.id || item.name;
+      const isFav = state.foodFavorites.includes(fKey);
+      const qtyLabel = item.unitType === "stuk" ? `${item.defaultQty || 1} stuk` : `${item.defaultQty || 100}g`;
+      const dispKcal = item.unitType === "stuk"
+        ? Math.round((item.kcalUnit ?? item.kcal) * (item.defaultQty || 1))
+        : Math.round(((item.kcal100 ?? item.kcal) * (item.defaultQty || 100)) / 100);
+      html += `
+        <div class="pref-row" style="padding:6px 4px; gap:6px;">
+          <span class="drink-fav-star" data-search-fav-food="${escapeHtml(fKey)}" style="font-size:1.1rem;">${isFav ? "★" : "☆"}</span>
+          <div style="flex:1; font-size:0.78rem;">
+            <strong>🍽️ ${escapeHtml(item.name)}</strong> <span style="color:var(--muted);">(${dispKcal} kcal / ${qtyLabel})</span>
+          </div>
+          <button type="button" class="btn-sm btn-hevy" data-search-add-local="${escapeHtml(JSON.stringify(item))}" style="color:#0f172a;">+${qtyLabel}</button>
+        </div>
+      `;
+    });
+
+    resEl.innerHTML = html;
+    return html;
+  }
+
+  const onlineSearchCache = {};
+
+  async function runOnlineFoodSearch(query) {
+    const q = query.trim();
+    if (q.length < 3) return;
+    const resEl = document.getElementById("unifiedSearchResults");
+    const existingLocalHtml = renderLocalUnifiedMatches(q);
+    const cacheKey = q.toLowerCase();
+
+    function renderApiProducts(prods) {
+      if (!prods || prods.length === 0) {
+        if (!existingLocalHtml) {
+          resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:6px;">Geen online resultaten gevonden voor "${escapeHtml(q)}".</div>`;
+        }
         return;
       }
-      resEl.innerHTML = prods.map((p, idx) => {
-        const n = p.nutriments;
+      const apiHtml = prods.map((p, idx) => {
+        const n = p.nutriments || {};
         const per100 = {
+          id: "off_" + p.product_name.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 24),
+          name: p.product_name,
           baseName: p.product_name,
-          kcal100: Math.round(n["energy-kcal_100g"] || 0),
-          p100: Number((n.proteins_100g || 0).toFixed(1)),
-          c100: Number((n.carbohydrates_100g || 0).toFixed(1)),
-          f100: Number((n.fat_100g || 0).toFixed(1))
+          cat: "snack",
+          unitType: "gram",
+          defaultQty: 100,
+          kcal100: Math.round(n["energy-kcal_100g"] || n["energy-kcal"] || 0),
+          p100: Number((n.proteins_100g || n.proteins || 0).toFixed(1)),
+          c100: Number((n.carbohydrates_100g || n.carbohydrates || 0).toFixed(1)),
+          f100: Number((n.fat_100g || n.fat || 0).toFixed(1))
         };
+        const isFav = state.foodFavorites.includes(per100.id);
         return `
           <div class="pref-row" style="padding:6px 4px; gap:6px;">
+            <span class="drink-fav-star" data-search-fav-api="${escapeHtml(JSON.stringify(per100))}" style="font-size:1.1rem;" title="Bewaar als favoriet">${isFav ? "★" : "☆"}</span>
             <div style="flex:1; min-width:0; font-size:0.78rem;">
               <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(per100.baseName)}</strong>
-              <span style="color:var(--muted); font-size:0.71rem;">Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E</span>
+              <span style="color:var(--muted); font-size:0.71rem;">Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH</span>
             </div>
             <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram" />
             <button type="button" class="btn-sm btn-accent" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g</button>
           </div>
         `;
       }).join("");
+      resEl.innerHTML = existingLocalHtml + apiHtml;
+    }
+
+    if (onlineSearchCache[cacheKey]) {
+      renderApiProducts(onlineSearchCache[cacheKey]);
+      return;
+    }
+
+    if (activeSearchAbort) {
+      try { activeSearchAbort.abort(); } catch (e) {}
+    }
+    const controller = new AbortController();
+    activeSearchAbort = controller;
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 15000);
+
+    resEl.innerHTML = existingLocalHtml + `<div id="onlineSearchSpinner" style="font-size:0.76rem; color:var(--accent); padding:6px;">🌐 Online zoeken in Open Food Facts (even geduld)...</div>`;
+
+    try {
+      // Gebruik de snellere v2 search API + Nederlandse filter
+      const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&countries_tags_en=netherlands&page_size=6&fields=product_name,nutriments`;
+      let resp = await fetch(url, { signal: controller.signal });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      let data = await resp.json();
+      let prods = (data.products || []).filter(p => p.product_name && p.nutriments);
+
+      // Fallback zonder landenfilter als er in NL geen hits zijn
+      if (prods.length === 0) {
+        const fallbackUrl = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&page_size=6&fields=product_name,nutriments`;
+        resp = await fetch(fallbackUrl, { signal: controller.signal });
+        if (resp.ok) {
+          data = await resp.json();
+          prods = (data.products || []).filter(p => p.product_name && p.nutriments);
+        }
+      }
+
+      clearTimeout(timeoutId);
+      onlineSearchCache[cacheKey] = prods;
+      renderApiProducts(prods);
     } catch (err) {
-      resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--danger); padding:6px;">Online zoeken mislukt (controleer internet).</div>`;
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError" && controller.signal.reason !== "timeout") return;
+      const spinner = document.getElementById("onlineSearchSpinner");
+      if (spinner) {
+        spinner.style.color = "var(--muted)";
+        spinner.textContent = "Online database reageert traag, probeer nogmaals of voeg handmatig toe.";
+      }
+    }
+  }
+
+  document.getElementById("unifiedSearchInput").addEventListener("input", e => {
+    const val = e.target.value;
+    renderLocalUnifiedMatches(val);
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    if (val.trim().length >= 3) {
+      // Langere input-delay (1100ms) zodat hij wacht tot je klaar bent met typen
+      searchDebounceTimer = setTimeout(() => runOnlineFoodSearch(val), 1100);
     }
   });
 
-  document.getElementById("foodSearchResults").addEventListener("click", e => {
+  document.getElementById("btnUnifiedSearch").addEventListener("click", () => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    runOnlineFoodSearch(document.getElementById("unifiedSearchInput").value);
+  });
+
+  document.getElementById("unifiedSearchResults").addEventListener("click", e => {
+    // Favoriet toggle voor drank in zoekresultaten
+    const favDrink = e.target.closest("[data-search-fav-drink]");
+    if (favDrink) {
+      const dId = favDrink.getAttribute("data-search-fav-drink");
+      const idx = state.drinkFavorites.indexOf(dId);
+      if (idx === -1) state.drinkFavorites.push(dId); else state.drinkFavorites.splice(idx, 1);
+      saveFoodState();
+      renderLocalUnifiedMatches(document.getElementById("unifiedSearchInput").value);
+      renderNutritionTab();
+      return;
+    }
+    // Favoriet toggle voor lokaal eten in zoekresultaten
+    const favFood = e.target.closest("[data-search-fav-food]");
+    if (favFood) {
+      const fKey = favFood.getAttribute("data-search-fav-food");
+      const idx = state.foodFavorites.indexOf(fKey);
+      if (idx === -1) state.foodFavorites.push(fKey); else state.foodFavorites.splice(idx, 1);
+      saveFoodState();
+      renderLocalUnifiedMatches(document.getElementById("unifiedSearchInput").value);
+      renderNutritionTab();
+      return;
+    }
+    // Favoriet toggle voor online Open Food Facts product (slaat direct op in customFoods + foodFavorites!)
+    const favApi = e.target.closest("[data-search-fav-api]");
+    if (favApi) {
+      const item = JSON.parse(favApi.getAttribute("data-search-fav-api"));
+      if (!state.customFoods.some(x => x.id === item.id)) {
+        state.customFoods.unshift(item);
+      }
+      const idx = state.foodFavorites.indexOf(item.id);
+      if (idx === -1) state.foodFavorites.push(item.id); else state.foodFavorites.splice(idx, 1);
+      saveFoodState();
+      favApi.textContent = state.foodFavorites.includes(item.id) ? "★" : "☆";
+      renderNutritionTab();
+      return;
+    }
+    // Drank toevoegen vanuit zoekresultaten
+    const addDrink = e.target.closest("[data-search-add-drink]");
+    if (addDrink) {
+      const dId = addDrink.getAttribute("data-search-add-drink");
+      const ml = Number(addDrink.getAttribute("data-ml")) || 250;
+      const dr = DEFAULT_DRINKS.find(x => x.id === dId);
+      if (dr) {
+        const log = getOrCreateFoodDay(state.selectedNutriDate);
+        const f = ml / 100;
+        log.drinks.push({ name: dr.name, ml, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
+        log.touched = true;
+        saveFoodState();
+        document.getElementById("unifiedSearchInput").value = "";
+        document.getElementById("unifiedSearchResults").innerHTML = "";
+        renderNutritionTab(); renderPlannerTab();
+      }
+      return;
+    }
+    // Lokaal eten toevoegen vanuit zoekresultaten
+    const addLocal = e.target.closest("[data-search-add-local]");
+    if (addLocal) {
+      const item = JSON.parse(addLocal.getAttribute("data-search-add-local"));
+      addFoodItemToLog(item);
+      document.getElementById("unifiedSearchInput").value = "";
+      document.getElementById("unifiedSearchResults").innerHTML = "";
+      return;
+    }
+    // Online API product toevoegen met ingevulde grammen
     const apiBtn = e.target.closest("[data-add-api-food]");
     if (apiBtn) {
       const per100 = JSON.parse(apiBtn.getAttribute("data-add-api-food"));
       const inpId = apiBtn.getAttribute("data-grams-input");
       const grams = Math.max(1, Number(document.getElementById(inpId)?.value) || 100);
-      const factor = grams / 100;
-      const item = {
-        name: `${per100.baseName} (${grams}g)`,
-        baseName: per100.baseName,
-        grams,
-        kcal100: per100.kcal100,
-        p100: per100.p100,
-        c100: per100.c100,
-        f100: per100.f100,
-        kcal: Math.round(per100.kcal100 * factor),
-        p: Number((per100.p100 * factor).toFixed(1)),
-        c: Number((per100.c100 * factor).toFixed(1)),
-        f: Number((per100.f100 * factor).toFixed(1))
-      };
-      const log = getOrCreateFoodDay(state.selectedNutriDate);
-      log.extras.push(item);
-      log.touched = true;
-      saveFoodState();
-      document.getElementById("foodSearchInput").value = "";
-      document.getElementById("foodSearchResults").innerHTML = "";
-      renderNutritionTab(); renderPlannerTab();
-      return;
+      addFoodItemToLog(per100, grams);
+      document.getElementById("unifiedSearchInput").value = "";
+      document.getElementById("unifiedSearchResults").innerHTML = "";
     }
-
-    const btn = e.target.closest("[data-add-pool-food]");
-    if (!btn) return;
-    const rawItem = JSON.parse(btn.getAttribute("data-add-pool-food"));
-    const item = {
-      ...rawItem,
-      baseName: rawItem.baseName || rawItem.name,
-      mult: 1,
-      baseKcal: rawItem.kcal,
-      baseP: rawItem.p,
-      baseC: rawItem.c,
-      baseF: rawItem.f
-    };
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.extras.push(item);
-    log.touched = true;
-    saveFoodState();
-    document.getElementById("foodSearchInput").value = "";
-    document.getElementById("foodSearchResults").innerHTML = "";
-    renderNutritionTab(); renderPlannerTab();
   });
 
   document.getElementById("btnAddCustomFood").addEventListener("click", () => {
     const name = document.getElementById("customFoodName").value.trim();
+    const unitType = document.getElementById("customFoodUnitType").value;
+    const defQty = Math.max(1, Number(document.getElementById("customFoodDefaultQty").value) || (unitType === "stuk" ? 1 : 100));
     const kcal = Number(document.getElementById("customFoodKcal").value) || 0;
     const p = Number(document.getElementById("customFoodProt").value) || 0;
     const c = Number(document.getElementById("customFoodCarb").value) || 0;
     const f = Number(document.getElementById("customFoodFat").value) || 0;
     if (!name || kcal <= 0) { alert("Vul een naam en calorieën in."); return; }
 
-    const item = { name, kcal, p, c, f };
-    state.customFoods.unshift(item);
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.extras.push(item);
-    log.touched = true;
-    saveFoodState();
+    if (unitType === "ml") {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const factor = defQty / 100;
+      log.drinks.push({ name, ml: defQty, kcal: kcal * factor, p: p * factor, c: c * factor, f: f * factor });
+      log.touched = true;
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+    } else {
+      const newId = "cust_" + Date.now();
+      const item = unitType === "stuk"
+        ? { id: newId, name, cat: "snack", unitType: "stuk", defaultQty: defQty, kcalUnit: kcal, pUnit: p, cUnit: c, fUnit: f }
+        : { id: newId, name, cat: "snack", unitType: "gram", defaultQty: defQty, kcal100: kcal, p100: p, c100: c, f100: f };
+      state.customFoods.unshift(item);
+      state.foodFavorites.push(newId);
+      addFoodItemToLog(item, defQty);
+    }
+
     document.getElementById("customFoodName").value = "";
     document.getElementById("customFoodKcal").value = "";
     document.getElementById("customFoodProt").value = "";
     document.getElementById("customFoodCarb").value = "";
     document.getElementById("customFoodFat").value = "";
-    renderNutritionTab(); renderPlannerTab();
   });
 
   function updateExtraItemGrams(idx, newGrams) {
@@ -3157,6 +3497,12 @@ function bindEvents() {
     localStorage.setItem("show_baseline_band", JSON.stringify(state.showBaselineBand));
     renderExerciseChart();
   });
+
+  document.getElementById("smartOverloadToggle").addEventListener("change", e => {
+    state.smartOverload = e.target.checked;
+    localStorage.setItem("smart_overload_v1", JSON.stringify(state.smartOverload));
+    renderExerciseChart();
+  });
   document.getElementById("prefSearch").addEventListener("input", renderPrefsList);
   document.getElementById("prefsListContainer").addEventListener("click", e => {
     const star = e.target.closest("[data-action='toggle-fav']");
@@ -3238,7 +3584,7 @@ function bindEvents() {
       garminSets: state.garminSets, hevySets: state.hevySets, bodyMeasurements: state.bodyMeasurements,
       mappings: state.mappings, favorites: state.favorites, pulleyGroups: state.pulleyGroups,
       pointOverrides: state.pointOverrides, foodLogs: state.foodLogs, plannedWorkouts: state.plannedWorkouts,
-      nutriGoals: state.nutriGoals, drinkFavorites: state.drinkFavorites, customFoods: state.customFoods
+      nutriGoals: state.nutriGoals, drinkFavorites: state.drinkFavorites, foodFavorites: state.foodFavorites, customFoods: state.customFoods, smartOverload: state.smartOverload
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -3264,7 +3610,9 @@ function bindEvents() {
         if (d.foodLogs) state.foodLogs = d.foodLogs;
         if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
         if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
+        if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
         if (d.drinkFavorites) state.drinkFavorites = d.drinkFavorites;
+        if (d.foodFavorites) state.foodFavorites = d.foodFavorites;
         if (d.customFoods) state.customFoods = d.customFoods;
 
         await saveDataset("garmin", state.garminSets);
@@ -3310,4 +3658,3 @@ function bindEvents() {
 </script>
 </body>
 </html>
-Verwerkt en geanalyseerd in code
