@@ -599,68 +599,193 @@
       </div>
     </div>
 
-    <!-- 1. Vaste Basis (Ontbijt, Tussendoortje, Lunch) met + / - stappen en rode verwijderknop -->
+    <!-- 1. Gecombineerde Dagvoeding: Basisdag + Aanvullend Eten & Drinken onder subkopjes -->
     <div class="card">
       <h2>
-        <span>Basisdag (Ontbijt, Tussendoor &amp; Lunch)</span>
-        <button type="button" class="btn-sm" id="btnResetDayDefaults" title="Herstel standaardwaarden">Reset dag</button>
+        <span>Dagvoeding &amp; Toevoegen</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span class="badge" id="drinksTotalBadge">0 ml vocht</span>
+          <button type="button" class="btn-sm" id="btnToggleBasisConfig" title="Basisdag instellen">⚙ Basisdag</button>
+          <button type="button" class="btn-sm" id="btnResetDayDefaults" title="Herstel standaardwaarden">Reset dag</button>
+        </div>
       </h2>
 
-      <!-- Magere Kwark -->
-      <div class="meal-row" id="rowBaseKwark">
-        <div class="meal-info">
-          <div class="meal-title">Magere Kwark (Ontbijt)</div>
-          <div class="meal-macros" id="kwarkMacroTxt">250g · 130 kcal · 22g E · 10g KH · 0g V</div>
+      <!-- Instellingenpaneel voor Basisdag (via tandwieltje bij basisdag) -->
+      <div id="basisConfigBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:0.84rem; color:var(--accent);">⚙ Basisdag standaardwaarden &amp; indeling</strong>
+          <button type="button" class="btn-sm" id="btnCloseBasisConfig" style="padding:2px 7px;">✕</button>
         </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" id="btnKwarkMinus">-50</button>
-          <input type="number" id="inputKwarkGrams" class="step-val-input" step="10" min="0" value="250" />
-          <button type="button" class="step-btn" id="btnKwarkPlus">+50</button>
-          <button type="button" class="step-btn" id="btnClearKwark" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
+        <div style="font-size:0.73rem; color:var(--muted); margin-bottom:8px;">
+          Kies per vast onderdeel de standaardhoeveelheid en onder welk subkopje deze op je dagoverzicht staat:
+        </div>
+
+        <div class="meal-row" style="padding:7px 8px; margin-bottom:6px;">
+          <div style="flex:1; font-size:0.78rem;">
+            <strong>Magere Kwark</strong>
+            <div style="color:var(--muted); font-size:0.68rem;">Standaard gram:</div>
+          </div>
+          <input type="number" id="cfgBaseKwarkQty" step="25" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
+          <select id="cfgBaseKwarkSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
+            <option value="ontbijt">Ontbijt</option>
+            <option value="tussendoor">Tussendoor</option>
+            <option value="lunch">Lunch</option>
+            <option value="extra">Extra</option>
+          </select>
+        </div>
+
+        <div class="meal-row" style="padding:7px 8px; margin-bottom:6px;">
+          <div style="flex:1; font-size:0.78rem;">
+            <strong>Jumbo Pure Choco Muesli</strong>
+            <div style="color:var(--muted); font-size:0.68rem;">Standaard gram:</div>
+          </div>
+          <input type="number" id="cfgBaseMuesliQty" step="5" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
+          <select id="cfgBaseMuesliSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
+            <option value="ontbijt">Ontbijt</option>
+            <option value="tussendoor">Tussendoor</option>
+            <option value="lunch">Lunch</option>
+            <option value="extra">Extra</option>
+          </select>
+        </div>
+
+        <div class="meal-row" style="padding:7px 8px; margin-bottom:6px;">
+          <div style="flex:1; font-size:0.78rem;">
+            <strong>Smoothie</strong>
+            <div style="color:var(--muted); font-size:0.66rem;">250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan</div>
+          </div>
+          <input type="number" id="cfgBaseSmoothieQty" step="1" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
+          <select id="cfgBaseSmoothieSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
+            <option value="ontbijt">Ontbijt</option>
+            <option value="tussendoor">Tussendoor</option>
+            <option value="lunch">Lunch</option>
+            <option value="extra">Extra</option>
+          </select>
+        </div>
+
+        <div class="meal-row" style="padding:7px 8px; margin-bottom:8px;">
+          <div style="flex:1; font-size:0.78rem;">
+            <strong>Volkoren Brood + Beleg</strong>
+            <div style="color:var(--muted); font-size:0.68rem;">Standaard snedes:</div>
+          </div>
+          <input type="number" id="cfgBaseBreadQty" step="1" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
+          <select id="cfgBaseBreadSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
+            <option value="ontbijt">Ontbijt</option>
+            <option value="tussendoor">Tussendoor</option>
+            <option value="lunch">Lunch</option>
+            <option value="extra">Extra</option>
+          </select>
+        </div>
+
+        <button type="button" class="btn btn-hevy" id="btnSaveBasisConfig" style="margin-top:0; padding:8px;">Basisdag instellingen opslaan</button>
+      </div>
+
+      <!-- 4 SUBKOPJES VAN DE DAG (Ontbijt, Tussendoor, Lunch, Extra) -->
+      <div id="daySectionsContainer">
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
+            <span>🌅 Ontbijt</span>
+            <span id="secTotal_ontbijt" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
+          </div>
+          <div id="secList_ontbijt"></div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-carbs); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
+            <span>🍎 Tussendoor</span>
+            <span id="secTotal_tussendoor" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
+          </div>
+          <div id="secList_tussendoor"></div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-hevy); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
+            <span>🥪 Lunch</span>
+            <span id="secTotal_lunch" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
+          </div>
+          <div id="secList_lunch"></div>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-corrected); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
+            <span>➕ Extra</span>
+            <span id="secTotal_extra" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
+          </div>
+          <div id="secList_extra"></div>
         </div>
       </div>
 
-      <!-- Jumbo Pure Chocolade Muesli -->
-      <div class="meal-row" id="rowBaseMuesli">
-        <div class="meal-info">
-          <div class="meal-title">Jumbo Pure Chocolade Muesli (Ontbijt)</div>
-          <div class="meal-macros" id="muesliMacroTxt">40g · 170 kcal · 3.8g E · 25g KH · 5.6g V</div>
+      <!-- SAMENGEVOEGD TOEVOEGEN AAN SUBKOPJE -->
+      <div style="border-top:1.5px solid var(--card-border); padding-top:12px; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:0.82rem; font-weight:700; color:var(--text);">+ Eten of drinken toevoegen aan:</span>
         </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" id="btnMuesliMinus">-10</button>
-          <input type="number" id="inputMuesliGrams" class="step-val-input" step="5" min="0" value="40" />
-          <button type="button" class="step-btn" id="btnMuesliPlus">+10</button>
-          <button type="button" class="step-btn" id="btnClearMuesli" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
+        <div class="pill-row" id="targetSectionPills" style="margin-bottom:8px;">
+          <span class="pill" data-tsec="ontbijt">🌅 Ontbijt</span>
+          <span class="pill" data-tsec="tussendoor">🍎 Tussendoor</span>
+          <span class="pill" data-tsec="lunch">🥪 Lunch</span>
+          <span class="pill active" data-tsec="extra">➕ Extra</span>
         </div>
-      </div>
 
-      <!-- Smoothie (250g volle yoghurt + 50g vriesfruit + 20g haver + 0,5 banaan) -->
-      <div class="meal-row" id="rowBaseSmoothie">
-        <div class="meal-info">
-          <div class="meal-title">Smoothie</div>
-          <div class="meal-macros" id="smoothieMacroTxt">1 portie · 304 kcal · 13.2g E · 40g KH · 9.2g V</div>
-          <div style="font-size:0.65rem; color:var(--muted); margin-top:1px;">250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan</div>
+        <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
+        <div style="display:flex; gap:6px; margin-bottom:4px;">
+          <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. banaan, skyr, cappuccino)..." style="margin-bottom:4px;" />
+          <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
         </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" id="btnSmoothieMinus">-</button>
-          <span id="smoothieCountSpan" style="padding:0 6px; font-weight:700; font-size:0.85rem;">1×</span>
-          <button type="button" class="step-btn" id="btnSmoothiePlus">+</button>
-          <button type="button" class="step-btn" id="btnClearSmoothie" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
-        </div>
-      </div>
+        <div id="unifiedSearchResults" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
 
-      <!-- Brood Snedes -->
-      <div class="meal-row" id="rowBaseBread">
-        <div class="meal-info">
-          <div class="meal-title">Volkoren Brood + Beleg (Lunch)</div>
-          <div class="meal-macros" id="breadMacroTxt">4 snedes · 540 kcal · 28g E · 64g KH · 16g V</div>
+        <!-- SUBKOPJE: DRANKEN (in mL) -->
+        <div style="margin-top:8px;">
+          <div style="font-size:0.78rem; font-weight:700; color:var(--accent); margin-bottom:5px;">🥤 Dranken (mL)</div>
+          <div class="pill-row" id="drinkCatPills">
+            <span class="pill active" data-dcat="fav">★ Favorieten</span>
+            <span class="pill" data-dcat="warm">Warme dranken</span>
+            <span class="pill" data-dcat="thee">Thee</span>
+            <span class="pill" data-dcat="fris">Frisdranken</span>
+            <span class="pill" data-dcat="water">Water</span>
+          </div>
+          <div class="drink-grid" id="drinkGrid"></div>
+
+          <!-- Hoeveelheid-kiezer na selectie van drank -->
+          <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
+            <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
+            <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
+          </div>
         </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" id="btnBreadMinus">-</button>
-          <span id="breadCountSpan" style="padding:0 6px; font-weight:700; font-size:0.85rem;">4</span>
-          <button type="button" class="step-btn" id="btnBreadPlus">+</button>
-          <button type="button" class="step-btn" id="btnClearBread" style="color:var(--danger); padding:6px 8px;" title="Verwijder voor vandaag">✕</button>
+
+        <!-- SUBKOPJE: ETEN (in stuk of gram) -->
+        <div style="margin-top:10px;">
+          <div style="font-size:0.78rem; font-weight:700; color:var(--accent-hevy); margin-bottom:5px;">🍽️ Eten (stuk / gram)</div>
+          <div class="pill-row" id="foodCatPills">
+            <span class="pill active" data-fcat="fav">★ Favorieten</span>
+            <span class="pill" data-fcat="fruit">Fruit &amp; Stuks</span>
+            <span class="pill" data-fcat="zuivel">Zuivel &amp; Eiwit</span>
+            <span class="pill" data-fcat="snack">Tussendoor</span>
+          </div>
+          <div class="drink-grid" id="foodQuickGrid"></div>
         </div>
+
+        <details style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
+          <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
+          <div style="margin-top:8px;">
+            <input type="text" id="customFoodName" placeholder="Naam product of drank" />
+            <div class="manual-grid">
+              <div>
+                <span class="field-lbl">Type &amp; Eenheid:</span>
+                <select id="customFoodUnitType" style="margin-bottom:4px; padding:8px; font-size:0.8rem;">
+                  <option value="gram">Eten per 100 gram</option>
+                  <option value="stuk">Eten per 1 stuk / portie</option>
+                  <option value="ml">Drank per 100 mL</option>
+                </select>
+              </div>
+              <div><span class="field-lbl">Standaard hoeveelheid:</span><input type="number" id="customFoodDefaultQty" value="100" /></div>
+              <div><span class="field-lbl">Kcal*:</span><input type="number" id="customFoodKcal" placeholder="250" /></div>
+              <div><span class="field-lbl">Eiwitten (g):</span><input type="number" step="0.1" id="customFoodProt" placeholder="15" /></div>
+              <div><span class="field-lbl">Koolhydraten (g):</span><input type="number" step="0.1" id="customFoodCarb" placeholder="25" /></div>
+              <div><span class="field-lbl">Vetten (g):</span><input type="number" step="0.1" id="customFoodFat" placeholder="8" /></div>
+            </div>
+            <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Opslaan &amp; Toevoegen</button>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -684,79 +809,6 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </div>
 
       <div id="dinnerContainer"></div>
-    </div>
-
-    <!-- 3. Aanvullend Eten & Dranken Toevoegen (Samengevoegd met Favorieten & Online Zoeken) -->
-    <div class="card">
-      <h2>
-        <span>+ Aanvullend Eten &amp; Dranken</span>
-        <span class="badge" id="drinksTotalBadge">0 ml vocht</span>
-      </h2>
-
-      <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
-      <div style="display:flex; gap:6px; margin-bottom:4px;">
-        <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. banaan, skyr, cappuccino)..." style="margin-bottom:4px;" />
-        <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
-      </div>
-      <div id="unifiedSearchResults" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
-
-      <!-- SUBKOPJE: DRANKEN (in mL) -->
-      <div style="border-top:1px solid var(--card-border); padding-top:10px; margin-top:6px;">
-        <div style="font-size:0.82rem; font-weight:700; color:var(--accent); margin-bottom:6px;">🥤 Dranken (mL)</div>
-        <div class="pill-row" id="drinkCatPills">
-          <span class="pill active" data-dcat="fav">★ Favorieten</span>
-          <span class="pill" data-dcat="warm">Warme dranken</span>
-          <span class="pill" data-dcat="thee">Thee</span>
-          <span class="pill" data-dcat="fris">Frisdranken</span>
-          <span class="pill" data-dcat="water">Water</span>
-        </div>
-        <div class="drink-grid" id="drinkGrid"></div>
-
-        <!-- Hoeveelheid-kiezer na selectie van drank -->
-        <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
-          <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
-          <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
-        </div>
-      </div>
-
-      <!-- SUBKOPJE: ETEN (in stuk of gram) -->
-      <div style="border-top:1px solid var(--card-border); padding-top:10px; margin-top:10px;">
-        <div style="font-size:0.82rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Eten (stuk / gram)</div>
-        <div class="pill-row" id="foodCatPills">
-          <span class="pill active" data-fcat="fav">★ Favorieten</span>
-          <span class="pill" data-fcat="fruit">Fruit &amp; Stuks</span>
-          <span class="pill" data-fcat="zuivel">Zuivel &amp; Eiwit</span>
-          <span class="pill" data-fcat="snack">Tussendoor</span>
-        </div>
-        <div class="drink-grid" id="foodQuickGrid"></div>
-      </div>
-
-      <details style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
-        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
-        <div style="margin-top:8px;">
-          <input type="text" id="customFoodName" placeholder="Naam product of drank" />
-          <div class="manual-grid">
-            <div>
-              <span class="field-lbl">Type &amp; Eenheid:</span>
-              <select id="customFoodUnitType" style="margin-bottom:4px; padding:8px; font-size:0.8rem;">
-                <option value="gram">Eten per 100 gram</option>
-                <option value="stuk">Eten per 1 stuk / portie</option>
-                <option value="ml">Drank per 100 mL</option>
-              </select>
-            </div>
-            <div><span class="field-lbl">Standaard hoeveelheid:</span><input type="number" id="customFoodDefaultQty" value="100" /></div>
-            <div><span class="field-lbl">Kcal*:</span><input type="number" id="customFoodKcal" placeholder="250" /></div>
-            <div><span class="field-lbl">Eiwitten (g):</span><input type="number" step="0.1" id="customFoodProt" placeholder="15" /></div>
-            <div><span class="field-lbl">Koolhydraten (g):</span><input type="number" step="0.1" id="customFoodCarb" placeholder="25" /></div>
-            <div><span class="field-lbl">Vetten (g):</span><input type="number" step="0.1" id="customFoodFat" placeholder="8" /></div>
-          </div>
-          <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Opslaan &amp; Toevoegen</button>
-        </div>
-      </details>
-
-      <!-- Gelogde aanvullende dranken & eten vandaag -->
-      <div id="loggedDrinksList" style="margin-top:10px;"></div>
-      <div id="loggedExtraFoodsList" style="margin-top:4px;"></div>
     </div>
 
     <!-- 5. Dag Afronden voor Planner -->
@@ -1183,9 +1235,13 @@ let state = {
     carbs: 240,
     fat: 75,
     defaultKwark: 250,
+    kwarkSection: "ontbijt",
     defaultMuesli: 40,
+    muesliSection: "ontbijt",
     defaultSmoothie: 1,
-    defaultBread: 4
+    smoothieSection: "tussendoor",
+    defaultBread: 4,
+    breadSection: "lunch"
   }),
   drinkFavorites: safeParseJSON("drink_favs_v1", ["cappuccino", "espresso", "water", "cola_zero"]),
   foodFavorites: safeParseJSON("food_favs_v1", ["banaan", "ei_gekookt", "eiwitreep", "noten_mix"]),
@@ -1198,6 +1254,7 @@ let state = {
   selectedDrinkCat: "fav",
   selectedDrinkId: null,
   selectedFoodCat: "fav",
+  selectedTargetSection: "extra",
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   selectedPlannerDate: TODAY_YMD
@@ -1597,23 +1654,155 @@ function renderNutritionTab() {
   document.getElementById("macFatSub").textContent = `/ ${goalF}g`;
   document.getElementById("macFatBar").style.width = `${Math.min(100, (totals.f / goalF) * 100)}%`;
 
-  // Basisdag items
-  document.getElementById("inputKwarkGrams").value = log.kwarkGrams;
-  document.getElementById("kwarkMacroTxt").textContent =
-    `${log.kwarkGrams}g · ${Math.round(totals.kwark.kcal)} kcal · ${Math.round(totals.kwark.p)}g E · ${Math.round(totals.kwark.c)}g KH · ${Math.round(totals.kwark.f)}g V`;
+  // Vul basisdag instellingenvelden
+  document.getElementById("cfgBaseKwarkQty").value = state.nutriGoals.defaultKwark ?? 250;
+  document.getElementById("cfgBaseKwarkSec").value = state.nutriGoals.kwarkSection || "ontbijt";
+  document.getElementById("cfgBaseMuesliQty").value = state.nutriGoals.defaultMuesli ?? 40;
+  document.getElementById("cfgBaseMuesliSec").value = state.nutriGoals.muesliSection || "ontbijt";
+  document.getElementById("cfgBaseSmoothieQty").value = state.nutriGoals.defaultSmoothie ?? 1;
+  document.getElementById("cfgBaseSmoothieSec").value = state.nutriGoals.smoothieSection || "tussendoor";
+  document.getElementById("cfgBaseBreadQty").value = state.nutriGoals.defaultBread ?? 4;
+  document.getElementById("cfgBaseBreadSec").value = state.nutriGoals.breadSection || "lunch";
 
-  const curMuesliG = log.muesliGrams !== undefined ? log.muesliGrams : Number(state.nutriGoals.defaultMuesli ?? 40);
-  document.getElementById("inputMuesliGrams").value = curMuesliG;
-  document.getElementById("muesliMacroTxt").textContent =
-    `${curMuesliG}g · ${Math.round(totals.muesli.kcal)} kcal · ${totals.muesli.p.toFixed(1)}g E · ${Math.round(totals.muesli.c)}g KH · ${totals.muesli.f.toFixed(1)}g V`;
+  // Bouw de 4 subkopjes: ontbijt, tussendoor, lunch, extra
+  const sections = ["ontbijt", "tussendoor", "lunch", "extra"];
+  const secHtml = { ontbijt: [], tussendoor: [], lunch: [], extra: [] };
+  const secKcal = { ontbijt: 0, tussendoor: 0, lunch: 0, extra: 0 };
 
-  document.getElementById("smoothieCountSpan").textContent = `${log.smoothieCount}×`;
-  document.getElementById("smoothieMacroTxt").textContent =
-    `${log.smoothieCount} portie · ${Math.round(totals.smoothie.kcal)} kcal · ${totals.smoothie.p.toFixed(1)}g E · ${Math.round(totals.smoothie.c)}g KH · ${totals.smoothie.f.toFixed(1)}g V`;
+  const kwarkSec = state.nutriGoals.kwarkSection || "ontbijt";
+  const muesliSec = state.nutriGoals.muesliSection || "ontbijt";
+  const smoothieSec = state.nutriGoals.smoothieSection || "tussendoor";
+  const breadSec = state.nutriGoals.breadSection || "lunch";
 
-  document.getElementById("breadCountSpan").textContent = log.breadSlices;
-  document.getElementById("breadMacroTxt").textContent =
-    `${log.breadSlices} snedes · ${Math.round(totals.bread.kcal)} kcal · ${Math.round(totals.bread.p)}g E · ${Math.round(totals.bread.c)}g KH · ${Math.round(totals.bread.f)}g V`;
+  const curKwarkG = log.kwarkGrams !== undefined ? Number(log.kwarkGrams) : Number(state.nutriGoals.defaultKwark ?? 250);
+  const curMuesliG = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
+  const curSmoothieC = log.smoothieCount !== undefined ? Number(log.smoothieCount) : Number(state.nutriGoals.defaultSmoothie ?? 1);
+  const curBreadS = log.breadSlices !== undefined ? Number(log.breadSlices) : Number(state.nutriGoals.defaultBread ?? 4);
+
+  if (curKwarkG > 0) {
+    secKcal[kwarkSec] += totals.kwark.kcal;
+    secHtml[kwarkSec].push(`
+      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
+        <div class="meal-info">
+          <div class="meal-title">Magere Kwark</div>
+          <div class="meal-macros">${curKwarkG}g · ${Math.round(totals.kwark.kcal)} kcal · ${Math.round(totals.kwark.p)}g E · ${Math.round(totals.kwark.c)}g KH · ${Math.round(totals.kwark.f)}g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" data-base-act="kwark-minus" style="padding:5px 8px;">-50</button>
+          <input type="number" data-base-inp="kwark" class="step-val-input" step="10" min="0" value="${curKwarkG}" style="width:50px !important; padding:4px 2px !important;" />
+          <button type="button" class="step-btn" data-base-act="kwark-plus" style="padding:5px 8px;">+50</button>
+          <button type="button" class="step-btn" data-base-act="kwark-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+        </div>
+      </div>
+    `);
+  }
+
+  if (curMuesliG > 0) {
+    secKcal[muesliSec] += totals.muesli.kcal;
+    secHtml[muesliSec].push(`
+      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
+        <div class="meal-info">
+          <div class="meal-title">Jumbo Pure Chocolade Muesli</div>
+          <div class="meal-macros">${curMuesliG}g · ${Math.round(totals.muesli.kcal)} kcal · ${totals.muesli.p.toFixed(1)}g E · ${Math.round(totals.muesli.c)}g KH · ${totals.muesli.f.toFixed(1)}g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" data-base-act="muesli-minus" style="padding:5px 8px;">-10</button>
+          <input type="number" data-base-inp="muesli" class="step-val-input" step="5" min="0" value="${curMuesliG}" style="width:50px !important; padding:4px 2px !important;" />
+          <button type="button" class="step-btn" data-base-act="muesli-plus" style="padding:5px 8px;">+10</button>
+          <button type="button" class="step-btn" data-base-act="muesli-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+        </div>
+      </div>
+    `);
+  }
+
+  if (curSmoothieC > 0) {
+    secKcal[smoothieSec] += totals.smoothie.kcal;
+    secHtml[smoothieSec].push(`
+      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
+        <div class="meal-info">
+          <div class="meal-title">Smoothie</div>
+          <div class="meal-macros">${curSmoothieC} portie · ${Math.round(totals.smoothie.kcal)} kcal · ${totals.smoothie.p.toFixed(1)}g E · ${Math.round(totals.smoothie.c)}g KH · ${totals.smoothie.f.toFixed(1)}g V</div>
+          <div style="font-size:0.64rem; color:var(--muted); margin-top:1px;">250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" data-base-act="smoothie-minus" style="padding:5px 8px;">-</button>
+          <span style="padding:0 5px; font-weight:700; font-size:0.82rem;">${curSmoothieC}×</span>
+          <button type="button" class="step-btn" data-base-act="smoothie-plus" style="padding:5px 8px;">+</button>
+          <button type="button" class="step-btn" data-base-act="smoothie-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+        </div>
+      </div>
+    `);
+  }
+
+  if (curBreadS > 0) {
+    secKcal[breadSec] += totals.bread.kcal;
+    secHtml[breadSec].push(`
+      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
+        <div class="meal-info">
+          <div class="meal-title">Volkoren Brood + Beleg</div>
+          <div class="meal-macros">${curBreadS} snedes · ${Math.round(totals.bread.kcal)} kcal · ${Math.round(totals.bread.p)}g E · ${Math.round(totals.bread.c)}g KH · ${Math.round(totals.bread.f)}g V</div>
+        </div>
+        <div class="stepper">
+          <button type="button" class="step-btn" data-base-act="bread-minus" style="padding:5px 8px;">-</button>
+          <span style="padding:0 5px; font-weight:700; font-size:0.82rem;">${curBreadS}</span>
+          <button type="button" class="step-btn" data-base-act="bread-plus" style="padding:5px 8px;">+</button>
+          <button type="button" class="step-btn" data-base-act="bread-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+        </div>
+      </div>
+    `);
+  }
+
+  // Voeg gelogde dranken toe onder hun gekozen subkopje (standaard 'extra' indien ouder log)
+  (log.drinks || []).forEach((d, idx) => {
+    const targetSec = sections.includes(d.section) ? d.section : "extra";
+    secKcal[targetSec] += Number(d.kcal || 0);
+    secHtml[targetSec].push(`
+      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; border-color:rgba(56,189,248,0.28);">
+        <div class="meal-info">
+          <div class="meal-title">🥤 ${escapeHtml(d.name)} (${d.ml} ml)</div>
+          <div class="meal-macros">${Math.round(d.kcal)} kcal · ${Number(d.p).toFixed(1)}g E · ${Number(d.c).toFixed(1)}g KH · ${Number(d.f).toFixed(1)}g V</div>
+        </div>
+        <button type="button" class="step-btn" data-del-drink="${idx}" style="color:var(--danger); padding:5px 8px;" title="Verwijderen">✕</button>
+      </div>
+    `);
+  });
+
+  // Voeg gelogde extra etenswaren toe onder hun gekozen subkopje
+  (log.extras || []).forEach((ex, idx) => {
+    const targetSec = sections.includes(ex.section) ? ex.section : "extra";
+    secKcal[targetSec] += Number(ex.kcal || 0);
+    const hasGrams = ex.grams !== undefined && ex.grams !== null;
+    const qtyControl = hasGrams
+      ? `<div class="stepper" style="padding:2px;">
+           <button type="button" class="step-btn" data-extra-step="-10" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">-10</button>
+           <input type="number" data-extra-grams="${idx}" value="${ex.grams}" step="5" min="1" class="step-val-input" style="width:46px !important; padding:3px 2px !important; font-size:0.76rem !important;" />
+           <button type="button" class="step-btn" data-extra-step="10" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">+10</button>
+         </div>`
+      : `<div class="stepper" style="padding:2px;">
+           <button type="button" class="step-btn" data-extra-mult="-0.5" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">-</button>
+           <span style="font-size:0.74rem; font-weight:700; padding:0 4px;">${ex.mult || 1} st</span>
+           <button type="button" class="step-btn" data-extra-mult="0.5" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">+</button>
+         </div>`;
+
+    secHtml[targetSec].push(`
+      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:rgba(16,185,129,0.28);">
+        <div class="meal-info">
+          <div class="meal-title">🍽️ ${escapeHtml(ex.baseName || ex.name)}</div>
+          <div class="meal-macros">${hasGrams ? ex.grams + "g · " : (ex.mult || 1) + " stuk · "}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
+        </div>
+        ${qtyControl}
+        <button type="button" class="step-btn" data-del-extra="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>
+      </div>
+    `);
+  });
+
+  sections.forEach(sec => {
+    document.getElementById(`secTotal_${sec}`).textContent = `${Math.round(secKcal[sec])} kcal`;
+    const listEl = document.getElementById(`secList_${sec}`);
+    listEl.innerHTML = secHtml[sec].length > 0
+      ? secHtml[sec].join("")
+      : `<div style="font-size:0.74rem; color:var(--muted); padding:2px 4px;">Nog geen items onder dit kopje.</div>`;
+  });
 
   // Avondeten (Weekmenu) weergave + Dag wisselen dropdown
   const dinnerBox = document.getElementById("dinnerContainer");
@@ -1665,8 +1854,8 @@ function renderNutritionTab() {
     `;
   }
 
-  // Dranken grid & lijst
-  document.getElementById("drinksTotalBadge").textContent = `${totals.drinkMl} ml`;
+  // Dranken grid
+  document.getElementById("drinksTotalBadge").textContent = `${totals.drinkMl} ml vocht`;
   const filteredDrinks = DEFAULT_DRINKS.filter(d =>
     state.selectedDrinkCat === "fav" ? state.drinkFavorites.includes(d.id) : d.cat === state.selectedDrinkCat
   );
@@ -1698,18 +1887,6 @@ function renderNutritionTab() {
     volPicker.style.display = "none";
   }
 
-  const loggedDrinksEl = document.getElementById("loggedDrinksList");
-  if (log.drinks && log.drinks.length > 0) {
-    loggedDrinksEl.innerHTML = log.drinks.map((d, idx) => `
-      <div class="pref-row" style="padding:5px 2px;">
-        <span style="font-size:0.8rem;">🥤 ${escapeHtml(d.name)} (<strong>${d.ml} ml</strong>) · <span style="color:var(--muted);">${Math.round(d.kcal)} kcal, ${Number(d.p).toFixed(1)}g E</span></span>
-        <button type="button" class="btn-sm" data-del-drink="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
-      </div>
-    `).join("");
-  } else {
-    loggedDrinksEl.innerHTML = "";
-  }
-
   // Snelkeuze Eten grid (Favorieten + Categorieën, in stuk of gram)
   const allFoodPool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
   const filteredFoods = allFoodPool.filter(item =>
@@ -1731,38 +1908,6 @@ function renderNutritionTab() {
       </div>
     `;
   }).join("");
-
-  // Extra gelogde producten (met aanpasbare grammen / hoeveelheid!)
-  const extraListEl = document.getElementById("loggedExtraFoodsList");
-  if (log.extras && log.extras.length > 0) {
-    extraListEl.innerHTML = log.extras.map((ex, idx) => {
-      const hasGrams = ex.grams !== undefined && ex.grams !== null;
-      const qtyControl = hasGrams
-        ? `<div class="stepper" style="padding:2px;">
-             <button type="button" class="step-btn" data-extra-step="-10" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">-10</button>
-             <input type="number" data-extra-grams="${idx}" value="${ex.grams}" step="5" min="1" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.76rem !important;" />
-             <button type="button" class="step-btn" data-extra-step="10" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">+10</button>
-           </div>`
-        : `<div class="stepper" style="padding:2px;">
-             <button type="button" class="step-btn" data-extra-mult="-0.5" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">-</button>
-             <span style="font-size:0.74rem; font-weight:700; padding:0 4px;">${ex.mult || 1} st</span>
-             <button type="button" class="step-btn" data-extra-mult="0.5" data-extra-idx="${idx}" style="padding:3px 6px; font-size:0.74rem;">+</button>
-           </div>`;
-
-      return `
-        <div class="pref-row" style="padding:6px 2px; gap:6px;">
-          <div style="flex:1; min-width:0; font-size:0.78rem;">
-            <div style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🍽️ ${escapeHtml(ex.baseName || ex.name)}</div>
-            <div style="color:var(--muted); font-size:0.71rem;">${hasGrams ? ex.grams + "g · " : (ex.mult || 1) + " stuk · "}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
-          </div>
-          ${qtyControl}
-          <button type="button" class="btn-sm" data-del-extra="${idx}" style="color:var(--danger); padding:3px 6px;">✕</button>
-        </div>
-      `;
-    }).join("");
-  } else {
-    extraListEl.innerHTML = "";
-  }
 
   document.getElementById("chkCompleteFoodDay").checked = Boolean(log.completed);
 }
@@ -2772,81 +2917,145 @@ function bindEvents() {
     renderNutritionTab();
   });
 
-  // Kwark -50 / +50 & exact getal
-  document.getElementById("btnKwarkMinus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.kwarkGrams = Math.max(0, Number(log.kwarkGrams) - 50);
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  // Basisdag tandwieltje & instellingen opslaan
+  document.getElementById("btnToggleBasisConfig").addEventListener("click", () => {
+    const box = document.getElementById("basisConfigBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
   });
-  document.getElementById("btnKwarkPlus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.kwarkGrams = Number(log.kwarkGrams) + 50;
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  document.getElementById("btnCloseBasisConfig").addEventListener("click", () => {
+    document.getElementById("basisConfigBox").style.display = "none";
   });
-  document.getElementById("inputKwarkGrams").addEventListener("change", e => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.kwarkGrams = Math.max(0, Number(e.target.value) || 0);
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-
-  // Muesli -10 / +10 & exact getal
-  document.getElementById("btnMuesliMinus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
-    log.muesliGrams = Math.max(0, cur - 10);
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("btnMuesliPlus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
-    log.muesliGrams = cur + 10;
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("inputMuesliGrams").addEventListener("change", e => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.muesliGrams = Math.max(0, Number(e.target.value) || 0);
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  document.getElementById("btnSaveBasisConfig").addEventListener("click", () => {
+    state.nutriGoals.defaultKwark = Math.max(0, Number(document.getElementById("cfgBaseKwarkQty").value) || 0);
+    state.nutriGoals.kwarkSection = document.getElementById("cfgBaseKwarkSec").value || "ontbijt";
+    state.nutriGoals.defaultMuesli = Math.max(0, Number(document.getElementById("cfgBaseMuesliQty").value) || 0);
+    state.nutriGoals.muesliSection = document.getElementById("cfgBaseMuesliSec").value || "ontbijt";
+    state.nutriGoals.defaultSmoothie = Math.max(0, Number(document.getElementById("cfgBaseSmoothieQty").value) || 0);
+    state.nutriGoals.smoothieSection = document.getElementById("cfgBaseSmoothieSec").value || "tussendoor";
+    state.nutriGoals.defaultBread = Math.max(0, Number(document.getElementById("cfgBaseBreadQty").value) || 0);
+    state.nutriGoals.breadSection = document.getElementById("cfgBaseBreadSec").value || "lunch";
+    saveFoodState();
+    document.getElementById("basisConfigBox").style.display = "none";
+    renderNutritionTab();
+    renderPlannerTab();
   });
 
-  // Smoothie / Ontbijt-extra - / +
-  document.getElementById("btnSmoothieMinus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.smoothieCount = Math.max(0, Number(log.smoothieCount) - 1);
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("btnSmoothiePlus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.smoothieCount = Number(log.smoothieCount) + 1;
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  // Subkopje selectie voor toevoegen (Ontbijt / Tussendoor / Lunch / Extra)
+  document.getElementById("targetSectionPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.selectedTargetSection = pill.getAttribute("data-tsec") || "extra";
+    document.querySelectorAll("#targetSectionPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
   });
 
-  // Brood - / +
-  document.getElementById("btnBreadMinus").addEventListener("click", () => {
+  function updateExtraItemGrams(idx, newGrams) {
     const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.breadSlices = Math.max(0, Number(log.breadSlices) - 1);
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("btnBreadPlus").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.breadSlices = Number(log.breadSlices) + 1;
-    log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+    const ex = log.extras[idx];
+    if (!ex || ex.kcal100 === undefined) return;
+    ex.grams = Math.max(1, newGrams);
+    const f = ex.grams / 100;
+    ex.kcal = Math.round(ex.kcal100 * f);
+    ex.p = Number((ex.p100 * f).toFixed(1));
+    ex.c = Number((ex.c100 * f).toFixed(1));
+    ex.f = Number((ex.f100 * f).toFixed(1));
+    ex.name = `${ex.baseName} (${ex.grams}g)`;
+    saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  }
+
+  // Gecombineerde interactie op alle 4 subkopjes (Basisdag items + Dranken + Extra etenswaren)
+  document.getElementById("daySectionsContainer").addEventListener("click", e => {
+    const baseBtn = e.target.closest("[data-base-act]");
+    if (baseBtn) {
+      const act = baseBtn.getAttribute("data-base-act");
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      if (act === "kwark-minus") log.kwarkGrams = Math.max(0, Number(log.kwarkGrams) - 50);
+      else if (act === "kwark-plus") log.kwarkGrams = Number(log.kwarkGrams) + 50;
+      else if (act === "kwark-clear") log.kwarkGrams = 0;
+      else if (act === "muesli-minus") {
+        const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
+        log.muesliGrams = Math.max(0, cur - 10);
+      } else if (act === "muesli-plus") {
+        const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
+        log.muesliGrams = cur + 10;
+      } else if (act === "muesli-clear") log.muesliGrams = 0;
+      else if (act === "smoothie-minus") log.smoothieCount = Math.max(0, Number(log.smoothieCount) - 1);
+      else if (act === "smoothie-plus") log.smoothieCount = Number(log.smoothieCount) + 1;
+      else if (act === "smoothie-clear") log.smoothieCount = 0;
+      else if (act === "bread-minus") log.breadSlices = Math.max(0, Number(log.breadSlices) - 1);
+      else if (act === "bread-plus") log.breadSlices = Number(log.breadSlices) + 1;
+      else if (act === "bread-clear") log.breadSlices = 0;
+      log.touched = true;
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+
+    const delDrink = e.target.closest("[data-del-drink]");
+    if (delDrink) {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.drinks.splice(Number(delDrink.getAttribute("data-del-drink")), 1);
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+
+    const delExtra = e.target.closest("[data-del-extra]");
+    if (delExtra) {
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.extras.splice(Number(delExtra.getAttribute("data-del-extra")), 1);
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+
+    const stepBtn = e.target.closest("[data-extra-step]");
+    if (stepBtn) {
+      const idx = Number(stepBtn.getAttribute("data-extra-idx"));
+      const delta = Number(stepBtn.getAttribute("data-extra-step"));
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const ex = log.extras[idx];
+      if (ex && ex.grams !== undefined) updateExtraItemGrams(idx, Number(ex.grams) + delta);
+      return;
+    }
+
+    const multBtn = e.target.closest("[data-extra-mult]");
+    if (multBtn) {
+      const idx = Number(multBtn.getAttribute("data-extra-idx"));
+      const delta = Number(multBtn.getAttribute("data-extra-mult"));
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const ex = log.extras[idx];
+      if (ex) {
+        const newMult = Math.max(0.5, (Number(ex.mult) || 1) + delta);
+        ex.mult = newMult;
+        const bK = ex.baseKcal ?? ex.kcal;
+        const bP = ex.baseP ?? ex.p;
+        const bC = ex.baseC ?? ex.c;
+        const bF = ex.baseF ?? ex.f;
+        ex.baseKcal = bK; ex.baseP = bP; ex.baseC = bC; ex.baseF = bF;
+        ex.kcal = Math.round(bK * newMult);
+        ex.p = Number((bP * newMult).toFixed(1));
+        ex.c = Number((bC * newMult).toFixed(1));
+        ex.f = Number((bF * newMult).toFixed(1));
+        saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      }
+    }
   });
 
-  document.getElementById("btnClearKwark").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.kwarkGrams = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("btnClearMuesli").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.muesliGrams = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("btnClearSmoothie").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.smoothieCount = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
-  document.getElementById("btnClearBread").addEventListener("click", () => {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.breadSlices = 0; log.touched = true; saveFoodState(); renderNutritionTab(); renderPlannerTab();
+  document.getElementById("daySectionsContainer").addEventListener("change", e => {
+    const baseInp = e.target.closest("[data-base-inp]");
+    if (baseInp) {
+      const kind = baseInp.getAttribute("data-base-inp");
+      const val = Math.max(0, Number(baseInp.value) || 0);
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      if (kind === "kwark") log.kwarkGrams = val;
+      else if (kind === "muesli") log.muesliGrams = val;
+      log.touched = true;
+      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+    const extraInp = e.target.closest("[data-extra-grams]");
+    if (extraInp) {
+      const idx = Number(extraInp.getAttribute("data-extra-grams"));
+      updateExtraItemGrams(idx, Number(extraInp.value) || 100);
+    }
   });
 
   document.getElementById("btnResetDayDefaults").addEventListener("click", () => {
@@ -2911,7 +3120,7 @@ function bindEvents() {
     }
   });
 
-  // Dranken selectie, favorieten & toevoegen
+  // Dranken selectie, favorieten & toevoegen aan gekozen subkopje
   document.getElementById("drinkCatPills").addEventListener("click", e => {
     const pill = e.target.closest(".pill");
     if (!pill) return;
@@ -2936,11 +3145,10 @@ function bindEvents() {
     const dId = card.getAttribute("data-select-drink");
     const dr = DEFAULT_DRINKS.find(x => x.id === dId);
     if (!dr) return;
-    // Als vaste hoeveelheid (zoals Espresso): direct toevoegen!
     if (dr.fixedVol) {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
       const f = dr.fixedVol / 100;
-      log.drinks.push({ name: dr.name, ml: dr.fixedVol, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
+      log.drinks.push({ name: dr.name, ml: dr.fixedVol, section: state.selectedTargetSection, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
       log.touched = true;
       state.selectedDrinkId = null;
       saveFoodState(); renderNutritionTab(); renderPlannerTab();
@@ -2958,22 +3166,16 @@ function bindEvents() {
     if (!dr) return;
     const log = getOrCreateFoodDay(state.selectedNutriDate);
     const f = ml / 100;
-    log.drinks.push({ name: dr.name, ml, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
+    log.drinks.push({ name: dr.name, ml, section: state.selectedTargetSection, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
     log.touched = true;
     state.selectedDrinkId = null;
     saveFoodState(); renderNutritionTab(); renderPlannerTab();
   });
-  document.getElementById("loggedDrinksList").addEventListener("click", e => {
-    const del = e.target.closest("[data-del-drink]");
-    if (!del) return;
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.drinks.splice(Number(del.getAttribute("data-del-drink")), 1);
-    saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  });
 
-  // Helper om een eten-item (stuk of gram) toe te voegen aan vandaag
+  // Helper om een eten-item (stuk of gram) toe te voegen aan gekozen subkopje
   function addFoodItemToLog(item, customQty = null) {
     const log = getOrCreateFoodDay(state.selectedNutriDate);
+    const sec = state.selectedTargetSection || "extra";
     if (item.unitType === "stuk") {
       const qty = customQty !== null ? customQty : (item.defaultQty || 1);
       const uK = item.kcalUnit ?? item.kcal ?? 0;
@@ -2983,6 +3185,7 @@ function bindEvents() {
       log.extras.push({
         name: item.name,
         baseName: item.name,
+        section: sec,
         mult: qty,
         baseKcal: uK,
         baseP: uP,
@@ -3003,6 +3206,7 @@ function bindEvents() {
       log.extras.push({
         name: `${item.baseName || item.name} (${grams}g)`,
         baseName: item.baseName || item.name,
+        section: sec,
         grams,
         kcal100: k100,
         p100,
@@ -3049,7 +3253,7 @@ function bindEvents() {
     if (item) addFoodItemToLog(item);
   });
 
-  // Gecombineerd zoeken (Dranken + Lokaal eten + Directe Open Food Facts API zonder 1e-klik fout)
+  // Gecombineerd zoeken (Dranken + Lokaal eten + Directe Open Food Facts API)
   let searchDebounceTimer = null;
   let activeSearchAbort = null;
 
@@ -3160,14 +3364,12 @@ function bindEvents() {
     resEl.innerHTML = existingLocalHtml + `<div id="onlineSearchSpinner" style="font-size:0.76rem; color:var(--accent); padding:6px;">🌐 Online zoeken in Open Food Facts (even geduld)...</div>`;
 
     try {
-      // Gebruik de snellere v2 search API + Nederlandse filter
       const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&countries_tags_en=netherlands&page_size=6&fields=product_name,nutriments`;
       let resp = await fetch(url, { signal: controller.signal });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       let data = await resp.json();
       let prods = (data.products || []).filter(p => p.product_name && p.nutriments);
 
-      // Fallback zonder landenfilter als er in NL geen hits zijn
       if (prods.length === 0) {
         const fallbackUrl = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&page_size=6&fields=product_name,nutriments`;
         resp = await fetch(fallbackUrl, { signal: controller.signal });
@@ -3196,7 +3398,6 @@ function bindEvents() {
     renderLocalUnifiedMatches(val);
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     if (val.trim().length >= 3) {
-      // Langere input-delay (1100ms) zodat hij wacht tot je klaar bent met typen
       searchDebounceTimer = setTimeout(() => runOnlineFoodSearch(val), 1100);
     }
   });
@@ -3207,7 +3408,6 @@ function bindEvents() {
   });
 
   document.getElementById("unifiedSearchResults").addEventListener("click", e => {
-    // Favoriet toggle voor drank in zoekresultaten
     const favDrink = e.target.closest("[data-search-fav-drink]");
     if (favDrink) {
       const dId = favDrink.getAttribute("data-search-fav-drink");
@@ -3218,7 +3418,6 @@ function bindEvents() {
       renderNutritionTab();
       return;
     }
-    // Favoriet toggle voor lokaal eten in zoekresultaten
     const favFood = e.target.closest("[data-search-fav-food]");
     if (favFood) {
       const fKey = favFood.getAttribute("data-search-fav-food");
@@ -3229,7 +3428,6 @@ function bindEvents() {
       renderNutritionTab();
       return;
     }
-    // Favoriet toggle voor online Open Food Facts product (slaat direct op in customFoods + foodFavorites!)
     const favApi = e.target.closest("[data-search-fav-api]");
     if (favApi) {
       const item = JSON.parse(favApi.getAttribute("data-search-fav-api"));
@@ -3243,7 +3441,6 @@ function bindEvents() {
       renderNutritionTab();
       return;
     }
-    // Drank toevoegen vanuit zoekresultaten
     const addDrink = e.target.closest("[data-search-add-drink]");
     if (addDrink) {
       const dId = addDrink.getAttribute("data-search-add-drink");
@@ -3252,7 +3449,7 @@ function bindEvents() {
       if (dr) {
         const log = getOrCreateFoodDay(state.selectedNutriDate);
         const f = ml / 100;
-        log.drinks.push({ name: dr.name, ml, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
+        log.drinks.push({ name: dr.name, ml, section: state.selectedTargetSection, kcal: dr.kcal100 * f, p: dr.p100 * f, c: dr.c100 * f, f: dr.f100 * f });
         log.touched = true;
         saveFoodState();
         document.getElementById("unifiedSearchInput").value = "";
@@ -3261,7 +3458,6 @@ function bindEvents() {
       }
       return;
     }
-    // Lokaal eten toevoegen vanuit zoekresultaten
     const addLocal = e.target.closest("[data-search-add-local]");
     if (addLocal) {
       const item = JSON.parse(addLocal.getAttribute("data-search-add-local"));
@@ -3270,7 +3466,6 @@ function bindEvents() {
       document.getElementById("unifiedSearchResults").innerHTML = "";
       return;
     }
-    // Online API product toevoegen met ingevulde grammen
     const apiBtn = e.target.closest("[data-add-api-food]");
     if (apiBtn) {
       const per100 = JSON.parse(apiBtn.getAttribute("data-add-api-food"));
@@ -3295,7 +3490,7 @@ function bindEvents() {
     if (unitType === "ml") {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
       const factor = defQty / 100;
-      log.drinks.push({ name, ml: defQty, kcal: kcal * factor, p: p * factor, c: c * factor, f: f * factor });
+      log.drinks.push({ name, ml: defQty, section: state.selectedTargetSection, kcal: kcal * factor, p: p * factor, c: c * factor, f: f * factor });
       log.touched = true;
       saveFoodState(); renderNutritionTab(); renderPlannerTab();
     } else {
@@ -3313,67 +3508,6 @@ function bindEvents() {
     document.getElementById("customFoodProt").value = "";
     document.getElementById("customFoodCarb").value = "";
     document.getElementById("customFoodFat").value = "";
-  });
-
-  function updateExtraItemGrams(idx, newGrams) {
-    const log = getOrCreateFoodDay(state.selectedNutriDate);
-    const ex = log.extras[idx];
-    if (!ex || ex.kcal100 === undefined) return;
-    ex.grams = Math.max(1, newGrams);
-    const f = ex.grams / 100;
-    ex.kcal = Math.round(ex.kcal100 * f);
-    ex.p = Number((ex.p100 * f).toFixed(1));
-    ex.c = Number((ex.c100 * f).toFixed(1));
-    ex.f = Number((ex.f100 * f).toFixed(1));
-    ex.name = `${ex.baseName} (${ex.grams}g)`;
-    saveFoodState(); renderNutritionTab(); renderPlannerTab();
-  }
-
-  document.getElementById("loggedExtraFoodsList").addEventListener("click", e => {
-    const del = e.target.closest("[data-del-extra]");
-    if (del) {
-      const log = getOrCreateFoodDay(state.selectedNutriDate);
-      log.extras.splice(Number(del.getAttribute("data-del-extra")), 1);
-      saveFoodState(); renderNutritionTab(); renderPlannerTab();
-      return;
-    }
-    const stepBtn = e.target.closest("[data-extra-step]");
-    if (stepBtn) {
-      const idx = Number(stepBtn.getAttribute("data-extra-idx"));
-      const delta = Number(stepBtn.getAttribute("data-extra-step"));
-      const log = getOrCreateFoodDay(state.selectedNutriDate);
-      const ex = log.extras[idx];
-      if (ex && ex.grams !== undefined) updateExtraItemGrams(idx, Number(ex.grams) + delta);
-      return;
-    }
-    const multBtn = e.target.closest("[data-extra-mult]");
-    if (multBtn) {
-      const idx = Number(multBtn.getAttribute("data-extra-idx"));
-      const delta = Number(multBtn.getAttribute("data-extra-mult"));
-      const log = getOrCreateFoodDay(state.selectedNutriDate);
-      const ex = log.extras[idx];
-      if (ex) {
-        const newMult = Math.max(0.5, (Number(ex.mult) || 1) + delta);
-        ex.mult = newMult;
-        const bK = ex.baseKcal ?? ex.kcal;
-        const bP = ex.baseP ?? ex.p;
-        const bC = ex.baseC ?? ex.c;
-        const bF = ex.baseF ?? ex.f;
-        ex.baseKcal = bK; ex.baseP = bP; ex.baseC = bC; ex.baseF = bF;
-        ex.kcal = Math.round(bK * newMult);
-        ex.p = Number((bP * newMult).toFixed(1));
-        ex.c = Number((bC * newMult).toFixed(1));
-        ex.f = Number((bF * newMult).toFixed(1));
-        saveFoodState(); renderNutritionTab(); renderPlannerTab();
-      }
-    }
-  });
-
-  document.getElementById("loggedExtraFoodsList").addEventListener("change", e => {
-    const inp = e.target.closest("[data-extra-grams]");
-    if (!inp) return;
-    const idx = Number(inp.getAttribute("data-extra-grams"));
-    updateExtraItemGrams(idx, Number(inp.value) || 100);
   });
 
   document.getElementById("chkCompleteFoodDay").addEventListener("change", e => {
