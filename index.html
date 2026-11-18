@@ -372,6 +372,23 @@
     .scanner-inbody { background: rgba(56, 189, 248, 0.18); color: var(--accent); }
     .scanner-evolt { background: rgba(236, 72, 153, 0.18); color: var(--accent-body); }
 
+
+    /* PC / Desktop 2-koloms indeling voor Voeding */
+    @media (min-width: 768px) {
+      #tab-nutrition .sections-grid-pc {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        align-items: start;
+      }
+      #tab-nutrition .add-grid-pc {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+    }
+
     /* Tooltip styles for (i) */
     .tooltip-icon {
       display: inline-flex; align-items: center; justify-content: center;
@@ -599,10 +616,10 @@
       </div>
     </div>
 
-    <!-- 1. Gecombineerde Dagvoeding: Basisdag + Aanvullend Eten & Drinken onder subkopjes -->
+    <!-- 1. Dagmenu (Basisdag + Toegevoegde items onder Ontbijt, Lunch, Tussendoor & Extra) -->
     <div class="card">
       <h2>
-        <span>Dagvoeding &amp; Toevoegen</span>
+        <span>Dagmenu</span>
         <div style="display:flex; gap:6px; align-items:center;">
           <span class="badge" id="drinksTotalBadge">0 ml vocht</span>
           <button type="button" class="btn-sm" id="btnToggleBasisConfig" title="Basisdag instellen">⚙ Basisdag</button>
@@ -610,78 +627,64 @@
         </div>
       </h2>
 
-      <!-- Instellingenpaneel voor Basisdag (via tandwieltje bij basisdag) -->
+      <!-- Instellingenpaneel voor Basisdag (onderdelen aanpassen, toevoegen en verwijderen) -->
       <div id="basisConfigBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:0.84rem; color:var(--accent);">⚙ Basisdag standaardwaarden &amp; indeling</strong>
+          <strong style="font-size:0.84rem; color:var(--accent);">⚙ Basisdag samenstellen &amp; indelen</strong>
           <button type="button" class="btn-sm" id="btnCloseBasisConfig" style="padding:2px 7px;">✕</button>
         </div>
         <div style="font-size:0.73rem; color:var(--muted); margin-bottom:8px;">
-          Kies per vast onderdeel de standaardhoeveelheid en onder welk subkopje deze op je dagoverzicht staat:
+          Pas de standaardhoeveelheid en het subkopje aan, verwijder onderdelen of voeg een nieuw vast onderdeel toe aan je basisdag:
         </div>
 
-        <div class="meal-row" style="padding:7px 8px; margin-bottom:6px;">
-          <div style="flex:1; font-size:0.78rem;">
-            <strong>Magere Kwark</strong>
-            <div style="color:var(--muted); font-size:0.68rem;">Standaard gram:</div>
+        <div id="basisConfigList"></div>
+
+        <!-- Nieuw onderdeel toevoegen aan Basisdag -->
+        <div style="border-top:1px solid var(--card-border); margin-top:8px; padding-top:8px;">
+          <span class="field-lbl" style="font-weight:700; color:var(--text); margin-bottom:4px;">+ Nieuw onderdeel toevoegen aan Basisdag:</span>
+          <div class="manual-grid" style="margin-top:4px;">
+            <select id="addBasisPresetSelect" style="margin-bottom:4px; padding:7px; font-size:0.78rem;">
+              <option value="">-- Kies uit favorieten / producten --</option>
+            </select>
+            <select id="addBasisTargetSec" style="margin-bottom:4px; padding:7px; font-size:0.78rem;">
+              <option value="ontbijt">Subkopje: Ontbijt</option>
+              <option value="tussendoor">Subkopje: Tussendoor</option>
+              <option value="lunch">Subkopje: Lunch</option>
+              <option value="extra">Subkopje: Extra</option>
+            </select>
           </div>
-          <input type="number" id="cfgBaseKwarkQty" step="25" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
-          <select id="cfgBaseKwarkSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
-            <option value="ontbijt">Ontbijt</option>
-            <option value="tussendoor">Tussendoor</option>
-            <option value="lunch">Lunch</option>
-            <option value="extra">Extra</option>
-          </select>
-        </div>
-
-        <div class="meal-row" style="padding:7px 8px; margin-bottom:6px;">
-          <div style="flex:1; font-size:0.78rem;">
-            <strong>Jumbo Pure Choco Muesli</strong>
-            <div style="color:var(--muted); font-size:0.68rem;">Standaard gram:</div>
+          <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
+            <input type="number" id="addBasisCustomQty" placeholder="Aantal (gram / stuk / ml)" style="margin-bottom:0; padding:7px; font-size:0.78rem;" />
+            <button type="button" class="btn-sm btn-accent" id="btnAddBasisFromPreset" style="color:#0f172a; white-space:nowrap; height:34px;">+ Aan basisdag</button>
           </div>
-          <input type="number" id="cfgBaseMuesliQty" step="5" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
-          <select id="cfgBaseMuesliSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
-            <option value="ontbijt">Ontbijt</option>
-            <option value="tussendoor">Tussendoor</option>
-            <option value="lunch">Lunch</option>
-            <option value="extra">Extra</option>
-          </select>
+
+          <details style="margin-top:8px; font-size:0.75rem; color:var(--muted);">
+            <summary style="cursor:pointer; color:var(--text); font-weight:600;">Of maak een nieuw eigen basis-item aan</summary>
+            <div style="margin-top:6px;">
+              <input type="text" id="newBasisName" placeholder="Naam (bijv. Eiwitshake of Handje noten)" style="padding:7px; font-size:0.78rem;" />
+              <div class="manual-grid">
+                <select id="newBasisUnitType" style="padding:7px; font-size:0.78rem;">
+                  <option value="gram">Per 100 gram</option>
+                  <option value="stuk">Per 1 stuk / portie</option>
+                  <option value="ml">Drank per 100 mL</option>
+                </select>
+                <input type="number" id="newBasisQty" placeholder="Standaard aantal (bijv. 30)" style="padding:7px; font-size:0.78rem;" />
+                <input type="number" id="newBasisKcal" placeholder="Kcal*" style="padding:7px; font-size:0.78rem;" />
+                <input type="number" step="0.1" id="newBasisProt" placeholder="Eiwitten (g)" style="padding:7px; font-size:0.78rem;" />
+                <input type="number" step="0.1" id="newBasisCarb" placeholder="Koolhydraten (g)" style="padding:7px; font-size:0.78rem;" />
+                <input type="number" step="0.1" id="newBasisFat" placeholder="Vetten (g)" style="padding:7px; font-size:0.78rem;" />
+              </div>
+              <button type="button" class="btn-sm btn-hevy" id="btnCreateNewBasisItem" style="color:#0f172a; width:100%; margin-top:4px; padding:7px;">Opslaan in Basisdag</button>
+            </div>
+          </details>
         </div>
 
-        <div class="meal-row" style="padding:7px 8px; margin-bottom:6px;">
-          <div style="flex:1; font-size:0.78rem;">
-            <strong>Smoothie</strong>
-            <div style="color:var(--muted); font-size:0.66rem;">250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan</div>
-          </div>
-          <input type="number" id="cfgBaseSmoothieQty" step="1" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
-          <select id="cfgBaseSmoothieSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
-            <option value="ontbijt">Ontbijt</option>
-            <option value="tussendoor">Tussendoor</option>
-            <option value="lunch">Lunch</option>
-            <option value="extra">Extra</option>
-          </select>
-        </div>
-
-        <div class="meal-row" style="padding:7px 8px; margin-bottom:8px;">
-          <div style="flex:1; font-size:0.78rem;">
-            <strong>Volkoren Brood + Beleg</strong>
-            <div style="color:var(--muted); font-size:0.68rem;">Standaard snedes:</div>
-          </div>
-          <input type="number" id="cfgBaseBreadQty" step="1" min="0" style="width:68px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
-          <select id="cfgBaseBreadSec" style="width:110px; margin-bottom:0; padding:5px; font-size:0.76rem;">
-            <option value="ontbijt">Ontbijt</option>
-            <option value="tussendoor">Tussendoor</option>
-            <option value="lunch">Lunch</option>
-            <option value="extra">Extra</option>
-          </select>
-        </div>
-
-        <button type="button" class="btn btn-hevy" id="btnSaveBasisConfig" style="margin-top:0; padding:8px;">Basisdag instellingen opslaan</button>
+        <button type="button" class="btn btn-hevy" id="btnSaveBasisConfig" style="margin-top:10px; padding:8px;">Basisdag opslaan &amp; sluiten</button>
       </div>
 
-      <!-- 4 SUBKOPJES VAN DE DAG (Ontbijt, Tussendoor, Lunch, Extra) -->
-      <div id="daySectionsContainer">
-        <div style="margin-bottom:12px;">
+      <!-- 4 SUBKOPJES VAN HET DAGMENU (Op PC: Ontbijt & Lunch naast elkaar, Tussendoor & Extra naast elkaar) -->
+      <div id="daySectionsContainer" class="sections-grid-pc">
+        <div style="margin-bottom:6px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
             <span>🌅 Ontbijt</span>
             <span id="secTotal_ontbijt" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
@@ -689,15 +692,7 @@
           <div id="secList_ontbijt"></div>
         </div>
 
-        <div style="margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-carbs); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
-            <span>🍎 Tussendoor</span>
-            <span id="secTotal_tussendoor" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
-          </div>
-          <div id="secList_tussendoor"></div>
-        </div>
-
-        <div style="margin-bottom:12px;">
+        <div style="margin-bottom:6px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-hevy); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
             <span>🥪 Lunch</span>
             <span id="secTotal_lunch" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
@@ -705,7 +700,15 @@
           <div id="secList_lunch"></div>
         </div>
 
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-carbs); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
+            <span>🍎 Tussendoor</span>
+            <span id="secTotal_tussendoor" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
+          </div>
+          <div id="secList_tussendoor"></div>
+        </div>
+
+        <div style="margin-bottom:6px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:var(--accent-corrected); border-bottom:1px solid var(--card-border); padding-bottom:4px; margin-bottom:6px;">
             <span>➕ Extra</span>
             <span id="secTotal_extra" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
@@ -713,29 +716,31 @@
           <div id="secList_extra"></div>
         </div>
       </div>
+    </div>
 
-      <!-- SAMENGEVOEGD TOEVOEGEN AAN SUBKOPJE -->
-      <div style="border-top:1.5px solid var(--card-border); padding-top:12px; margin-top:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <span style="font-size:0.82rem; font-weight:700; color:var(--text);">+ Eten of drinken toevoegen aan:</span>
+    <!-- 2. Toevoegen (Zelfde kopgrootte & card margins als Dagmenu; op PC Dranken en Eten naast elkaar) -->
+    <div class="card">
+      <h2>
+        <span>Toevoegen</span>
+        <div class="pill-row" id="targetSectionPills" style="margin-bottom:0;">
+          <span class="pill" data-tsec="ontbijt" style="padding:3px 8px; font-size:0.71rem;">🌅 Ontbijt</span>
+          <span class="pill" data-tsec="lunch" style="padding:3px 8px; font-size:0.71rem;">🥪 Lunch</span>
+          <span class="pill" data-tsec="tussendoor" style="padding:3px 8px; font-size:0.71rem;">🍎 Tussendoor</span>
+          <span class="pill active" data-tsec="extra" style="padding:3px 8px; font-size:0.71rem;">➕ Extra</span>
         </div>
-        <div class="pill-row" id="targetSectionPills" style="margin-bottom:8px;">
-          <span class="pill" data-tsec="ontbijt">🌅 Ontbijt</span>
-          <span class="pill" data-tsec="tussendoor">🍎 Tussendoor</span>
-          <span class="pill" data-tsec="lunch">🥪 Lunch</span>
-          <span class="pill active" data-tsec="extra">➕ Extra</span>
-        </div>
+      </h2>
 
-        <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
-        <div style="display:flex; gap:6px; margin-bottom:4px;">
-          <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. banaan, skyr, cappuccino)..." style="margin-bottom:4px;" />
-          <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
-        </div>
-        <div id="unifiedSearchResults" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
+      <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
+      <div style="display:flex; gap:6px; margin-bottom:4px;">
+        <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. banaan, skyr, cappuccino)..." style="margin-bottom:4px;" />
+        <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
+      </div>
+      <div id="unifiedSearchResults" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
 
-        <!-- SUBKOPJE: DRANKEN (in mL) -->
-        <div style="margin-top:8px;">
-          <div style="font-size:0.78rem; font-weight:700; color:var(--accent); margin-bottom:5px;">🥤 Dranken (mL)</div>
+      <!-- Op PC naast elkaar: Dranken (links) en Eten (rechts) -->
+      <div class="add-grid-pc">
+        <div>
+          <div style="font-size:0.8rem; font-weight:700; color:var(--accent); margin-bottom:6px;">🥤 Dranken (mL)</div>
           <div class="pill-row" id="drinkCatPills">
             <span class="pill active" data-dcat="fav">★ Favorieten</span>
             <span class="pill" data-dcat="warm">Warme dranken</span>
@@ -752,9 +757,8 @@
           </div>
         </div>
 
-        <!-- SUBKOPJE: ETEN (in stuk of gram) -->
-        <div style="margin-top:10px;">
-          <div style="font-size:0.78rem; font-weight:700; color:var(--accent-hevy); margin-bottom:5px;">🍽️ Eten (stuk / gram)</div>
+        <div>
+          <div style="font-size:0.8rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Eten (stuk / gram)</div>
           <div class="pill-row" id="foodCatPills">
             <span class="pill active" data-fcat="fav">★ Favorieten</span>
             <span class="pill" data-fcat="fruit">Fruit &amp; Stuks</span>
@@ -763,30 +767,30 @@
           </div>
           <div class="drink-grid" id="foodQuickGrid"></div>
         </div>
-
-        <details style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
-          <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
-          <div style="margin-top:8px;">
-            <input type="text" id="customFoodName" placeholder="Naam product of drank" />
-            <div class="manual-grid">
-              <div>
-                <span class="field-lbl">Type &amp; Eenheid:</span>
-                <select id="customFoodUnitType" style="margin-bottom:4px; padding:8px; font-size:0.8rem;">
-                  <option value="gram">Eten per 100 gram</option>
-                  <option value="stuk">Eten per 1 stuk / portie</option>
-                  <option value="ml">Drank per 100 mL</option>
-                </select>
-              </div>
-              <div><span class="field-lbl">Standaard hoeveelheid:</span><input type="number" id="customFoodDefaultQty" value="100" /></div>
-              <div><span class="field-lbl">Kcal*:</span><input type="number" id="customFoodKcal" placeholder="250" /></div>
-              <div><span class="field-lbl">Eiwitten (g):</span><input type="number" step="0.1" id="customFoodProt" placeholder="15" /></div>
-              <div><span class="field-lbl">Koolhydraten (g):</span><input type="number" step="0.1" id="customFoodCarb" placeholder="25" /></div>
-              <div><span class="field-lbl">Vetten (g):</span><input type="number" step="0.1" id="customFoodFat" placeholder="8" /></div>
-            </div>
-            <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Opslaan &amp; Toevoegen</button>
-          </div>
-        </details>
       </div>
+
+      <details style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
+        <div style="margin-top:8px;">
+          <input type="text" id="customFoodName" placeholder="Naam product of drank" />
+          <div class="manual-grid">
+            <div>
+              <span class="field-lbl">Type &amp; Eenheid:</span>
+              <select id="customFoodUnitType" style="margin-bottom:4px; padding:8px; font-size:0.8rem;">
+                <option value="gram">Eten per 100 gram</option>
+                <option value="stuk">Eten per 1 stuk / portie</option>
+                <option value="ml">Drank per 100 mL</option>
+              </select>
+            </div>
+            <div><span class="field-lbl">Standaard hoeveelheid:</span><input type="number" id="customFoodDefaultQty" value="100" /></div>
+            <div><span class="field-lbl">Kcal*:</span><input type="number" id="customFoodKcal" placeholder="250" /></div>
+            <div><span class="field-lbl">Eiwitten (g):</span><input type="number" step="0.1" id="customFoodProt" placeholder="15" /></div>
+            <div><span class="field-lbl">Koolhydraten (g):</span><input type="number" step="0.1" id="customFoodCarb" placeholder="25" /></div>
+            <div><span class="field-lbl">Vetten (g):</span><input type="number" step="0.1" id="customFoodFat" placeholder="8" /></div>
+          </div>
+          <button type="button" class="btn btn-hevy" id="btnAddCustomFood" style="padding:8px;">Opslaan &amp; Toevoegen</button>
+        </div>
+      </details>
     </div>
 
     <!-- 2. Avondeten vanuit Weekmenu (Bevestigen & Dag Wisselen) -->
@@ -1003,9 +1007,9 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <!-- ========================================================= -->
   <div id="tab-upload" class="panel">
     <div class="card">
-      <h2>1. Voedingsdoelen &amp; Standaardmaaltijden</h2>
+      <h2>1. Voedingsdoelen</h2>
       <p style="font-size:0.78rem; color:var(--muted); margin-top:0;">
-        Stel je dagelijkse macro-doelen in (rustdag vs. trainingsdag) en pas je standaard ontbijt/lunch aan.
+        Stel je dagelijkse macro-doelen in (rustdag vs. trainingsdag). Je standaard basismaaltijden stel je direct in op het tabblad <strong>Voeding</strong> via <strong>⚙ Basisdag</strong>.
       </p>
       <div class="manual-grid">
         <div><span class="field-lbl">Kcal Rustdag:</span><input type="number" id="cfgKcalRest" /></div>
@@ -1013,7 +1017,6 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
         <div><span class="field-lbl">Eiwitten doel (g):</span><input type="number" id="cfgProtGoal" /></div>
         <div><span class="field-lbl">Koolhydraten doel (g):</span><input type="number" id="cfgCarbGoal" /></div>
         <div><span class="field-lbl">Vetten doel (g):</span><input type="number" id="cfgFatGoal" /></div>
-        <div><span class="field-lbl">Standaard Kwark (g):</span><input type="number" step="50" id="cfgDefaultKwark" /></div>
       </div>
       <button type="button" class="btn btn-hevy" id="btnSaveNutriGoals">Voedingsdoelen opslaan</button>
     </div>
@@ -1233,16 +1236,14 @@ let state = {
     kcalTrain: 2550,
     protein: 155,
     carbs: 240,
-    fat: 75,
-    defaultKwark: 250,
-    kwarkSection: "ontbijt",
-    defaultMuesli: 40,
-    muesliSection: "ontbijt",
-    defaultSmoothie: 1,
-    smoothieSection: "tussendoor",
-    defaultBread: 4,
-    breadSection: "lunch"
+    fat: 75
   }),
+  basisItems: safeParseJSON("basis_items_v1", [
+    { id: "base_kwark", name: "Magere Kwark", unitType: "gram", defaultQty: 250, step: 50, section: "ontbijt", kcal100: 52, p100: 8.8, c100: 4.0, f100: 0.1 },
+    { id: "base_muesli", name: "Jumbo Pure Chocolade Muesli", unitType: "gram", defaultQty: 40, step: 10, section: "ontbijt", kcal100: 425, p100: 9.5, c100: 62.0, f100: 14.0 },
+    { id: "base_smoothie", name: "Smoothie", desc: "250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan", unitType: "stuk", unitLabel: "portie", defaultQty: 1, step: 1, section: "tussendoor", kcalUnit: 304, pUnit: 13.2, cUnit: 40.3, fUnit: 9.2 },
+    { id: "base_bread", name: "Volkoren Brood + Beleg", unitType: "stuk", unitLabel: "snedes", defaultQty: 4, step: 1, section: "lunch", kcalUnit: 135, pUnit: 7.0, cUnit: 16.0, fUnit: 4.0 }
+  ]),
   drinkFavorites: safeParseJSON("drink_favs_v1", ["cappuccino", "espresso", "water", "cola_zero"]),
   foodFavorites: safeParseJSON("food_favs_v1", ["banaan", "ei_gekookt", "eiwitreep", "noten_mix"]),
   customFoods: safeParseJSON("custom_foods_v1", []),
@@ -1351,6 +1352,7 @@ function buildFullSyncPayload() {
     foodLogs: state.foodLogs,
     plannedWorkouts: state.plannedWorkouts,
     nutriGoals: state.nutriGoals,
+    basisItems: state.basisItems,
     drinkFavorites: state.drinkFavorites,
     customFoods: state.customFoods
   };
@@ -1372,6 +1374,8 @@ async function applySyncPayload(d, saveLocally = true) {
     if (d.foodLogs) state.foodLogs = d.foodLogs;
     if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
     if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
+        if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
+    if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
         if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
     if (Array.isArray(d.drinkFavorites)) state.drinkFavorites = d.drinkFavorites;
     if (Array.isArray(d.foodFavorites)) state.foodFavorites = d.foodFavorites;
@@ -1388,6 +1392,7 @@ async function applySyncPayload(d, saveLocally = true) {
   localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
       localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
       localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
+  localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
       localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
       localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
     scheduleCloudPush();
@@ -1473,6 +1478,7 @@ function saveFoodState() {
   localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
   localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
   localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
+  localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
   scheduleCloudPush();
 }
 
@@ -1480,10 +1486,7 @@ function saveFoodState() {
 function getOrCreateFoodDay(ymd) {
   if (!state.foodLogs[ymd]) {
     state.foodLogs[ymd] = {
-      kwarkGrams: Number(state.nutriGoals.defaultKwark ?? 250),
-      muesliGrams: Number(state.nutriGoals.defaultMuesli ?? 40),
-      smoothieCount: Number(state.nutriGoals.defaultSmoothie ?? 1),
-      breadSlices: Number(state.nutriGoals.defaultBread ?? 4),
+      basisOverrides: {},
       drinks: [],
       extras: [],
       dinner: null,
@@ -1491,50 +1494,66 @@ function getOrCreateFoodDay(ymd) {
       touched: false
     };
   }
+  if (!state.foodLogs[ymd].basisOverrides) {
+    const ov = {};
+    // Migreer eventuele eerdere losse velden naar basisOverrides
+    if (state.foodLogs[ymd].kwarkGrams !== undefined) ov["base_kwark"] = Number(state.foodLogs[ymd].kwarkGrams);
+    if (state.foodLogs[ymd].muesliGrams !== undefined) ov["base_muesli"] = Number(state.foodLogs[ymd].muesliGrams);
+    if (state.foodLogs[ymd].smoothieCount !== undefined) ov["base_smoothie"] = Number(state.foodLogs[ymd].smoothieCount);
+    if (state.foodLogs[ymd].breadSlices !== undefined) ov["base_bread"] = Number(state.foodLogs[ymd].breadSlices);
+    state.foodLogs[ymd].basisOverrides = ov;
+  }
   return state.foodLogs[ymd];
+}
+
+function getBasisItemQtyForDay(log, bItem) {
+  if (log && log.basisOverrides && Object.prototype.hasOwnProperty.call(log.basisOverrides, bItem.id)) {
+    return Number(log.basisOverrides[bItem.id]);
+  }
+  if (log) {
+    if (bItem.id === "base_kwark" && log.kwarkGrams !== undefined) return Number(log.kwarkGrams);
+    if (bItem.id === "base_muesli" && log.muesliGrams !== undefined) return Number(log.muesliGrams);
+    if (bItem.id === "base_smoothie" && log.smoothieCount !== undefined) return Number(log.smoothieCount);
+    if (bItem.id === "base_bread" && log.breadSlices !== undefined) return Number(log.breadSlices);
+  }
+  return Number(bItem.defaultQty || 0);
+}
+
+function computeBasisItemMacros(bItem, qty) {
+  if (bItem.unitType === "stuk") {
+    return {
+      kcal: qty * Number(bItem.kcalUnit || 0),
+      p: qty * Number(bItem.pUnit || 0),
+      c: qty * Number(bItem.cUnit || 0),
+      f: qty * Number(bItem.fUnit || 0),
+      ml: 0
+    };
+  }
+  const factor = qty / 100;
+  return {
+    kcal: factor * Number(bItem.kcal100 || 0),
+    p: factor * Number(bItem.p100 || 0),
+    c: factor * Number(bItem.c100 || 0),
+    f: factor * Number(bItem.f100 || 0),
+    ml: bItem.unitType === "ml" ? qty : 0
+  };
 }
 
 function computeDayNutrition(ymd) {
   const log = state.foodLogs[ymd];
-  const kwarkG = (log && log.kwarkGrams !== undefined) ? Number(log.kwarkGrams) : Number(state.nutriGoals.defaultKwark ?? 250);
-  const muesliG = (log && log.muesliGrams !== undefined) ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
-  const smoothC = (log && log.smoothieCount !== undefined) ? Number(log.smoothieCount) : Number(state.nutriGoals.defaultSmoothie ?? 1);
-  const breadS = (log && log.breadSlices !== undefined) ? Number(log.breadSlices) : Number(state.nutriGoals.defaultBread ?? 4);
+  let totalKcal = 0, totalP = 0, totalC = 0, totalF = 0, totalDrinkMl = 0;
 
-  // Magere kwark per 100g: 52 kcal, 8.8g eiwit, 4.0g kh, 0.1g vet
-  const kwark = {
-    kcal: (kwarkG / 100) * 52,
-    p: (kwarkG / 100) * 8.8,
-    c: (kwarkG / 100) * 4.0,
-    f: (kwarkG / 100) * 0.1
-  };
-  // Jumbo Pure Chocolade Muesli per 100g: 425 kcal, 9.5g eiwit, 62.0g kh, 14.0g vet
-  const muesli = {
-    kcal: (muesliG / 100) * 425,
-    p: (muesliG / 100) * 9.5,
-    c: (muesliG / 100) * 62.0,
-    f: (muesliG / 100) * 14.0
-  };
-  // Smoothie (250g volle yoghurt + 50g vriesfruit + 20g haver + 0.5 banaan): 304 kcal, 13.2g E, 40.3g KH, 9.2g V
-  const smoothie = {
-    kcal: smoothC * 304,
-    p: smoothC * 13.2,
-    c: smoothC * 40.3,
-    f: smoothC * 9.2
-  };
-  // Volkoren brood + beleg per snede: 135 kcal, 7g eiwit, 16g kh, 4g vet
-  const bread = {
-    kcal: breadS * 135,
-    p: breadS * 7,
-    c: breadS * 16,
-    f: breadS * 4
-  };
-
-  let totalKcal = kwark.kcal + muesli.kcal + smoothie.kcal + bread.kcal;
-  let totalP = kwark.p + muesli.p + smoothie.p + bread.p;
-  let totalC = kwark.c + muesli.c + smoothie.c + bread.c;
-  let totalF = kwark.f + muesli.f + smoothie.f + bread.f;
-  let totalDrinkMl = 0;
+  (state.basisItems || []).forEach(bItem => {
+    const qty = getBasisItemQtyForDay(log, bItem);
+    if (qty > 0) {
+      const m = computeBasisItemMacros(bItem, qty);
+      totalKcal += m.kcal;
+      totalP += m.p;
+      totalC += m.c;
+      totalF += m.f;
+      totalDrinkMl += m.ml;
+    }
+  });
 
   if (log) {
     (log.drinks || []).forEach(d => {
@@ -1550,7 +1569,6 @@ function computeDayNutrition(ymd) {
       totalC += Number(ex.c || 0);
       totalF += Number(ex.f || 0);
     });
-    // Avondeten telt pas mee zodra bevestigd!
     if (log.dinner && log.dinner.confirmed) {
       totalKcal += Number(log.dinner.kcal || 0);
       totalP += Number(log.dinner.p || 0);
@@ -1560,7 +1578,6 @@ function computeDayNutrition(ymd) {
   }
 
   return {
-    kwark, muesli, smoothie, bread,
     kcal: Math.round(totalKcal),
     p: Math.round(totalP),
     c: Math.round(totalC),
@@ -1579,7 +1596,9 @@ function isTrainingDay(ymd) {
 
 // === WEEKMENU PARSER (GEMINI TEKST -> MAANDAG T/M ZONDAG AVONDETEN) ===
 function parseWeekmenuText(rawText) {
-  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = rawText.split(/
+?
+/).map(l => l.trim()).filter(Boolean);
   const dayNames = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
   const foundByDayIdx = {};
 
@@ -1588,11 +1607,9 @@ function parseWeekmenuText(rawText) {
     const dIdx = dayNames.findIndex(dn => lower.startsWith(dn) || lower.includes(`**${dn}`));
     if (dIdx === -1) continue;
 
-    // Strip dagnaam en markdown tekens
     let clean = line.replace(/\*\*/g, "").replace(/^[-•*]\s*/, "");
     clean = clean.replace(new RegExp(`^${dayNames[dIdx]}\s*[:\-–]?\s*`, "i"), "");
 
-    // Extraheer eventuele macro's tussen haakjes of achteraan
     const mKcal = clean.match(/(\d{3,4})\s*kcal/i);
     const mProt = clean.match(/(\d{1,3})\s*g?\s*(?:eiwit|protein|e\b)/i);
     const mCarb = clean.match(/(\d{1,3})\s*g?\s*(?:koolhydraten|kh\b|carbs)/i);
@@ -1603,7 +1620,6 @@ function parseWeekmenuText(rawText) {
     const c = mCarb ? Number(mCarb[1]) : 58;
     const f = mFat ? Number(mFat[1]) : 20;
 
-    // Verwijder haakjes met macro-info uit de titel
     const title = clean.replace(/\([^)]*kcal[^)]*\)/gi, "").replace(/\s*[-–]\s*\d+\s*kcal.*$/i, "").trim();
     if (title) {
       foundByDayIdx[dIdx] = { title, kcal, p, c, f, confirmed: false };
@@ -1615,9 +1631,46 @@ function parseWeekmenuText(rawText) {
 
 function getMondayOfDate(ymd) {
   const d = new Date(ymd + "T12:00:00");
-  const day = d.getDay(); // 0=zo, 1=ma..6=za
+  const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(d.setDate(diff));
+}
+
+function renderBasisConfigPanel() {
+  const listEl = document.getElementById("basisConfigList");
+  if (!listEl) return;
+
+  listEl.innerHTML = (state.basisItems || []).map((bItem, idx) => {
+    const unitTxt = bItem.unitType === "gram" ? "gram" : (bItem.unitType === "ml" ? "mL" : (bItem.unitLabel || "stuk"));
+    return `
+      <div class="meal-row" style="padding:7px 8px; margin-bottom:6px; gap:6px;">
+        <div style="flex:1; min-width:0; font-size:0.78rem;">
+          <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(bItem.name)}</strong>
+          <div style="color:var(--muted); font-size:0.67rem;">Standaard (${unitTxt})${bItem.desc ? " · " + escapeHtml(bItem.desc) : ""}</div>
+        </div>
+        <input type="number" data-bcfg-qty="${idx}" step="${bItem.step || 1}" min="0" value="${bItem.defaultQty}" style="width:62px; margin-bottom:0; padding:5px; font-size:0.78rem;" />
+        <select data-bcfg-sec="${idx}" style="width:102px; margin-bottom:0; padding:5px; font-size:0.75rem;">
+          <option value="ontbijt" ${bItem.section === "ontbijt" ? "selected" : ""}>Ontbijt</option>
+          <option value="lunch" ${bItem.section === "lunch" ? "selected" : ""}>Lunch</option>
+          <option value="tussendoor" ${bItem.section === "tussendoor" ? "selected" : ""}>Tussendoor</option>
+          <option value="extra" ${bItem.section === "extra" ? "selected" : ""}>Extra</option>
+        </select>
+        <button type="button" class="btn-sm" data-bcfg-del="${idx}" style="color:var(--danger); padding:4px 7px;" title="Verwijder uit basisdag">✕</button>
+      </div>
+    `;
+  }).join("");
+
+  // Vul preset dropdown met dranken + favorieten/lokale producten
+  const presetSel = document.getElementById("addBasisPresetSelect");
+  if (presetSel) {
+    const drinkOpts = DEFAULT_DRINKS.map(d => `<option value="drink:${d.id}">🥤 ${escapeHtml(d.name)} (mL)</option>`).join("");
+    const foodPool = [...state.customFoods, ...LOCAL_FOOD_DB];
+    const foodOpts = foodPool.map(f => {
+      const fKey = f.id || f.name;
+      return `<option value="food:${escapeHtml(fKey)}">🍽️ ${escapeHtml(f.name)} (${f.unitType === "stuk" ? "stuk" : "gram"})</option>`;
+    }).join("");
+    presetSel.innerHTML = `<option value="">-- Kies uit favorieten / producten --</option><optgroup label="Dranken">${drinkOpts}</optgroup><optgroup label="Eten">${foodOpts}</optgroup>`;
+  }
 }
 
 // === RENDER VOEDING TAB ===
@@ -1654,105 +1707,50 @@ function renderNutritionTab() {
   document.getElementById("macFatSub").textContent = `/ ${goalF}g`;
   document.getElementById("macFatBar").style.width = `${Math.min(100, (totals.f / goalF) * 100)}%`;
 
-  // Vul basisdag instellingenvelden
-  document.getElementById("cfgBaseKwarkQty").value = state.nutriGoals.defaultKwark ?? 250;
-  document.getElementById("cfgBaseKwarkSec").value = state.nutriGoals.kwarkSection || "ontbijt";
-  document.getElementById("cfgBaseMuesliQty").value = state.nutriGoals.defaultMuesli ?? 40;
-  document.getElementById("cfgBaseMuesliSec").value = state.nutriGoals.muesliSection || "ontbijt";
-  document.getElementById("cfgBaseSmoothieQty").value = state.nutriGoals.defaultSmoothie ?? 1;
-  document.getElementById("cfgBaseSmoothieSec").value = state.nutriGoals.smoothieSection || "tussendoor";
-  document.getElementById("cfgBaseBreadQty").value = state.nutriGoals.defaultBread ?? 4;
-  document.getElementById("cfgBaseBreadSec").value = state.nutriGoals.breadSection || "lunch";
+  renderBasisConfigPanel();
 
-  // Bouw de 4 subkopjes: ontbijt, tussendoor, lunch, extra
-  const sections = ["ontbijt", "tussendoor", "lunch", "extra"];
-  const secHtml = { ontbijt: [], tussendoor: [], lunch: [], extra: [] };
-  const secKcal = { ontbijt: 0, tussendoor: 0, lunch: 0, extra: 0 };
+  // Bouw de 4 subkopjes: ontbijt, lunch, tussendoor, extra
+  const sections = ["ontbijt", "lunch", "tussendoor", "extra"];
+  const secHtml = { ontbijt: [], lunch: [], tussendoor: [], extra: [] };
+  const secKcal = { ontbijt: 0, lunch: 0, tussendoor: 0, extra: 0 };
 
-  const kwarkSec = state.nutriGoals.kwarkSection || "ontbijt";
-  const muesliSec = state.nutriGoals.muesliSection || "ontbijt";
-  const smoothieSec = state.nutriGoals.smoothieSection || "tussendoor";
-  const breadSec = state.nutriGoals.breadSection || "lunch";
+  (state.basisItems || []).forEach(bItem => {
+    const qty = getBasisItemQtyForDay(log, bItem);
+    if (qty <= 0) return;
+    const targetSec = sections.includes(bItem.section) ? bItem.section : "ontbijt";
+    const m = computeBasisItemMacros(bItem, qty);
+    secKcal[targetSec] += m.kcal;
 
-  const curKwarkG = log.kwarkGrams !== undefined ? Number(log.kwarkGrams) : Number(state.nutriGoals.defaultKwark ?? 250);
-  const curMuesliG = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
-  const curSmoothieC = log.smoothieCount !== undefined ? Number(log.smoothieCount) : Number(state.nutriGoals.defaultSmoothie ?? 1);
-  const curBreadS = log.breadSlices !== undefined ? Number(log.breadSlices) : Number(state.nutriGoals.defaultBread ?? 4);
+    const step = Number(bItem.step || (bItem.unitType === "stuk" ? 1 : 25));
+    const unitSuffix = bItem.unitType === "gram" ? "g" : (bItem.unitType === "ml" ? " ml" : ` ${bItem.unitLabel || "portie"}`);
 
-  if (curKwarkG > 0) {
-    secKcal[kwarkSec] += totals.kwark.kcal;
-    secHtml[kwarkSec].push(`
+    const controlHtml = (bItem.unitType === "gram" || bItem.unitType === "ml")
+      ? `<div class="stepper">
+           <button type="button" class="step-btn" data-basis-step="-${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">-${step}</button>
+           <input type="number" data-basis-inp="${escapeHtml(bItem.id)}" class="step-val-input" step="5" min="0" value="${qty}" style="width:50px !important; padding:4px 2px !important;" />
+           <button type="button" class="step-btn" data-basis-step="${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">+${step}</button>
+           <button type="button" class="step-btn" data-basis-clear="${escapeHtml(bItem.id)}" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+         </div>`
+      : `<div class="stepper">
+           <button type="button" class="step-btn" data-basis-step="-${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">-</button>
+           <span style="padding:0 5px; font-weight:700; font-size:0.82rem;">${qty}×</span>
+           <button type="button" class="step-btn" data-basis-step="${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">+</button>
+           <button type="button" class="step-btn" data-basis-clear="${escapeHtml(bItem.id)}" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+         </div>`;
+
+    secHtml[targetSec].push(`
       <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
         <div class="meal-info">
-          <div class="meal-title">Magere Kwark</div>
-          <div class="meal-macros">${curKwarkG}g · ${Math.round(totals.kwark.kcal)} kcal · ${Math.round(totals.kwark.p)}g E · ${Math.round(totals.kwark.c)}g KH · ${Math.round(totals.kwark.f)}g V</div>
+          <div class="meal-title">${escapeHtml(bItem.name)}</div>
+          <div class="meal-macros">${qty}${unitSuffix} · ${Math.round(m.kcal)} kcal · ${m.p.toFixed(1)}g E · ${Math.round(m.c)}g KH · ${m.f.toFixed(1)}g V</div>
+          ${bItem.desc ? `<div style="font-size:0.64rem; color:var(--muted); margin-top:1px;">${escapeHtml(bItem.desc)}</div>` : ""}
         </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" data-base-act="kwark-minus" style="padding:5px 8px;">-50</button>
-          <input type="number" data-base-inp="kwark" class="step-val-input" step="10" min="0" value="${curKwarkG}" style="width:50px !important; padding:4px 2px !important;" />
-          <button type="button" class="step-btn" data-base-act="kwark-plus" style="padding:5px 8px;">+50</button>
-          <button type="button" class="step-btn" data-base-act="kwark-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
-        </div>
+        ${controlHtml}
       </div>
     `);
-  }
+  });
 
-  if (curMuesliG > 0) {
-    secKcal[muesliSec] += totals.muesli.kcal;
-    secHtml[muesliSec].push(`
-      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
-        <div class="meal-info">
-          <div class="meal-title">Jumbo Pure Chocolade Muesli</div>
-          <div class="meal-macros">${curMuesliG}g · ${Math.round(totals.muesli.kcal)} kcal · ${totals.muesli.p.toFixed(1)}g E · ${Math.round(totals.muesli.c)}g KH · ${totals.muesli.f.toFixed(1)}g V</div>
-        </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" data-base-act="muesli-minus" style="padding:5px 8px;">-10</button>
-          <input type="number" data-base-inp="muesli" class="step-val-input" step="5" min="0" value="${curMuesliG}" style="width:50px !important; padding:4px 2px !important;" />
-          <button type="button" class="step-btn" data-base-act="muesli-plus" style="padding:5px 8px;">+10</button>
-          <button type="button" class="step-btn" data-base-act="muesli-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
-        </div>
-      </div>
-    `);
-  }
-
-  if (curSmoothieC > 0) {
-    secKcal[smoothieSec] += totals.smoothie.kcal;
-    secHtml[smoothieSec].push(`
-      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
-        <div class="meal-info">
-          <div class="meal-title">Smoothie</div>
-          <div class="meal-macros">${curSmoothieC} portie · ${Math.round(totals.smoothie.kcal)} kcal · ${totals.smoothie.p.toFixed(1)}g E · ${Math.round(totals.smoothie.c)}g KH · ${totals.smoothie.f.toFixed(1)}g V</div>
-          <div style="font-size:0.64rem; color:var(--muted); margin-top:1px;">250g volle yoghurt, 50g vriesfruit, 20g haver, ½ banaan</div>
-        </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" data-base-act="smoothie-minus" style="padding:5px 8px;">-</button>
-          <span style="padding:0 5px; font-weight:700; font-size:0.82rem;">${curSmoothieC}×</span>
-          <button type="button" class="step-btn" data-base-act="smoothie-plus" style="padding:5px 8px;">+</button>
-          <button type="button" class="step-btn" data-base-act="smoothie-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
-        </div>
-      </div>
-    `);
-  }
-
-  if (curBreadS > 0) {
-    secKcal[breadSec] += totals.bread.kcal;
-    secHtml[breadSec].push(`
-      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
-        <div class="meal-info">
-          <div class="meal-title">Volkoren Brood + Beleg</div>
-          <div class="meal-macros">${curBreadS} snedes · ${Math.round(totals.bread.kcal)} kcal · ${Math.round(totals.bread.p)}g E · ${Math.round(totals.bread.c)}g KH · ${Math.round(totals.bread.f)}g V</div>
-        </div>
-        <div class="stepper">
-          <button type="button" class="step-btn" data-base-act="bread-minus" style="padding:5px 8px;">-</button>
-          <span style="padding:0 5px; font-weight:700; font-size:0.82rem;">${curBreadS}</span>
-          <button type="button" class="step-btn" data-base-act="bread-plus" style="padding:5px 8px;">+</button>
-          <button type="button" class="step-btn" data-base-act="bread-clear" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
-        </div>
-      </div>
-    `);
-  }
-
-  // Voeg gelogde dranken toe onder hun gekozen subkopje (standaard 'extra' indien ouder log)
+  // Voeg gelogde dranken toe onder hun gekozen subkopje
   (log.drinks || []).forEach((d, idx) => {
     const targetSec = sections.includes(d.section) ? d.section : "extra";
     secKcal[targetSec] += Number(d.kcal || 0);
@@ -2646,7 +2644,6 @@ function refreshAll() {
   document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
   document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
   document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
-  document.getElementById("cfgDefaultKwark").value = state.nutriGoals.defaultKwark ?? 250;
   document.getElementById("cfgSupaUrl").value = cloudConfig.url || "";
   document.getElementById("cfgSupaKey").value = cloudConfig.key || "";
   document.getElementById("cfgSupaSyncId").value = cloudConfig.syncId || "";
@@ -2917,7 +2914,7 @@ function bindEvents() {
     renderNutritionTab();
   });
 
-  // Basisdag tandwieltje & instellingen opslaan
+  // Basisdag tandwieltje: aanpassen, toevoegen en verwijderen van vaste basis-items
   document.getElementById("btnToggleBasisConfig").addEventListener("click", () => {
     const box = document.getElementById("basisConfigBox");
     box.style.display = box.style.display === "none" ? "block" : "none";
@@ -2925,22 +2922,149 @@ function bindEvents() {
   document.getElementById("btnCloseBasisConfig").addEventListener("click", () => {
     document.getElementById("basisConfigBox").style.display = "none";
   });
+
+  document.getElementById("basisConfigList").addEventListener("click", e => {
+    const delBtn = e.target.closest("[data-bcfg-del]");
+    if (!delBtn) return;
+    const idx = Number(delBtn.getAttribute("data-bcfg-del"));
+    state.basisItems.splice(idx, 1);
+    saveFoodState();
+    renderNutritionTab();
+    renderPlannerTab();
+  });
+
+  document.getElementById("addBasisPresetSelect").addEventListener("change", e => {
+    const val = e.target.value;
+    const qtyInp = document.getElementById("addBasisCustomQty");
+    if (!val) { qtyInp.value = ""; return; }
+    if (val.startsWith("drink:")) {
+      const dr = DEFAULT_DRINKS.find(d => d.id === val.slice(6));
+      if (dr) qtyInp.value = dr.fixedVol || dr.vols[0] || 250;
+    } else if (val.startsWith("food:")) {
+      const fKey = val.slice(5);
+      const item = [...state.customFoods, ...LOCAL_FOOD_DB].find(f => (f.id || f.name) === fKey);
+      if (item) qtyInp.value = item.defaultQty || (item.unitType === "stuk" ? 1 : 100);
+    }
+  });
+
+  document.getElementById("btnAddBasisFromPreset").addEventListener("click", () => {
+    const val = document.getElementById("addBasisPresetSelect").value;
+    const sec = document.getElementById("addBasisTargetSec").value || "ontbijt";
+    const qty = Math.max(1, Number(document.getElementById("addBasisCustomQty").value) || 0);
+    if (!val || qty <= 0) { alert("Kies een product/drank en vul een hoeveelheid in."); return; }
+
+    if (val.startsWith("drink:")) {
+      const dr = DEFAULT_DRINKS.find(d => d.id === val.slice(6));
+      if (dr) {
+        state.basisItems.push({
+          id: "base_" + Date.now(),
+          name: dr.name,
+          unitType: "ml",
+          defaultQty: qty,
+          step: dr.fixedVol ? dr.fixedVol : 50,
+          section: sec,
+          kcal100: dr.kcal100,
+          p100: dr.p100,
+          c100: dr.c100,
+          f100: dr.f100
+        });
+      }
+    } else if (val.startsWith("food:")) {
+      const fKey = val.slice(5);
+      const item = [...state.customFoods, ...LOCAL_FOOD_DB].find(f => (f.id || f.name) === fKey);
+      if (item) {
+        if (item.unitType === "stuk") {
+          state.basisItems.push({
+            id: "base_" + Date.now(),
+            name: item.name,
+            unitType: "stuk",
+            unitLabel: "stuk",
+            defaultQty: qty,
+            step: 1,
+            section: sec,
+            kcalUnit: item.kcalUnit ?? item.kcal ?? 0,
+            pUnit: item.pUnit ?? item.p ?? 0,
+            cUnit: item.cUnit ?? item.c ?? 0,
+            fUnit: item.fUnit ?? item.f ?? 0
+          });
+        } else {
+          state.basisItems.push({
+            id: "base_" + Date.now(),
+            name: item.baseName || item.name,
+            unitType: "gram",
+            defaultQty: qty,
+            step: 25,
+            section: sec,
+            kcal100: item.kcal100 ?? item.kcal ?? 0,
+            p100: item.p100 ?? item.p ?? 0,
+            c100: item.c100 ?? item.c ?? 0,
+            f100: item.f100 ?? item.f ?? 0
+          });
+        }
+      }
+    }
+    document.getElementById("addBasisPresetSelect").value = "";
+    document.getElementById("addBasisCustomQty").value = "";
+    saveFoodState();
+    renderNutritionTab();
+    renderPlannerTab();
+  });
+
+  document.getElementById("btnCreateNewBasisItem").addEventListener("click", () => {
+    const name = document.getElementById("newBasisName").value.trim();
+    const unitType = document.getElementById("newBasisUnitType").value;
+    const qty = Math.max(1, Number(document.getElementById("newBasisQty").value) || (unitType === "stuk" ? 1 : 100));
+    const kcal = Number(document.getElementById("newBasisKcal").value) || 0;
+    const p = Number(document.getElementById("newBasisProt").value) || 0;
+    const c = Number(document.getElementById("newBasisCarb").value) || 0;
+    const f = Number(document.getElementById("newBasisFat").value) || 0;
+    const sec = document.getElementById("addBasisTargetSec").value || "ontbijt";
+    if (!name || kcal <= 0) { alert("Vul een naam en calorieën in."); return; }
+
+    if (unitType === "stuk") {
+      state.basisItems.push({
+        id: "base_" + Date.now(),
+        name, unitType: "stuk", unitLabel: "stuk", defaultQty: qty, step: 1, section: sec,
+        kcalUnit: kcal, pUnit: p, cUnit: c, fUnit: f
+      });
+    } else {
+      state.basisItems.push({
+        id: "base_" + Date.now(),
+        name, unitType, defaultQty: qty, step: unitType === "ml" ? 50 : 25, section: sec,
+        kcal100: kcal, p100: p, c100: c, f100: f
+      });
+    }
+    document.getElementById("newBasisName").value = "";
+    document.getElementById("newBasisQty").value = "";
+    document.getElementById("newBasisKcal").value = "";
+    document.getElementById("newBasisProt").value = "";
+    document.getElementById("newBasisCarb").value = "";
+    document.getElementById("newBasisFat").value = "";
+    saveFoodState();
+    renderNutritionTab();
+    renderPlannerTab();
+  });
+
   document.getElementById("btnSaveBasisConfig").addEventListener("click", () => {
-    state.nutriGoals.defaultKwark = Math.max(0, Number(document.getElementById("cfgBaseKwarkQty").value) || 0);
-    state.nutriGoals.kwarkSection = document.getElementById("cfgBaseKwarkSec").value || "ontbijt";
-    state.nutriGoals.defaultMuesli = Math.max(0, Number(document.getElementById("cfgBaseMuesliQty").value) || 0);
-    state.nutriGoals.muesliSection = document.getElementById("cfgBaseMuesliSec").value || "ontbijt";
-    state.nutriGoals.defaultSmoothie = Math.max(0, Number(document.getElementById("cfgBaseSmoothieQty").value) || 0);
-    state.nutriGoals.smoothieSection = document.getElementById("cfgBaseSmoothieSec").value || "tussendoor";
-    state.nutriGoals.defaultBread = Math.max(0, Number(document.getElementById("cfgBaseBreadQty").value) || 0);
-    state.nutriGoals.breadSection = document.getElementById("cfgBaseBreadSec").value || "lunch";
+    document.querySelectorAll("[data-bcfg-qty]").forEach(inp => {
+      const idx = Number(inp.getAttribute("data-bcfg-qty"));
+      if (state.basisItems[idx]) {
+        state.basisItems[idx].defaultQty = Math.max(0, Number(inp.value) || 0);
+      }
+    });
+    document.querySelectorAll("[data-bcfg-sec]").forEach(sel => {
+      const idx = Number(sel.getAttribute("data-bcfg-sec"));
+      if (state.basisItems[idx]) {
+        state.basisItems[idx].section = sel.value || "ontbijt";
+      }
+    });
     saveFoodState();
     document.getElementById("basisConfigBox").style.display = "none";
     renderNutritionTab();
     renderPlannerTab();
   });
 
-  // Subkopje selectie voor toevoegen (Ontbijt / Tussendoor / Lunch / Extra)
+  // Subkopje selectie voor toevoegen (Ontbijt / Lunch / Tussendoor / Extra)
   document.getElementById("targetSectionPills").addEventListener("click", e => {
     const pill = e.target.closest(".pill");
     if (!pill) return;
@@ -2963,28 +3087,28 @@ function bindEvents() {
     saveFoodState(); renderNutritionTab(); renderPlannerTab();
   }
 
-  // Gecombineerde interactie op alle 4 subkopjes (Basisdag items + Dranken + Extra etenswaren)
+  // Gecombineerde interactie op alle 4 subkopjes (Dynamische Basisdag items + Dranken + Extra etenswaren)
   document.getElementById("daySectionsContainer").addEventListener("click", e => {
-    const baseBtn = e.target.closest("[data-base-act]");
-    if (baseBtn) {
-      const act = baseBtn.getAttribute("data-base-act");
+    const basisStepBtn = e.target.closest("[data-basis-step]");
+    if (basisStepBtn) {
+      const bId = basisStepBtn.getAttribute("data-basis-id");
+      const delta = Number(basisStepBtn.getAttribute("data-basis-step"));
+      const bItem = state.basisItems.find(x => x.id === bId);
+      if (bItem) {
+        const log = getOrCreateFoodDay(state.selectedNutriDate);
+        const cur = getBasisItemQtyForDay(log, bItem);
+        log.basisOverrides[bId] = Math.max(0, cur + delta);
+        log.touched = true;
+        saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      }
+      return;
+    }
+
+    const basisClearBtn = e.target.closest("[data-basis-clear]");
+    if (basisClearBtn) {
+      const bId = basisClearBtn.getAttribute("data-basis-clear");
       const log = getOrCreateFoodDay(state.selectedNutriDate);
-      if (act === "kwark-minus") log.kwarkGrams = Math.max(0, Number(log.kwarkGrams) - 50);
-      else if (act === "kwark-plus") log.kwarkGrams = Number(log.kwarkGrams) + 50;
-      else if (act === "kwark-clear") log.kwarkGrams = 0;
-      else if (act === "muesli-minus") {
-        const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
-        log.muesliGrams = Math.max(0, cur - 10);
-      } else if (act === "muesli-plus") {
-        const cur = log.muesliGrams !== undefined ? Number(log.muesliGrams) : Number(state.nutriGoals.defaultMuesli ?? 40);
-        log.muesliGrams = cur + 10;
-      } else if (act === "muesli-clear") log.muesliGrams = 0;
-      else if (act === "smoothie-minus") log.smoothieCount = Math.max(0, Number(log.smoothieCount) - 1);
-      else if (act === "smoothie-plus") log.smoothieCount = Number(log.smoothieCount) + 1;
-      else if (act === "smoothie-clear") log.smoothieCount = 0;
-      else if (act === "bread-minus") log.breadSlices = Math.max(0, Number(log.breadSlices) - 1);
-      else if (act === "bread-plus") log.breadSlices = Number(log.breadSlices) + 1;
-      else if (act === "bread-clear") log.breadSlices = 0;
+      log.basisOverrides[bId] = 0;
       log.touched = true;
       saveFoodState(); renderNutritionTab(); renderPlannerTab();
       return;
@@ -3040,13 +3164,12 @@ function bindEvents() {
   });
 
   document.getElementById("daySectionsContainer").addEventListener("change", e => {
-    const baseInp = e.target.closest("[data-base-inp]");
-    if (baseInp) {
-      const kind = baseInp.getAttribute("data-base-inp");
-      const val = Math.max(0, Number(baseInp.value) || 0);
+    const basisInp = e.target.closest("[data-basis-inp]");
+    if (basisInp) {
+      const bId = basisInp.getAttribute("data-basis-inp");
+      const val = Math.max(0, Number(basisInp.value) || 0);
       const log = getOrCreateFoodDay(state.selectedNutriDate);
-      if (kind === "kwark") log.kwarkGrams = val;
-      else if (kind === "muesli") log.muesliGrams = val;
+      log.basisOverrides[bId] = val;
       log.touched = true;
       saveFoodState(); renderNutritionTab(); renderPlannerTab();
       return;
@@ -3524,7 +3647,6 @@ function bindEvents() {
     state.nutriGoals.protein = Number(document.getElementById("cfgProtGoal").value) || 155;
     state.nutriGoals.carbs = Number(document.getElementById("cfgCarbGoal").value) || 240;
     state.nutriGoals.fat = Number(document.getElementById("cfgFatGoal").value) || 75;
-    state.nutriGoals.defaultKwark = Number(document.getElementById("cfgDefaultKwark").value) || 250;
     saveFoodState();
     document.getElementById("uploadFeedback").textContent = "Voedingsdoelen opgeslagen!";
     renderNutritionTab();
@@ -3718,7 +3840,8 @@ function bindEvents() {
       garminSets: state.garminSets, hevySets: state.hevySets, bodyMeasurements: state.bodyMeasurements,
       mappings: state.mappings, favorites: state.favorites, pulleyGroups: state.pulleyGroups,
       pointOverrides: state.pointOverrides, foodLogs: state.foodLogs, plannedWorkouts: state.plannedWorkouts,
-      nutriGoals: state.nutriGoals, drinkFavorites: state.drinkFavorites, foodFavorites: state.foodFavorites, customFoods: state.customFoods, smartOverload: state.smartOverload
+      nutriGoals: state.nutriGoals,
+    basisItems: state.basisItems, drinkFavorites: state.drinkFavorites, foodFavorites: state.foodFavorites, customFoods: state.customFoods, smartOverload: state.smartOverload
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -3744,6 +3867,8 @@ function bindEvents() {
         if (d.foodLogs) state.foodLogs = d.foodLogs;
         if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
         if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
+        if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
+    if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
         if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
         if (d.drinkFavorites) state.drinkFavorites = d.drinkFavorites;
         if (d.foodFavorites) state.foodFavorites = d.foodFavorites;
