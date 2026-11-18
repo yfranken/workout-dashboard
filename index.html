@@ -373,6 +373,75 @@
     .scanner-evolt { background: rgba(236, 72, 153, 0.18); color: var(--accent-body); }
 
 
+
+    /* Planner grote icoon-balken */
+    .cal-cell {
+      min-height: 68px;
+      padding: 4px 3px;
+    }
+    .cal-pill-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 4px;
+    }
+    .cal-pill-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      padding: 2px 3px;
+      font-size: 0.72rem;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+    .cal-bar-food-orange { background: #f59e0b; color: #0f172a; }
+    .cal-bar-food-green  { background: #10b981; color: #0f172a; }
+    .cal-bar-wo-blue     { background: #38bdf8; color: #0f172a; }
+    .cal-bar-wo-green    { background: #10b981; color: #0f172a; }
+
+    /* Dagvoeding Datumkalender Popup */
+    .nutri-cal-popup {
+      margin-top: 10px;
+      padding: 10px;
+      background: #0f172a;
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      display: none;
+    }
+    .nutri-cal-popup.visible { display: block; }
+    .nutri-cal-cell {
+      border-radius: 8px;
+      padding: 7px 2px;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: #1e293b;
+      color: var(--text);
+    }
+    .nutri-cal-cell.other-month { opacity: 0.35; }
+    .nutri-cal-cell.food-orange {
+      background: rgba(245, 158, 11, 0.28);
+      border-color: #f59e0b;
+      color: #fde68a;
+    }
+    .nutri-cal-cell.food-green {
+      background: rgba(16, 185, 129, 0.28);
+      border-color: #10b981;
+      color: #a7f3d0;
+    }
+    .nutri-cal-cell.selected {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    /* Ruimte tussen Dranken en Eten op mobiel */
+    .add-food-col { margin-top: 18px; }
+    @media (min-width: 768px) {
+      .add-food-col { margin-top: 0; }
+    }
+
     /* PC / Desktop 2-koloms indeling voor Voeding */
     @media (min-width: 768px) {
       #tab-nutrition .sections-grid-pc {
@@ -532,11 +601,11 @@
         <span class="nav-label" id="calMonthLabel">-</span>
         <button type="button" class="nav-arrow" id="calNextMonthBtn">&#9654;</button>
       </div>
-      <div style="font-size:0.7rem; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-        <span>🍽️ <span style="color:#f59e0b;">Oranje</span> = Bezig</span>
-        <span>🍽️ <span style="color:#10b981;">Groen</span> = Dag afgerond</span>
-        <span><span class="legend-dot" style="background:var(--accent-hevy)"></span>Gedaan</span>
-        <span><span class="legend-dot" style="background:var(--accent)"></span>Gepland</span>
+      <div style="font-size:0.7rem; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <span><span class="cal-pill-bar cal-bar-food-orange" style="display:inline-flex; padding:1px 5px;">🍽️</span> Bezig</span>
+        <span><span class="cal-pill-bar cal-bar-food-green" style="display:inline-flex; padding:1px 5px;">🍽️</span> Afgerond</span>
+        <span><span class="cal-pill-bar cal-bar-wo-blue" style="display:inline-flex; padding:1px 5px;">🏋️</span> Gepland</span>
+        <span><span class="cal-pill-bar cal-bar-wo-green" style="display:inline-flex; padding:1px 5px;">🏋️</span> Voltooid</span>
       </div>
       <div class="cal-header">
         <div>Ma</div><div>Di</div><div>Wo</div><div>Do</div><div>Vr</div><div>Za</div><div>Zo</div>
@@ -575,7 +644,7 @@
   <!-- TAB 3: VOEDING (DAGLOGBOEK, ALLE MACRO'S & WEEKMENU)      -->
   <!-- ========================================================= -->
   <div id="tab-nutrition" class="panel">
-    <!-- Dag-navigatie -->
+    <!-- Dag-navigatie met klikbare maandkalender -->
     <div class="card" style="padding-bottom:10px;">
       <h2>
         <span>Dagvoeding</span>
@@ -583,8 +652,26 @@
       </h2>
       <div class="period-nav">
         <button type="button" class="nav-arrow" id="nutriPrevDayBtn">&#9664;</button>
-        <span class="nav-label" id="nutriDateLabel">Vandaag</span>
+        <span class="nav-label" id="nutriDateLabel" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;" title="Klik om een datum te kiezen">Vandaag 📅</span>
         <button type="button" class="nav-arrow" id="nutriNextDayBtn">&#9654;</button>
+      </div>
+
+      <!-- Uitklapbare maandkalender voor snelle datumkeuze -->
+      <div class="nutri-cal-popup" id="nutriCalPopup">
+        <div class="period-nav" style="margin-bottom:8px; background:#1e293b;">
+          <button type="button" class="nav-arrow" id="nutriCalPrevMonthBtn">&#9664;</button>
+          <span class="nav-label" id="nutriCalMonthLabel">Oktober '26</span>
+          <button type="button" class="nav-arrow" id="nutriCalNextMonthBtn">&#9654;</button>
+        </div>
+        <div style="font-size:0.68rem; color:var(--muted); display:flex; gap:10px; justify-content:center; margin-bottom:6px;">
+          <span><span class="legend-dot" style="background:#f59e0b;"></span>Deels gelogd</span>
+          <span><span class="legend-dot" style="background:#10b981;"></span>Afgerond</span>
+          <span><span class="legend-dot" style="background:#334155;"></span>Niet gelogd</span>
+        </div>
+        <div class="cal-header">
+          <div>M</div><div>D</div><div>W</div><div>D</div><div>V</div><div>Z</div><div>Z</div>
+        </div>
+        <div class="cal-grid" id="nutriCalGrid"></div>
       </div>
     </div>
 
@@ -722,20 +809,20 @@
     <div class="card">
       <h2>
         <span>Toevoegen</span>
-        <div class="pill-row" id="targetSectionPills" style="margin-bottom:0;">
-          <span class="pill" data-tsec="ontbijt" style="padding:3px 8px; font-size:0.71rem;">🌅 Ontbijt</span>
-          <span class="pill" data-tsec="lunch" style="padding:3px 8px; font-size:0.71rem;">🥪 Lunch</span>
-          <span class="pill" data-tsec="tussendoor" style="padding:3px 8px; font-size:0.71rem;">🍎 Tussendoor</span>
-          <span class="pill active" data-tsec="extra" style="padding:3px 8px; font-size:0.71rem;">➕ Extra</span>
-        </div>
       </h2>
+      <div class="pill-row" id="targetSectionPills" style="margin-bottom:10px;">
+        <span class="pill" data-tsec="ontbijt">🌅 Ontbijt</span>
+        <span class="pill" data-tsec="lunch">🥪 Lunch</span>
+        <span class="pill" data-tsec="tussendoor">🍎 Tussendoor</span>
+        <span class="pill active" data-tsec="extra">➕ Extra</span>
+      </div>
 
       <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
       <div style="display:flex; gap:6px; margin-bottom:4px;">
-        <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. banaan, skyr, cappuccino)..." style="margin-bottom:4px;" />
+        <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. Chocomel 0%, Lipton, skyr)..." style="margin-bottom:4px;" />
         <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
       </div>
-      <div id="unifiedSearchResults" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
+      <div id="unifiedSearchResults" style="max-height:240px; overflow-y:auto; margin-bottom:10px;"></div>
 
       <!-- Op PC naast elkaar: Dranken (links) en Eten (rechts) -->
       <div class="add-grid-pc">
@@ -746,7 +833,6 @@
             <span class="pill" data-dcat="warm">Warme dranken</span>
             <span class="pill" data-dcat="thee">Thee</span>
             <span class="pill" data-dcat="fris">Frisdranken</span>
-            <span class="pill" data-dcat="water">Water</span>
           </div>
           <div class="drink-grid" id="drinkGrid"></div>
 
@@ -757,7 +843,7 @@
           </div>
         </div>
 
-        <div>
+        <div class="add-food-col">
           <div style="font-size:0.8rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Eten (stuk / gram)</div>
           <div class="pill-row" id="foodCatPills">
             <span class="pill active" data-fcat="fav">★ Favorieten</span>
@@ -1180,12 +1266,12 @@ const DEFAULT_DRINKS = [
   { id: "latte", name: "Koffie Verkeerd / Latte", cat: "warm", kcal100: 42, p100: 2.4, c100: 3.5, f100: 2.0, vols: [200, 250, 330], fixedVol: null },
   { id: "thee_groen", name: "Groene / Kruidenthee", cat: "thee", kcal100: 1, p100: 0, c100: 0.1, f100: 0, vols: [250, 330, 500], fixedVol: null },
   { id: "thee_munt", name: "Verse Muntthee", cat: "thee", kcal100: 2, p100: 0, c100: 0.4, f100: 0, vols: [250, 330], fixedVol: null },
-  { id: "water", name: "Water / Bruiswater", cat: "water", kcal100: 0, p100: 0, c100: 0, f100: 0, vols: [250, 330, 500, 750], fixedVol: null },
+  { id: "water", name: "Water / Bruiswater", cat: "fris", kcal100: 0, p100: 0, c100: 0, f100: 0, vols: [250, 330, 500, 750], fixedVol: null },
   { id: "cola_zero", name: "Cola Zero / Light", cat: "fris", kcal100: 0.5, p100: 0, c100: 0, f100: 0, vols: [250, 330, 500], fixedVol: null },
   { id: "cola_reg", name: "Cola / Frisdrank (Suiker)", cat: "fris", kcal100: 42, p100: 0, c100: 10.6, f100: 0, vols: [250, 330, 500], fixedVol: null },
   { id: "sinas_zero", name: "Sinas / Ice Tea Zero", cat: "fris", kcal100: 1, p100: 0, c100: 0.1, f100: 0, vols: [250, 330, 500], fixedVol: null },
   { id: "bier", name: "Pils / Biertje (5%)", cat: "fris", kcal100: 43, p100: 0.5, c100: 3.2, f100: 0, vols: [250, 330, 500], fixedVol: null },
-  { id: "melk_half", name: "Halfvolle Melk", cat: "water", kcal100: 46, p100: 3.4, c100: 4.8, f100: 1.5, vols: [200, 250, 330], fixedVol: null }
+  { id: "melk_half", name: "Halfvolle Melk", cat: "fris", kcal100: 46, p100: 3.4, c100: 4.8, f100: 1.5, vols: [200, 250, 330], fixedVol: null }
 ];
 
 const LOCAL_FOOD_DB = [
@@ -1252,6 +1338,9 @@ let state = {
   // plannedWorkouts: { "2026-11-18": ["Upper Body"] }
   plannedWorkouts: safeParseJSON("planned_workouts_v1", {}),
   selectedNutriDate: TODAY_YMD,
+  nutriCalYear: new Date().getFullYear(),
+  nutriCalMonth: new Date().getMonth(),
+  nutriCalOpen: false,
   selectedDrinkCat: "fav",
   selectedDrinkId: null,
   selectedFoodCat: "fav",
@@ -1671,6 +1760,39 @@ function renderBasisConfigPanel() {
   }
 }
 
+function renderNutriDateCalendar() {
+  const popup = document.getElementById("nutriCalPopup");
+  if (!popup) return;
+  popup.classList.toggle("visible", Boolean(state.nutriCalOpen));
+  if (!state.nutriCalOpen) return;
+
+  const year = state.nutriCalYear;
+  const month = state.nutriCalMonth;
+  const monthNames = ["Januari", "Februari", "Maart", "April", "Mei", "Juni", "Juli", "Augustus", "September", "Oktober", "November", "December"];
+  document.getElementById("nutriCalMonthLabel").textContent = `${monthNames[month]} '${String(year).slice(2)}`;
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const startDate = new Date(year, month, 1 - startOffset);
+
+  let html = "";
+  for (let i = 0; i < 42; i++) {
+    const cur = new Date(startDate);
+    cur.setDate(startDate.getDate() + i);
+    const cellYmd = formatYMD(cur);
+    const inMonth = cur.getMonth() === month;
+    const isSel = cellYmd === state.selectedNutriDate;
+    const fInfo = computeDayNutrition(cellYmd);
+
+    let statusCls = "";
+    if (fInfo.completed) statusCls = "food-green";
+    else if (fInfo.touched) statusCls = "food-orange";
+
+    html += `<div class="nutri-cal-cell ${inMonth ? "" : "other-month"} ${statusCls} ${isSel ? "selected" : ""}" data-pick-nutri-day="${cellYmd}">${cur.getDate()}</div>`;
+  }
+  document.getElementById("nutriCalGrid").innerHTML = html;
+}
+
 // === RENDER VOEDING TAB ===
 function renderNutritionTab() {
   const ymd = state.selectedNutriDate;
@@ -1678,8 +1800,19 @@ function renderNutritionTab() {
   const totals = computeDayNutrition(ymd);
   const trainDay = isTrainingDay(ymd);
 
-  document.getElementById("nutriDateLabel").textContent =
-    ymd === TODAY_YMD ? `Vandaag (${formatShortNL(ymd)})` : formatShortNL(ymd);
+  function formatNutriDayHeader(targetYmd) {
+    const todayDt = new Date(TODAY_YMD + "T12:00:00");
+    const targetDt = new Date(targetYmd + "T12:00:00");
+    const diffDays = Math.round((targetDt.getTime() - todayDt.getTime()) / 86400000);
+    const shortStr = formatShortNL(targetYmd);
+    if (diffDays === 0) return `Vandaag (${shortStr}) 📅`;
+    if (diffDays === -1) return `Gisteren (${shortStr}) 📅`;
+    if (diffDays === 1) return `Morgen (${shortStr}) 📅`;
+    const weekdays = ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"];
+    return `${weekdays[targetDt.getDay()]} (${shortStr}) 📅`;
+  }
+  document.getElementById("nutriDateLabel").textContent = formatNutriDayHeader(ymd);
+  renderNutriDateCalendar();
   document.getElementById("nutriDayTypeBadge").textContent = trainDay ? "🏋️ Trainingsdag" : "🛋️ Rustdag";
   document.getElementById("nutriDayTypeBadge").style.color = trainDay ? "var(--accent-hevy)" : "var(--muted)";
 
@@ -1937,24 +2070,22 @@ function renderPlannerTab() {
     const hasActualWo = actualWorkoutDays.has(ymd);
     const plannedList = state.plannedWorkouts[ymd] || [];
 
-    let foodIcon = "";
+    let pillBarsHtml = "";
     if (foodInfo.completed) {
-      foodIcon = `<span class="food-dot-green" title="Voeding afgerond">🍽️</span>`;
+      pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-green" title="Voeding afgerond">🍽️</div>`;
     } else if (foodInfo.touched) {
-      foodIcon = `<span class="food-dot-orange" title="Voeding bezig">🍽️</span>`;
+      pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-orange" title="Voeding deels gelogd">🍽️</div>`;
     }
-
-    let barsHtml = "";
-    if (hasActualWo) barsHtml += `<div class="cal-bar" style="background:var(--accent-hevy);"></div>`;
-    if (plannedList.length > 0) barsHtml += `<div class="cal-bar" style="background:var(--accent);"></div>`;
+    if (hasActualWo) {
+      pillBarsHtml += `<div class="cal-pill-bar cal-bar-wo-green" title="Training voltooid">🏋️</div>`;
+    } else if (plannedList.length > 0) {
+      pillBarsHtml += `<div class="cal-pill-bar cal-bar-wo-blue" title="Training gepland">🏋️</div>`;
+    }
 
     cellsHtml += `
       <div class="cal-cell ${inMonth ? "" : "other-month"} ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}" data-cal-day="${ymd}">
-        <div class="cal-icons">
-          <span>${foodIcon}</span>
-          <span class="cal-day-num">${cur.getDate()}</span>
-        </div>
-        <div class="cal-bars">${barsHtml}</div>
+        <div class="cal-day-num">${cur.getDate()}</div>
+        <div class="cal-pill-bars">${pillBarsHtml}</div>
       </div>
     `;
   }
@@ -2903,12 +3034,48 @@ function bindEvents() {
     const d = new Date(state.selectedNutriDate + "T12:00:00");
     d.setDate(d.getDate() - 1);
     state.selectedNutriDate = formatYMD(d);
+    const curDt = new Date(state.selectedNutriDate + "T12:00:00");
+    state.nutriCalYear = curDt.getFullYear();
+    state.nutriCalMonth = curDt.getMonth();
     renderNutritionTab();
   });
   document.getElementById("nutriNextDayBtn").addEventListener("click", () => {
     const d = new Date(state.selectedNutriDate + "T12:00:00");
     d.setDate(d.getDate() + 1);
     state.selectedNutriDate = formatYMD(d);
+    const curDt = new Date(state.selectedNutriDate + "T12:00:00");
+    state.nutriCalYear = curDt.getFullYear();
+    state.nutriCalMonth = curDt.getMonth();
+    renderNutritionTab();
+  });
+
+  document.getElementById("nutriDateLabel").addEventListener("click", () => {
+    state.nutriCalOpen = !state.nutriCalOpen;
+    if (state.nutriCalOpen) {
+      const curDt = new Date(state.selectedNutriDate + "T12:00:00");
+      state.nutriCalYear = curDt.getFullYear();
+      state.nutriCalMonth = curDt.getMonth();
+    }
+    renderNutriDateCalendar();
+  });
+
+  document.getElementById("nutriCalPrevMonthBtn").addEventListener("click", () => {
+    state.nutriCalMonth -= 1;
+    if (state.nutriCalMonth < 0) { state.nutriCalMonth = 11; state.nutriCalYear -= 1; }
+    renderNutriDateCalendar();
+  });
+
+  document.getElementById("nutriCalNextMonthBtn").addEventListener("click", () => {
+    state.nutriCalMonth += 1;
+    if (state.nutriCalMonth > 11) { state.nutriCalMonth = 0; state.nutriCalYear += 1; }
+    renderNutriDateCalendar();
+  });
+
+  document.getElementById("nutriCalGrid").addEventListener("click", e => {
+    const cell = e.target.closest("[data-pick-nutri-day]");
+    if (!cell) return;
+    state.selectedNutriDate = cell.getAttribute("data-pick-nutri-day");
+    state.nutriCalOpen = false;
     renderNutritionTab();
   });
 
@@ -3428,7 +3595,7 @@ function bindEvents() {
 
   async function runOnlineFoodSearch(query) {
     const q = query.trim();
-    if (q.length < 3) return;
+    if (q.length < 2) return;
     const resEl = document.getElementById("unifiedSearchResults");
     const existingLocalHtml = renderLocalUnifiedMatches(q);
     const cacheKey = q.toLowerCase();
@@ -3442,17 +3609,20 @@ function bindEvents() {
       }
       const apiHtml = prods.map((p, idx) => {
         const n = p.nutriments || {};
+        const rawTitle = (p.product_name_nl || p.product_name || "Onbekend product").trim();
+        const brand = (p.brands || "").split(",")[0].trim();
+        const fullLabel = brand && !rawTitle.toLowerCase().includes(brand.toLowerCase()) ? `${rawTitle} (${brand})` : rawTitle;
         const per100 = {
-          id: "off_" + p.product_name.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 24),
-          name: p.product_name,
-          baseName: p.product_name,
+          id: "off_" + fullLabel.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 28),
+          name: fullLabel,
+          baseName: fullLabel,
           cat: "snack",
           unitType: "gram",
           defaultQty: 100,
-          kcal100: Math.round(n["energy-kcal_100g"] || n["energy-kcal"] || 0),
-          p100: Number((n.proteins_100g || n.proteins || 0).toFixed(1)),
-          c100: Number((n.carbohydrates_100g || n.carbohydrates || 0).toFixed(1)),
-          f100: Number((n.fat_100g || n.fat || 0).toFixed(1))
+          kcal100: Math.round(n["energy-kcal_100g"] ?? n["energy-kcal"] ?? (n["energy_100g"] ? n["energy_100g"] / 4.184 : 0)),
+          p100: Number((n.proteins_100g ?? n.proteins ?? 0).toFixed(1)),
+          c100: Number((n.carbohydrates_100g ?? n.carbohydrates ?? 0).toFixed(1)),
+          f100: Number((n.fat_100g ?? n.fat ?? 0).toFixed(1))
         };
         const isFav = state.foodFavorites.includes(per100.id);
         return `
@@ -3460,10 +3630,10 @@ function bindEvents() {
             <span class="drink-fav-star" data-search-fav-api="${escapeHtml(JSON.stringify(per100))}" style="font-size:1.1rem;" title="Bewaar als favoriet">${isFav ? "★" : "☆"}</span>
             <div style="flex:1; min-width:0; font-size:0.78rem;">
               <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(per100.baseName)}</strong>
-              <span style="color:var(--muted); font-size:0.71rem;">Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH</span>
+              <span style="color:var(--muted); font-size:0.71rem;">Per 100g/ml: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH · ${per100.f100}g V</span>
             </div>
-            <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram" />
-            <button type="button" class="btn-sm btn-accent" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g</button>
+            <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram of mL" />
+            <button type="button" class="btn-sm btn-accent" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g/ml</button>
           </div>
         `;
       }).join("");
@@ -3480,23 +3650,25 @@ function bindEvents() {
     }
     const controller = new AbortController();
     activeSearchAbort = controller;
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 15000);
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 18000);
 
-    resEl.innerHTML = existingLocalHtml + `<div id="onlineSearchSpinner" style="font-size:0.76rem; color:var(--accent); padding:6px;">🌐 Online zoeken in Open Food Facts (even geduld)...</div>`;
+    resEl.innerHTML = existingLocalHtml + `<div id="onlineSearchSpinner" style="font-size:0.76rem; color:var(--accent); padding:6px;">🌐 Zoeken naar "${escapeHtml(q)}" in Open Food Facts...</div>`;
 
     try {
-      const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&countries_tags_en=netherlands&page_size=6&fields=product_name,nutriments`;
-      let resp = await fetch(url, { signal: controller.signal });
+      // Gebruik cgi/search.pl met search_terms (v2 negeert search_terms) en beperkte fields voor snelle respons
+      const fields = "product_name,product_name_nl,brands,nutriments";
+      const nlUrl = `https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=${fields}`;
+      let resp = await fetch(nlUrl, { signal: controller.signal });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       let data = await resp.json();
-      let prods = (data.products || []).filter(p => p.product_name && p.nutriments);
+      let prods = (data.products || []).filter(p => (p.product_name_nl || p.product_name) && p.nutriments);
 
       if (prods.length === 0) {
-        const fallbackUrl = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&page_size=6&fields=product_name,nutriments`;
-        resp = await fetch(fallbackUrl, { signal: controller.signal });
+        const worldUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=${fields}`;
+        resp = await fetch(worldUrl, { signal: controller.signal });
         if (resp.ok) {
           data = await resp.json();
-          prods = (data.products || []).filter(p => p.product_name && p.nutriments);
+          prods = (data.products || []).filter(p => (p.product_name_nl || p.product_name) && p.nutriments);
         }
       }
 
