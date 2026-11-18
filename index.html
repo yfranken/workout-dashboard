@@ -1596,9 +1596,7 @@ function isTrainingDay(ymd) {
 
 // === WEEKMENU PARSER (GEMINI TEKST -> MAANDAG T/M ZONDAG AVONDETEN) ===
 function parseWeekmenuText(rawText) {
-  const lines = rawText.split(/
-?
-/).map(l => l.trim()).filter(Boolean);
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const dayNames = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
   const foundByDayIdx = {};
 
