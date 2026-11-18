@@ -24,7 +24,7 @@
       --accent-body: #ec4899;
       --accent-corrected: #c084fc;
       --accent-carbs: #fbbf24;
-      --accent-fat: #f43f5e;
+      --accent-fat: #a855f7;
       --danger: #ef4444;
       --star: #fbbf24;
     }
@@ -147,11 +147,45 @@
     .pill.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
 
     /* Voeding & Macro stijlen */
+
+    /* Split progress bar voor normaal + rood overschot */
     .macro-bar-wrap {
+      display: flex;
       background: #0f172a; border-radius: 8px; height: 8px; width: 100%;
       overflow: hidden; margin-top: 5px; border: 1px solid #334155;
     }
     .macro-bar-fill { height: 100%; transition: width 0.25s; }
+    .macro-bar-over { height: 100%; background: #ef4444; transition: width 0.25s; }
+
+    /* Hydratatie Tracker balk binnen Dagmenu */
+    .hydration-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 11px;
+    }
+    .hydration-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      margin-bottom: 5px;
+    }
+    .hydration-bar-wrap {
+      background: #0f172a;
+      border-radius: 999px;
+      height: 10px;
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+    .hydration-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0284c7, #38bdf8);
+      transition: width 0.3s;
+    }
+
     .meal-row {
       display: flex; align-items: center; justify-content: space-between;
       background: #0f172a; border: 1px solid var(--card-border);
@@ -681,25 +715,36 @@
         <div class="kpi-label">Calorieën</div>
         <div class="kpi-val" id="macKcalVal">0</div>
         <div class="kpi-sub" id="macKcalSub">/ 2300 kcal</div>
-        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macKcalBar" style="width:0%; background:var(--accent);"></div></div>
+        <div class="macro-bar-wrap">
+          <div class="macro-bar-fill" id="macKcalBar" style="width:0%; background:var(--accent);"></div>
+          <div class="macro-bar-over" id="macKcalOverBar" style="width:0%;"></div>
+        </div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Eiwitten</div>
         <div class="kpi-val" id="macProtVal">0g</div>
         <div class="kpi-sub" id="macProtSub">/ 155g</div>
-        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macProtBar" style="width:0%; background:var(--accent-hevy);"></div></div>
+        <div class="macro-bar-wrap">
+          <div class="macro-bar-fill" id="macProtBar" style="width:0%; background:var(--accent-hevy);"></div>
+        </div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Koolhydraten</div>
         <div class="kpi-val" id="macCarbVal">0g</div>
         <div class="kpi-sub" id="macCarbSub">/ 240g</div>
-        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macCarbBar" style="width:0%; background:var(--accent-carbs);"></div></div>
+        <div class="macro-bar-wrap">
+          <div class="macro-bar-fill" id="macCarbBar" style="width:0%; background:var(--accent-carbs);"></div>
+          <div class="macro-bar-over" id="macCarbOverBar" style="width:0%;"></div>
+        </div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Vetten</div>
         <div class="kpi-val" id="macFatVal">0g</div>
         <div class="kpi-sub" id="macFatSub">/ 75g</div>
-        <div class="macro-bar-wrap"><div class="macro-bar-fill" id="macFatBar" style="width:0%; background:var(--accent-fat);"></div></div>
+        <div class="macro-bar-wrap">
+          <div class="macro-bar-fill" id="macFatBar" style="width:0%; background:var(--accent-fat);"></div>
+          <div class="macro-bar-over" id="macFatOverBar" style="width:0%;"></div>
+        </div>
       </div>
     </div>
 
@@ -801,6 +846,20 @@
             <span id="secTotal_extra" style="font-size:0.72rem; color:var(--muted); font-weight:600;">0 kcal</span>
           </div>
           <div id="secList_extra"></div>
+        </div>
+      </div>
+
+      <!-- Volledige breedte Hydratatietracker onderaan in Dagmenu -->
+      <div class="hydration-box" id="hydrationTrackerBox">
+        <div class="hydration-header">
+          <span style="font-weight:700; color:var(--accent);">💧 Hydratatie &amp; Vochtbalans</span>
+          <span id="hydrationStatusText" style="font-weight:700; color:var(--text);">0 / 2500 ml (0%)</span>
+        </div>
+        <div class="hydration-bar-wrap">
+          <div class="hydration-bar-fill" id="hydrationBarFill" style="width:0%;"></div>
+        </div>
+        <div id="hydrationAdviceSub" style="font-size:0.69rem; color:var(--muted); margin-top:4px;">
+          Richtlijn: ~2500 ml op rustdag, ~3000 ml op trainingsdag (incl. koffie, thee, frisdrank &amp; zuiveldranken).
         </div>
       </div>
     </div>
@@ -1333,6 +1392,7 @@ let state = {
   drinkFavorites: safeParseJSON("drink_favs_v1", ["cappuccino", "espresso", "water", "cola_zero"]),
   foodFavorites: safeParseJSON("food_favs_v1", ["banaan", "ei_gekookt", "eiwitreep", "noten_mix"]),
   customFoods: safeParseJSON("custom_foods_v1", []),
+  customDrinks: safeParseJSON("custom_drinks_v1", []),
   // foodLogs: { "2026-11-17": { kwarkGrams, smoothieCount, breadSlices, drinks: [...], extras: [...], dinner: { title, kcal, p, c, f, confirmed }, completed: false } }
   foodLogs: safeParseJSON("food_logs_v1", {}),
   // plannedWorkouts: { "2026-11-18": ["Upper Body"] }
@@ -1443,6 +1503,7 @@ function buildFullSyncPayload() {
     nutriGoals: state.nutriGoals,
     basisItems: state.basisItems,
     drinkFavorites: state.drinkFavorites,
+    customDrinks: state.customDrinks,
     customFoods: state.customFoods
   };
 }
@@ -1467,6 +1528,7 @@ async function applySyncPayload(d, saveLocally = true) {
     if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
         if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
     if (Array.isArray(d.drinkFavorites)) state.drinkFavorites = d.drinkFavorites;
+    if (Array.isArray(d.customDrinks)) state.customDrinks = d.customDrinks;
     if (Array.isArray(d.foodFavorites)) state.foodFavorites = d.foodFavorites;
     if (Array.isArray(d.customFoods)) state.customFoods = d.customFoods;
 
@@ -1480,6 +1542,7 @@ async function applySyncPayload(d, saveLocally = true) {
       localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
   localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
       localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
+  localStorage.setItem("custom_drinks_v1", JSON.stringify(state.customDrinks));
       localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
   localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
       localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
@@ -1566,6 +1629,7 @@ function saveFoodState() {
   localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
   localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
   localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
+  localStorage.setItem("custom_drinks_v1", JSON.stringify(state.customDrinks));
   localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
   localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
   scheduleCloudPush();
@@ -1822,21 +1886,73 @@ function renderNutritionTab() {
   const goalC = Number(state.nutriGoals.carbs || 240);
   const goalF = Number(state.nutriGoals.fat || 75);
 
-  document.getElementById("macKcalVal").textContent = totals.kcal;
-  document.getElementById("macKcalSub").textContent = `/ ${goalKcal} kcal`;
-  document.getElementById("macKcalBar").style.width = `${Math.min(100, (totals.kcal / goalKcal) * 100)}%`;
+  function getMacroTextColor(val, goal) {
+    if (!goal || goal <= 0) return "var(--text)";
+    const ratio = val / goal;
+    if (ratio >= 0.90 && ratio <= 1.05) return "#10b981"; // Groen: binnen acceptabele marge (90% - 105%)
+    if (ratio > 1.05 && ratio <= 1.15) return "#f59e0b";  // Oranje: lichte afwijking eroverheen (105% - 115%)
+    if (ratio > 1.15) return "#ef4444";                   // Rood: dik eroverheen (> 115%)
+    return "var(--text)";
+  }
 
-  document.getElementById("macProtVal").textContent = `${totals.p}g`;
+  function applySplitBar(barId, overBarId, val, goal) {
+    const bar = document.getElementById(barId);
+    const over = overBarId ? document.getElementById(overBarId) : null;
+    if (!bar || !goal || goal <= 0) return;
+    if (val <= goal) {
+      bar.style.width = `${Math.min(100, (val / goal) * 100)}%`;
+      if (over) over.style.width = "0%";
+    } else {
+      // Toon het deel binnen het doel in de basiskleur en enkel het overschot in rood
+      const normalPct = (goal / val) * 100;
+      const overPct = ((val - goal) / val) * 100;
+      bar.style.width = `${normalPct}%`;
+      if (over) over.style.width = `${overPct}%`;
+    }
+  }
+
+  const kcalEl = document.getElementById("macKcalVal");
+  kcalEl.textContent = totals.kcal;
+  kcalEl.style.color = getMacroTextColor(totals.kcal, goalKcal);
+  document.getElementById("macKcalSub").textContent = `/ ${goalKcal} kcal`;
+  applySplitBar("macKcalBar", "macKcalOverBar", totals.kcal, goalKcal);
+
+  const protEl = document.getElementById("macProtVal");
+  protEl.textContent = `${totals.p}g`;
+  protEl.style.color = getMacroTextColor(totals.p, goalP);
   document.getElementById("macProtSub").textContent = `/ ${goalP}g`;
   document.getElementById("macProtBar").style.width = `${Math.min(100, (totals.p / goalP) * 100)}%`;
 
-  document.getElementById("macCarbVal").textContent = `${totals.c}g`;
+  const carbEl = document.getElementById("macCarbVal");
+  carbEl.textContent = `${totals.c}g`;
+  carbEl.style.color = getMacroTextColor(totals.c, goalC);
   document.getElementById("macCarbSub").textContent = `/ ${goalC}g`;
-  document.getElementById("macCarbBar").style.width = `${Math.min(100, (totals.c / goalC) * 100)}%`;
+  applySplitBar("macCarbBar", "macCarbOverBar", totals.c, goalC);
 
-  document.getElementById("macFatVal").textContent = `${totals.f}g`;
+  const fatEl = document.getElementById("macFatVal");
+  fatEl.textContent = `${totals.f}g`;
+  fatEl.style.color = getMacroTextColor(totals.f, goalF);
   document.getElementById("macFatSub").textContent = `/ ${goalF}g`;
-  document.getElementById("macFatBar").style.width = `${Math.min(100, (totals.f / goalF) * 100)}%`;
+  applySplitBar("macFatBar", "macFatOverBar", totals.f, goalF);
+
+  // Hydratatietracker bijwerken (richtlijn: 2500 ml rustdag, 3000 ml trainingsdag)
+  const waterGoalMl = trainDay ? 3000 : 2500;
+  const waterPct = Math.round((totals.drinkMl / waterGoalMl) * 100);
+  const hydStatusEl = document.getElementById("hydrationStatusText");
+  const hydBarEl = document.getElementById("hydrationBarFill");
+  const hydSubEl = document.getElementById("hydrationAdviceSub");
+  if (hydStatusEl && hydBarEl) {
+    hydStatusEl.textContent = `${totals.drinkMl} / ${waterGoalMl} ml (${waterPct}%)`;
+    hydStatusEl.style.color = waterPct >= 100 ? "#10b981" : (waterPct >= 70 ? "#38bdf8" : "var(--text)");
+    hydBarEl.style.width = `${Math.min(100, waterPct)}%`;
+    hydBarEl.style.background = waterPct >= 100 ? "#10b981" : "linear-gradient(90deg, #0284c7, #38bdf8)";
+    if (hydSubEl) {
+      const rem = Math.max(0, waterGoalMl - totals.drinkMl);
+      hydSubEl.textContent = rem === 0
+        ? `✅ Gezonde vochtinname voor vandaag behaald (${trainDay ? "trainingsdag" : "rustdag"})!`
+        : `Nog ${rem} ml aanbevolen voor een gezonde vochtbalans (${trainDay ? "trainingsdag-doel: 3000 ml" : "rustdag-doel: 2500 ml"}).`;
+    }
+  }
 
   renderBasisConfigPanel();
 
@@ -1881,17 +1997,27 @@ function renderNutritionTab() {
     `);
   });
 
-  // Voeg gelogde dranken toe onder hun gekozen subkopje
+  // Voeg gelogde dranken toe onder hun gekozen subkopje (met aanpasbare mL!)
   (log.drinks || []).forEach((d, idx) => {
     const targetSec = sections.includes(d.section) ? d.section : "extra";
     secKcal[targetSec] += Number(d.kcal || 0);
+    const isEspresso = d.name.toLowerCase().includes("espresso");
+    const drinkControl = isEspresso
+      ? `<span style="font-size:0.75rem; font-weight:700; color:var(--muted); padding:0 6px;">${d.ml} ml</span>`
+      : `<div class="stepper" style="padding:2px;">
+           <button type="button" class="step-btn" data-drink-step="-50" data-drink-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">-50</button>
+           <input type="number" data-drink-ml-inp="${idx}" value="${d.ml}" step="10" min="10" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.76rem !important;" />
+           <button type="button" class="step-btn" data-drink-step="50" data-drink-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">+50</button>
+         </div>`;
+
     secHtml[targetSec].push(`
-      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; border-color:rgba(56,189,248,0.28);">
+      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:rgba(56,189,248,0.28);">
         <div class="meal-info">
-          <div class="meal-title">🥤 ${escapeHtml(d.name)} (${d.ml} ml)</div>
-          <div class="meal-macros">${Math.round(d.kcal)} kcal · ${Number(d.p).toFixed(1)}g E · ${Number(d.c).toFixed(1)}g KH · ${Number(d.f).toFixed(1)}g V</div>
+          <div class="meal-title">🥤 ${escapeHtml(d.name)}</div>
+          <div class="meal-macros">${d.ml} ml · ${Math.round(d.kcal)} kcal · ${Number(d.p).toFixed(1)}g E · ${Number(d.c).toFixed(1)}g KH · ${Number(d.f).toFixed(1)}g V</div>
         </div>
-        <button type="button" class="step-btn" data-del-drink="${idx}" style="color:var(--danger); padding:5px 8px;" title="Verwijderen">✕</button>
+        ${drinkControl}
+        <button type="button" class="step-btn" data-del-drink="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>
       </div>
     `);
   });
@@ -1985,7 +2111,8 @@ function renderNutritionTab() {
 
   // Dranken grid
   document.getElementById("drinksTotalBadge").textContent = `${totals.drinkMl} ml vocht`;
-  const filteredDrinks = DEFAULT_DRINKS.filter(d =>
+  const allDrinksPool = [...state.customDrinks, ...DEFAULT_DRINKS];
+  const filteredDrinks = allDrinksPool.filter(d =>
     state.selectedDrinkCat === "fav" ? state.drinkFavorites.includes(d.id) : d.cat === state.selectedDrinkCat
   );
   document.getElementById("drinkGrid").innerHTML = filteredDrinks.map(d => {
@@ -2004,7 +2131,7 @@ function renderNutritionTab() {
 
   const volPicker = document.getElementById("drinkVolumePicker");
   if (state.selectedDrinkId) {
-    const dr = DEFAULT_DRINKS.find(x => x.id === state.selectedDrinkId);
+    const dr = [...state.customDrinks, ...DEFAULT_DRINKS].find(x => x.id === state.selectedDrinkId);
     if (dr) {
       volPicker.style.display = "flex";
       document.getElementById("selectedDrinkTitle").textContent = `${dr.name} – kies hoeveelheid:`;
@@ -3287,6 +3414,28 @@ function bindEvents() {
       return;
     }
 
+    const drinkStepBtn = e.target.closest("[data-drink-step]");
+    if (drinkStepBtn) {
+      const idx = Number(drinkStepBtn.getAttribute("data-drink-idx"));
+      const delta = Number(drinkStepBtn.getAttribute("data-drink-step"));
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const d = log.drinks[idx];
+      if (d) {
+        const oldMl = Number(d.ml) || 250;
+        const newMl = Math.max(10, oldMl + delta);
+        const k100 = d.kcal100 ?? (oldMl > 0 ? (d.kcal / oldMl) * 100 : 0);
+        const p100 = d.p100 ?? (oldMl > 0 ? (d.p / oldMl) * 100 : 0);
+        const c100 = d.c100 ?? (oldMl > 0 ? (d.c / oldMl) * 100 : 0);
+        const f100 = d.f100 ?? (oldMl > 0 ? (d.f / oldMl) * 100 : 0);
+        d.kcal100 = k100; d.p100 = p100; d.c100 = c100; d.f100 = f100;
+        d.ml = newMl;
+        const f = newMl / 100;
+        d.kcal = k100 * f; d.p = p100 * f; d.c = c100 * f; d.f = f100 * f;
+        saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      }
+      return;
+    }
+
     const delExtra = e.target.closest("[data-del-extra]");
     if (delExtra) {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
@@ -3337,6 +3486,26 @@ function bindEvents() {
       log.basisOverrides[bId] = val;
       log.touched = true;
       saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      return;
+    }
+    const drinkMlInp = e.target.closest("[data-drink-ml-inp]");
+    if (drinkMlInp) {
+      const idx = Number(drinkMlInp.getAttribute("data-drink-ml-inp"));
+      const newMl = Math.max(10, Number(drinkMlInp.value) || 250);
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      const d = log.drinks[idx];
+      if (d) {
+        const oldMl = Number(d.ml) || 250;
+        const k100 = d.kcal100 ?? (oldMl > 0 ? (d.kcal / oldMl) * 100 : 0);
+        const p100 = d.p100 ?? (oldMl > 0 ? (d.p / oldMl) * 100 : 0);
+        const c100 = d.c100 ?? (oldMl > 0 ? (d.c / oldMl) * 100 : 0);
+        const f100 = d.f100 ?? (oldMl > 0 ? (d.f / oldMl) * 100 : 0);
+        d.kcal100 = k100; d.p100 = p100; d.c100 = c100; d.f100 = f100;
+        d.ml = newMl;
+        const f = newMl / 100;
+        d.kcal = k100 * f; d.p = p100 * f; d.c = c100 * f; d.f = f100 * f;
+        saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      }
       return;
     }
     const extraInp = e.target.closest("[data-extra-grams]");
@@ -3431,7 +3600,7 @@ function bindEvents() {
     const card = e.target.closest("[data-select-drink]");
     if (!card) return;
     const dId = card.getAttribute("data-select-drink");
-    const dr = DEFAULT_DRINKS.find(x => x.id === dId);
+    const dr = [...state.customDrinks, ...DEFAULT_DRINKS].find(x => x.id === dId);
     if (!dr) return;
     if (dr.fixedVol) {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
@@ -3555,16 +3724,22 @@ function bindEvents() {
     const foodMatches = foodPool.filter(item => item.name.toLowerCase().includes(q));
 
     let html = "";
-    drinkMatches.forEach(d => {
+    drinkMatches.forEach((d, dIdx) => {
       const isFav = state.drinkFavorites.includes(d.id);
-      const defMl = d.fixedVol || d.vols[0] || 250;
+      const chipsHtml = d.fixedVol
+        ? `<button type="button" class="btn-sm btn-accent" data-search-add-drink="${d.id}" data-ml="${d.fixedVol}" style="color:#0f172a;">+${d.fixedVol} ml</button>`
+        : `<button type="button" class="btn-sm" data-search-add-drink="${d.id}" data-ml="250" style="padding:3px 6px; font-size:0.71rem;">250</button>
+           <button type="button" class="btn-sm" data-search-add-drink="${d.id}" data-ml="330" style="padding:3px 6px; font-size:0.71rem;">330</button>
+           <button type="button" class="btn-sm" data-search-add-drink="${d.id}" data-ml="500" style="padding:3px 6px; font-size:0.71rem;">500</button>
+           <input type="number" id="locDrinkMl_${dIdx}" value="250" step="10" min="1" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.75rem !important;" />
+           <button type="button" class="btn-sm btn-accent" data-search-add-drink="${d.id}" data-ml-input="locDrinkMl_${dIdx}" style="color:#0f172a; padding:4px 7px;">+ml</button>`;
       html += `
-        <div class="pref-row" style="padding:6px 4px; gap:6px;">
+        <div class="pref-row" style="padding:6px 4px; gap:5px; flex-wrap:wrap;">
           <span class="drink-fav-star" data-search-fav-drink="${d.id}" style="font-size:1.1rem;">${isFav ? "★" : "☆"}</span>
-          <div style="flex:1; font-size:0.78rem;">
-            <strong>🥤 ${escapeHtml(d.name)}</strong> <span style="color:var(--muted);">(${Math.round((d.kcal100 * defMl) / 100)} kcal / ${defMl} ml)</span>
+          <div style="flex:1; min-width:120px; font-size:0.78rem;">
+            <strong>🥤 ${escapeHtml(d.name)}</strong> <span style="color:var(--muted);">(${d.kcal100} kcal / 100ml)</span>
           </div>
-          <button type="button" class="btn-sm btn-accent" data-search-add-drink="${d.id}" data-ml="${defMl}" style="color:#0f172a;">+${defMl} ml</button>
+          <div style="display:flex; gap:4px; align-items:center;">${chipsHtml}</div>
         </div>
       `;
     });
@@ -3607,33 +3782,69 @@ function bindEvents() {
         }
         return;
       }
+      function detectIsDrinkProduct(p, label) {
+        const hay = `${label} ${p.quantity || ""} ${p.categories_tags ? p.categories_tags.join(" ") : ""}`.toLowerCase();
+        if (/beverages|drinks|sodas|waters|milks|coffees|teas|juices|icetea|ice-tea/.test(hay)) return true;
+        if (/\b(\d+\s*(ml|cl|liter|l))\b/.test(hay)) return true;
+        return /chocomel|icetea|ice tea|cola|fanta|sprite|sinas|sap|juice|melk|milk|drank|drink|koffie|coffee|espresso|cappuccino|latte|thee|tea|water|bier|wijn|limonade|frisdrank|smoothie|shake|red bull|monster|aa drink|aquarius|fristi|yogho|karnemelk/.test(hay);
+      }
+
       const apiHtml = prods.map((p, idx) => {
         const n = p.nutriments || {};
         const rawTitle = (p.product_name_nl || p.product_name || "Onbekend product").trim();
         const brand = (p.brands || "").split(",")[0].trim();
         const fullLabel = brand && !rawTitle.toLowerCase().includes(brand.toLowerCase()) ? `${rawTitle} (${brand})` : rawTitle;
+        const isDrink = detectIsDrinkProduct(p, fullLabel);
+        const isEspresso = /espresso/i.test(fullLabel);
+        const itemId = "off_" + fullLabel.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 28);
+
         const per100 = {
-          id: "off_" + fullLabel.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 28),
+          id: itemId,
           name: fullLabel,
           baseName: fullLabel,
-          cat: "snack",
-          unitType: "gram",
-          defaultQty: 100,
+          isDrink,
+          cat: isDrink ? "fris" : "snack",
+          unitType: isDrink ? "ml" : "gram",
+          vols: isEspresso ? [35] : [250, 330, 500],
+          fixedVol: isEspresso ? 35 : null,
+          defaultQty: isDrink ? (isEspresso ? 35 : 250) : 100,
           kcal100: Math.round(n["energy-kcal_100g"] ?? n["energy-kcal"] ?? (n["energy_100g"] ? n["energy_100g"] / 4.184 : 0)),
           p100: Number((n.proteins_100g ?? n.proteins ?? 0).toFixed(1)),
           c100: Number((n.carbohydrates_100g ?? n.carbohydrates ?? 0).toFixed(1)),
           f100: Number((n.fat_100g ?? n.fat ?? 0).toFixed(1))
         };
-        const isFav = state.foodFavorites.includes(per100.id);
+        const isFav = isDrink ? state.drinkFavorites.includes(itemId) : state.foodFavorites.includes(itemId);
+
+        if (isDrink) {
+          const quickChips = isEspresso
+            ? `<button type="button" class="btn-sm btn-accent" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="35" style="color:#0f172a;">+35 ml</button>`
+            : `<button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="250" style="padding:3px 6px; font-size:0.71rem;">250</button>
+               <button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="330" style="padding:3px 6px; font-size:0.71rem;">330</button>
+               <button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="500" style="padding:3px 6px; font-size:0.71rem;">500</button>
+               <input type="number" id="apiMl_${idx}" value="250" step="10" min="1" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.75rem !important;" title="Aantal mL" />
+               <button type="button" class="btn-sm btn-accent" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-ml-input="apiMl_${idx}" style="color:#0f172a; padding:4px 7px;">+ml</button>`;
+
+          return `
+            <div class="pref-row" style="padding:6px 4px; gap:5px; flex-wrap:wrap;">
+              <span class="drink-fav-star" data-search-fav-api="${escapeHtml(JSON.stringify(per100))}" style="font-size:1.1rem;" title="Bewaar drank als favoriet">${isFav ? "★" : "☆"}</span>
+              <div style="flex:1; min-width:130px; font-size:0.78rem;">
+                <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🥤 ${escapeHtml(per100.baseName)}</strong>
+                <span style="color:var(--muted); font-size:0.7rem;">Per 100ml: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH</span>
+              </div>
+              <div style="display:flex; gap:4px; align-items:center;">${quickChips}</div>
+            </div>
+          `;
+        }
+
         return `
           <div class="pref-row" style="padding:6px 4px; gap:6px;">
             <span class="drink-fav-star" data-search-fav-api="${escapeHtml(JSON.stringify(per100))}" style="font-size:1.1rem;" title="Bewaar als favoriet">${isFav ? "★" : "☆"}</span>
             <div style="flex:1; min-width:0; font-size:0.78rem;">
-              <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(per100.baseName)}</strong>
-              <span style="color:var(--muted); font-size:0.71rem;">Per 100g/ml: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH · ${per100.f100}g V</span>
+              <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🍽️ ${escapeHtml(per100.baseName)}</strong>
+              <span style="color:var(--muted); font-size:0.71rem;">Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH · ${per100.f100}g V</span>
             </div>
-            <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram of mL" />
-            <button type="button" class="btn-sm btn-accent" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g/ml</button>
+            <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram" />
+            <button type="button" class="btn-sm btn-hevy" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g</button>
           </div>
         `;
       }).join("");
@@ -3656,7 +3867,7 @@ function bindEvents() {
 
     try {
       // Gebruik cgi/search.pl met search_terms (v2 negeert search_terms) en beperkte fields voor snelle respons
-      const fields = "product_name,product_name_nl,brands,nutriments";
+      const fields = "product_name,product_name_nl,brands,quantity,categories_tags,nutriments";
       const nlUrl = `https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=${fields}`;
       let resp = await fetch(nlUrl, { signal: controller.signal });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
@@ -3724,21 +3935,61 @@ function bindEvents() {
     const favApi = e.target.closest("[data-search-fav-api]");
     if (favApi) {
       const item = JSON.parse(favApi.getAttribute("data-search-fav-api"));
-      if (!state.customFoods.some(x => x.id === item.id)) {
-        state.customFoods.unshift(item);
+      if (item.isDrink) {
+        if (!state.customDrinks.some(x => x.id === item.id)) {
+          state.customDrinks.unshift(item);
+        }
+        const idx = state.drinkFavorites.indexOf(item.id);
+        if (idx === -1) state.drinkFavorites.push(item.id); else state.drinkFavorites.splice(idx, 1);
+        saveFoodState();
+        favApi.textContent = state.drinkFavorites.includes(item.id) ? "★" : "☆";
+      } else {
+        if (!state.customFoods.some(x => x.id === item.id)) {
+          state.customFoods.unshift(item);
+        }
+        const idx = state.foodFavorites.indexOf(item.id);
+        if (idx === -1) state.foodFavorites.push(item.id); else state.foodFavorites.splice(idx, 1);
+        saveFoodState();
+        favApi.textContent = state.foodFavorites.includes(item.id) ? "★" : "☆";
       }
-      const idx = state.foodFavorites.indexOf(item.id);
-      if (idx === -1) state.foodFavorites.push(item.id); else state.foodFavorites.splice(idx, 1);
-      saveFoodState();
-      favApi.textContent = state.foodFavorites.includes(item.id) ? "★" : "☆";
       renderNutritionTab();
+      return;
+    }
+
+    const apiDrinkBtn = e.target.closest("[data-add-api-drink]");
+    if (apiDrinkBtn) {
+      const per100 = JSON.parse(apiDrinkBtn.getAttribute("data-add-api-drink"));
+      const fixedMl = apiDrinkBtn.getAttribute("data-fixed-ml");
+      const inpId = apiDrinkBtn.getAttribute("data-ml-input");
+      const ml = fixedMl ? Number(fixedMl) : Math.max(1, Number(document.getElementById(inpId)?.value) || 250);
+      const factor = ml / 100;
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.drinks.push({
+        name: per100.baseName,
+        ml,
+        section: state.selectedTargetSection,
+        kcal100: per100.kcal100,
+        p100: per100.p100,
+        c100: per100.c100,
+        f100: per100.f100,
+        kcal: per100.kcal100 * factor,
+        p: per100.p100 * factor,
+        c: per100.c100 * factor,
+        f: per100.f100 * factor
+      });
+      log.touched = true;
+      saveFoodState();
+      document.getElementById("unifiedSearchInput").value = "";
+      document.getElementById("unifiedSearchResults").innerHTML = "";
+      renderNutritionTab(); renderPlannerTab();
       return;
     }
     const addDrink = e.target.closest("[data-search-add-drink]");
     if (addDrink) {
       const dId = addDrink.getAttribute("data-search-add-drink");
-      const ml = Number(addDrink.getAttribute("data-ml")) || 250;
-      const dr = DEFAULT_DRINKS.find(x => x.id === dId);
+      const mlInpId = addDrink.getAttribute("data-ml-input");
+      const ml = mlInpId ? Math.max(1, Number(document.getElementById(mlInpId)?.value) || 250) : (Number(addDrink.getAttribute("data-ml")) || 250);
+      const dr = [...state.customDrinks, ...DEFAULT_DRINKS].find(x => x.id === dId);
       if (dr) {
         const log = getOrCreateFoodDay(state.selectedNutriDate);
         const f = ml / 100;
@@ -4011,7 +4262,7 @@ function bindEvents() {
       mappings: state.mappings, favorites: state.favorites, pulleyGroups: state.pulleyGroups,
       pointOverrides: state.pointOverrides, foodLogs: state.foodLogs, plannedWorkouts: state.plannedWorkouts,
       nutriGoals: state.nutriGoals,
-    basisItems: state.basisItems, drinkFavorites: state.drinkFavorites, foodFavorites: state.foodFavorites, customFoods: state.customFoods, smartOverload: state.smartOverload
+    basisItems: state.basisItems, drinkFavorites: state.drinkFavorites, customDrinks: state.customDrinks, foodFavorites: state.foodFavorites, customFoods: state.customFoods, smartOverload: state.smartOverload
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -4041,6 +4292,7 @@ function bindEvents() {
     if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
         if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
         if (d.drinkFavorites) state.drinkFavorites = d.drinkFavorites;
+        if (Array.isArray(d.customDrinks)) state.customDrinks = d.customDrinks;
         if (d.foodFavorites) state.foodFavorites = d.foodFavorites;
         if (d.customFoods) state.customFoods = d.customFoods;
 
