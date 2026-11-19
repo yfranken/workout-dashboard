@@ -1722,6 +1722,76 @@ function saveFoodState() {
   scheduleCloudPush();
 }
 
+
+// === SPORT MET-WAARDEN & PLANNER WORKOUT HELPERS ===
+const SPORT_PRESETS = {
+  "BodyPump":             { met: 6.0, defaultMin: 60, isStrength: false, color: "#ec4899" },
+  "Hometrainer / Fietsen":{ met: 6.8, defaultMin: 45, isStrength: false, color: "#38bdf8" },
+  "Wandelen":             { met: 3.8, defaultMin: 45, isStrength: false, color: "#10b981" },
+  "Skeeleren":            { met: 7.5, defaultMin: 45, isStrength: false, color: "#f59e0b" },
+  "Hardlopen":            { met: 8.5, defaultMin: 30, isStrength: false, color: "#fbbf24" },
+  "Zwemmen":              { met: 6.5, defaultMin: 45, isStrength: false, color: "#06b6d4" },
+  "Krachttraining":       { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
+  "Upper Body":           { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
+  "Lower Body":           { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
+  "Push":                 { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
+  "Pull":                 { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
+  "Full Body":            { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" }
+};
+
+function hasStrengthCsvData() {
+  return (Array.isArray(state.garminSets) && state.garminSets.length > 0) ||
+         (Array.isArray(state.hevySets) && state.hevySets.length > 0);
+}
+
+function getLatestWeightKg() {
+  if (Array.isArray(state.bodyMeasurements) && state.bodyMeasurements.length > 0) {
+    const sorted = [...state.bodyMeasurements].sort((a, b) => a.date.localeCompare(b.date));
+    const w = Number(sorted[sorted.length - 1].weight);
+    if (w > 30) return w;
+  }
+  return 75;
+}
+
+function estimateBurnedKcal(sportName, durationMin) {
+  const preset = SPORT_PRESETS[sportName] || { met: 5.0 };
+  const weightKg = getLatestWeightKg();
+  return Math.round(preset.met * weightKg * (Math.max(1, Number(durationMin) || 30) / 60));
+}
+
+function normalizePlannedEntry(entry) {
+  if (!entry) return null;
+  if (typeof entry === "string") {
+    const preset = SPORT_PRESETS[entry] || { defaultMin: 45, isStrength: /upper|lower|push|pull|full|kracht/i.test(entry) };
+    const dur = preset.defaultMin || 45;
+    return {
+      title: entry,
+      durationMin: dur,
+      burnedKcal: estimateBurnedKcal(entry, dur),
+      completed: false,
+      isStrength: Boolean(preset.isStrength)
+    };
+  }
+  const title = String(entry.title || "Workout");
+  const dur = Math.max(1, Number(entry.durationMin) || 45);
+  const isStr = entry.isStrength !== undefined
+    ? Boolean(entry.isStrength)
+    : Boolean((SPORT_PRESETS[title] && SPORT_PRESETS[title].isStrength) || /upper|lower|push|pull|full|kracht/i.test(title));
+  return {
+    title,
+    durationMin: dur,
+    burnedKcal: entry.burnedKcal !== undefined && entry.burnedKcal !== null ? Number(entry.burnedKcal) : estimateBurnedKcal(title, dur),
+    completed: Boolean(entry.completed),
+    isStrength: isStr
+  };
+}
+
+function getNormalizedDayWorkouts(ymd) {
+  const rawList = state.plannedWorkouts[ymd];
+  if (!Array.isArray(rawList)) return [];
+  return rawList.map(normalizePlannedEntry).filter(Boolean);
+}
+
 // === VOEDING LOGICA & MACRO BEREKENINGEN ===
 function getOrCreateFoodDay(ymd) {
   if (!state.foodLogs[ymd]) {
@@ -2266,7 +2336,7 @@ function renderPlannerTab() {
   const startOffset = (firstDay.getDay() + 6) % 7; // Maandag = 0
   const startDate = new Date(year, month, 1 - startOffset);
 
-  const actualWorkoutDays = new Set([
+  const actualCsvDays = new Set([
     ...state.garminSets.map(s => s.dateDay),
     ...state.hevySets.map(s => s.dateDay)
   ]);
@@ -2281,8 +2351,10 @@ function renderPlannerTab() {
     const isSelected = ymd === state.selectedPlannerDate;
 
     const foodInfo = computeDayNutrition(ymd);
-    const hasActualWo = actualWorkoutDays.has(ymd);
-    const plannedList = state.plannedWorkouts[ymd] || [];
+    const hasCsvWo = actualCsvDays.has(ymd);
+    const dayWorkouts = getNormalizedDayWorkouts(ymd);
+    const hasCompletedPlan = dayWorkouts.some(w => w.completed);
+    const hasOpenPlan = dayWorkouts.some(w => !w.completed);
 
     let pillBarsHtml = "";
     if (foodInfo.completed) {
@@ -2290,9 +2362,9 @@ function renderPlannerTab() {
     } else if (foodInfo.touched) {
       pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-orange" title="Voeding deels gelogd">🍽️</div>`;
     }
-    if (hasActualWo) {
+    if (hasCsvWo || hasCompletedPlan) {
       pillBarsHtml += `<div class="cal-pill-bar cal-bar-wo-green" title="Training voltooid">🏋️</div>`;
-    } else if (plannedList.length > 0) {
+    } else if (hasOpenPlan) {
       pillBarsHtml += `<div class="cal-pill-bar cal-bar-wo-blue" title="Training gepland">🏋️</div>`;
     }
 
@@ -2309,21 +2381,49 @@ function renderPlannerTab() {
   const selYmd = state.selectedPlannerDate;
   document.getElementById("plannerSelectedDateLabel").textContent = formatShortNL(selYmd);
   const fTotals = computeDayNutrition(selYmd);
-  const hasActual = actualWorkoutDays.has(selYmd);
+  const hasCsv = actualCsvDays.has(selYmd);
+  const pList = getNormalizedDayWorkouts(selYmd);
+  const completedPlans = pList.filter(w => w.completed);
+  const totalBurnedDay = completedPlans.reduce((acc, w) => acc + (w.burnedKcal || 0), 0);
+
   const statusTxt = fTotals.completed ? "✅ Voeding afgerond" : (fTotals.touched ? "🟠 Voeding deels gelogd" : "⚪ Nog geen voeding gelogd");
+  let woSummaryLine = "Geen geregistreerde activiteit op deze dag";
+  if (hasCsv || completedPlans.length > 0) {
+    const parts = [];
+    if (hasCsv) parts.push("Krachttraining (CSV)");
+    if (completedPlans.length > 0) parts.push(`${completedPlans.length} activiteit(en) voltooid (${totalBurnedDay} kcal)`);
+    woSummaryLine = `🏋️ <strong>${parts.join(" + ")}</strong>`;
+  } else if (pList.length > 0) {
+    woSummaryLine = `📅 <strong>${pList.length} geplande activiteit(en)</strong>`;
+  }
+
   document.getElementById("plannerDaySummary").innerHTML = `
     <div>${statusTxt} · <strong>${fTotals.kcal} kcal</strong> (${fTotals.p}g E · ${fTotals.c}g KH · ${fTotals.f}g V)</div>
-    <div style="margin-top:4px;">${hasActual ? "🏋️ <strong>Krachttraining voltooid</strong> op deze dag" : "Geen geregistreerde workout op deze dag"}</div>
+    <div style="margin-top:4px;">${woSummaryLine}</div>
   `;
 
-  const pList = state.plannedWorkouts[selYmd] || [];
   const pEl = document.getElementById("plannedWorkoutsList");
-  pEl.innerHTML = pList.map((w, idx) => `
-    <div class="pref-row" style="padding:5px 4px;">
-      <span style="font-size:0.82rem; color:var(--accent);">📅 Gepland: <strong>${escapeHtml(w)}</strong></span>
-      <button type="button" class="btn-sm" data-del-plan="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
-    </div>
-  `).join("");
+  if (pList.length === 0) {
+    pEl.innerHTML = "";
+  } else {
+    pEl.innerHTML = pList.map((w, idx) => {
+      const badgeColor = w.completed ? "var(--accent-hevy)" : "var(--accent)";
+      const statusIcon = w.completed ? "✅" : "📅";
+      const toggleLabel = w.completed ? "↩ Gepland" : "✓ Afronden";
+      const toggleCls = w.completed ? "btn-sm" : "btn-sm btn-hevy";
+      const toggleStyle = w.completed ? "padding:4px 7px; font-size:0.72rem;" : "color:#0f172a; padding:4px 8px; font-size:0.72rem;";
+      return `
+        <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:${w.completed ? "rgba(16,185,129,0.4)" : "rgba(56,189,248,0.35)"};">
+          <div class="meal-info">
+            <div class="meal-title" style="color:${badgeColor};">${statusIcon} ${escapeHtml(w.title)}</div>
+            <div class="meal-macros">${w.durationMin} min · ~${w.burnedKcal} kcal · ${w.completed ? "Uitgevoerd" : "Ingepland"}</div>
+          </div>
+          <button type="button" class="${toggleCls}" data-toggle-plan="${idx}" style="${toggleStyle}">${toggleLabel}</button>
+          <button type="button" class="btn-sm" data-del-plan="${idx}" style="color:var(--danger); padding:4px 7px;">✕</button>
+        </div>
+      `;
+    }).join("");
+  }
 }
 
 // === PROGRESSIVE OVERLOAD ADVIES BEREKENEN ===
@@ -2690,22 +2790,77 @@ function formatBucketLabel(key, gran) {
 
 function renderOverviewDashboard(sets) {
   const gran = state.ovGranularity;
+  const hasCsv = hasStrengthCsvData();
   document.getElementById("ovPeriodBadge").textContent = gran === "month" ? "Per Maand" : (gran === "quarter" ? "Per Kwartaal" : "Per Jaar");
+
+  const volCard = document.getElementById("ovKpiVolCard");
+  const kpiGrid = document.getElementById("ovKpiGrid");
+  if (volCard && kpiGrid) {
+    volCard.style.display = hasCsv ? "block" : "none";
+    kpiGrid.className = hasCsv ? "kpi-grid-3" : "kpi-grid";
+  }
+
+  const muscleDetails = document.getElementById("ovMuscleDetails");
+  const muscleContent = document.getElementById("ovMuscleContent");
+  const muscleEmptyMsg = document.getElementById("ovMuscleEmptyMsg");
+  if (muscleDetails && muscleContent && muscleEmptyMsg) {
+    if (hasCsv) {
+      muscleDetails.setAttribute("open", "");
+      muscleDetails.open = true;
+      muscleContent.style.display = "block";
+      muscleEmptyMsg.style.display = "none";
+    } else {
+      muscleDetails.removeAttribute("open");
+      muscleDetails.open = false;
+      muscleContent.style.display = "none";
+      muscleEmptyMsg.style.display = "block";
+    }
+  }
+
+  const trainSel = document.getElementById("ovTrainMetric");
+  const bodySel = document.getElementById("ovBodyMetric");
+  if (!hasCsv && ["volume", "sets", "reps"].includes(trainSel.value)) {
+    trainSel.value = "minutes";
+  }
+  const hasScans = state.bodyMeasurements.some(m => m.smm !== null && m.smm !== undefined);
+  if (!hasScans && ["smm", "fatMass", "fatPct", "smmPct"].includes(bodySel.value)) {
+    bodySel.value = "weight";
+  }
+
   const bucketMap = {};
   const ensureBucket = k => {
-    if (!bucketMap[k]) bucketMap[k] = { key: k, days: new Set(), dayDurations: {}, volumeKg: 0, setsCount: 0, repsCount: 0, musclesSets: {}, musclesVol: {}, bodyEntries: [], foodDays: [] };
+    if (!bucketMap[k]) bucketMap[k] = {
+      key: k, csvDays: new Set(), dayDurations: {}, volumeKg: 0, setsCount: 0, repsCount: 0,
+      extraSessions: 0, extraMinutes: 0, burnedKcal: 0,
+      musclesSets: {}, musclesVol: {}, bodyEntries: [], foodDays: []
+    };
     return bucketMap[k];
   };
 
   for (const s of sets) {
     const k = getBucketKey(s.dateDay, gran);
     const b = ensureBucket(k);
-    b.days.add(s.dateDay);
+    b.csvDays.add(s.dateDay);
     if (s.workoutDurationMin > 0) b.dayDurations[s.dateDay] = Math.max(b.dayDurations[s.dateDay] || 0, s.workoutDurationMin);
     b.volumeKg += s.volume; b.setsCount += 1; b.repsCount += s.reps;
     b.musclesSets[s.muscleGroup] = (b.musclesSets[s.muscleGroup] || 0) + 1;
     b.musclesVol[s.muscleGroup] = (b.musclesVol[s.muscleGroup] || 0) + (s.volume / 1000);
   }
+
+  for (const [pDate, rawList] of Object.entries(state.plannedWorkouts || {})) {
+    const dayWos = getNormalizedDayWorkouts(pDate).filter(w => w.completed);
+    if (dayWos.length === 0) continue;
+    const k = getBucketKey(pDate, gran);
+    const b = ensureBucket(k);
+    const hasCsvOnDay = b.csvDays.has(pDate);
+    dayWos.forEach(w => {
+      if (hasCsvOnDay && w.isStrength) return;
+      b.extraSessions += 1;
+      b.extraMinutes += Number(w.durationMin || 45);
+      b.burnedKcal += Number(w.burnedKcal || 0);
+    });
+  }
+
   for (const m of state.bodyMeasurements) ensureBucket(getBucketKey(m.date, gran)).bodyEntries.push(m);
   for (const [fDate, fLog] of Object.entries(state.foodLogs)) {
     const t = computeDayNutrition(fDate);
@@ -2727,9 +2882,11 @@ function renderOverviewDashboard(sets) {
   const visibleBody = [];
   visibleKeys.forEach(k => {
     const b = bucketMap[k];
-    totalSessions += b.days.size;
-    let mins = 0; b.days.forEach(d => { mins += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; });
-    totalMinutes += mins; totalVolKg += b.volumeKg; totalSets += b.setsCount; totalReps += b.repsCount;
+    totalSessions += b.csvDays.size + b.extraSessions;
+    let mins = b.extraMinutes;
+    b.csvDays.forEach(d => { mins += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; });
+    totalMinutes += mins;
+    totalVolKg += b.volumeKg; totalSets += b.setsCount; totalReps += b.repsCount;
     visibleBody.push(...b.bodyEntries);
   });
 
@@ -2740,30 +2897,63 @@ function renderOverviewDashboard(sets) {
   document.getElementById("ovKpiSetsReps").textContent = `${totalSets} sets · ${totalReps.toLocaleString("nl-NL")} reps`;
 
   visibleBody.sort((a, b) => a.date.localeCompare(b.date));
+  const bodyLbl = document.getElementById("ovKpiBodyLabel");
   if (visibleBody.length >= 2) {
     const first = visibleBody[0], last = visibleBody[visibleBody.length - 1];
     const dSmm = (last.smm && first.smm) ? (last.smm - first.smm) : null;
     const dFat = (last.fatMass && first.fatMass) ? (last.fatMass - first.fatMass) : null;
-    document.getElementById("ovKpiBodyDelta").innerHTML = dSmm !== null ? `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>` : "-";
-    document.getElementById("ovKpiFatDelta").textContent = dFat !== null ? `Vet: ${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg` : `${visibleBody.length} metingen`;
+    const dWeight = (last.weight && first.weight) ? (last.weight - first.weight) : null;
+    if (dSmm !== null) {
+      if (bodyLbl) bodyLbl.textContent = "Spier / Vet Delta";
+      document.getElementById("ovKpiBodyDelta").innerHTML = `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`;
+      document.getElementById("ovKpiFatDelta").textContent = dFat !== null ? `Vet: ${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg` : `${visibleBody.length} metingen`;
+    } else if (dWeight !== null) {
+      if (bodyLbl) bodyLbl.textContent = "Gewicht Delta";
+      document.getElementById("ovKpiBodyDelta").innerHTML = `<span style="color:var(--accent);">${dWeight >= 0 ? "+" : ""}${dWeight.toFixed(1)} kg</span>`;
+      document.getElementById("ovKpiFatDelta").textContent = `${first.weight} → ${last.weight} kg`;
+    } else {
+      document.getElementById("ovKpiBodyDelta").textContent = "-";
+      document.getElementById("ovKpiFatDelta").textContent = `${visibleBody.length} metingen`;
+    }
+  } else if (visibleBody.length === 1) {
+    if (bodyLbl) bodyLbl.textContent = "Huidig Gewicht";
+    document.getElementById("ovKpiBodyDelta").textContent = `${visibleBody[0].weight} kg`;
+    document.getElementById("ovKpiFatDelta").textContent = formatShortNL(visibleBody[0].date);
   } else {
+    if (bodyLbl) bodyLbl.textContent = hasCsv ? "Spier / Vet Delta" : "Gewicht Delta";
     document.getElementById("ovKpiBodyDelta").textContent = "-";
-    document.getElementById("ovKpiFatDelta").textContent = "Geen metingen";
+    document.getElementById("ovKpiFatDelta").textContent = "Voeg meting toe";
   }
 
-  const trainMetric = document.getElementById("ovTrainMetric").value;
-  const bodyMetric = document.getElementById("ovBodyMetric").value;
-  const trainLabels = { volume: "Volume (ton)", sessions: "Workouts", minutes: "Minuten", sets: "Sets", reps: "Reps", avgKcal: "Gem. Kcal/dag", avgProtein: "Gem. Eiwit (g/dag)" };
+  const trainMetric = trainSel.value;
+  const bodyMetric = bodySel.value;
+  const trainLabels = {
+    volume: "Volume (ton)", sessions: "Workouts", minutes: "Trainingsminuten",
+    burnedKcal: "Verbrande kcal", sets: "Sets", reps: "Reps",
+    avgKcal: "Gem. Voeding (kcal/dag)", avgProtein: "Gem. Eiwit (g/dag)"
+  };
   const bodyLabels = { smm: "Skeletspier (kg)", fatMass: "Vetmassa (kg)", fatPct: "Vetpercentage (%)", weight: "Gewicht (kg)", smmPct: "Spierpercentage (%)" };
 
   const labels = visibleKeys.map(k => formatBucketLabel(k, gran));
   const trainData = visibleKeys.map(k => {
     const b = bucketMap[k];
     if (trainMetric === "volume") return Number((b.volumeKg / 1000).toFixed(1));
-    if (trainMetric === "sessions") return b.days.size;
+    if (trainMetric === "sessions") return b.csvDays.size + b.extraSessions;
     if (trainMetric === "sets") return b.setsCount;
     if (trainMetric === "reps") return b.repsCount;
-    if (trainMetric === "minutes") { let m = 0; b.days.forEach(d => { m += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; }); return m; }
+    if (trainMetric === "minutes") {
+      let m = b.extraMinutes;
+      b.csvDays.forEach(d => { m += b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55; });
+      return m;
+    }
+    if (trainMetric === "burnedKcal") {
+      let kcal = b.burnedKcal;
+      b.csvDays.forEach(d => {
+        const mins = b.dayDurations[d] ? Math.round(b.dayDurations[d]) : 55;
+        kcal += estimateBurnedKcal("Krachttraining", mins);
+      });
+      return Math.round(kcal);
+    }
     if (trainMetric === "avgKcal") return b.foodDays.length > 0 ? Math.round(b.foodDays.reduce((a, c) => a + c.kcal, 0) / b.foodDays.length) : null;
     if (trainMetric === "avgProtein") return b.foodDays.length > 0 ? Math.round(b.foodDays.reduce((a, c) => a + c.p, 0) / b.foodDays.length) : null;
     return 0;
@@ -2797,24 +2987,26 @@ function renderOverviewDashboard(sets) {
     }
   });
 
-  const muscleGroups = ["Borst", "Rug", "Benen", "Schouders", "Armen", "Core"];
-  const muscleColors = { Borst: "#38bdf8", Rug: "#10b981", Benen: "#f59e0b", Schouders: "#c084fc", Armen: "#ec4899", Core: "#94a3b8" };
-  const muscleDatasets = muscleGroups.map(mg => ({
-    label: mg,
-    data: visibleKeys.map(k => Number((state.ovMuscleMetric === "sets" ? (bucketMap[k].musclesSets[mg] || 0) : (bucketMap[k].musclesVol[mg] || 0)).toFixed(1))),
-    backgroundColor: muscleColors[mg], borderRadius: 3
-  }));
+  if (hasCsv) {
+    const muscleGroups = ["Borst", "Rug", "Benen", "Schouders", "Armen", "Core"];
+    const muscleColors = { Borst: "#38bdf8", Rug: "#10b981", Benen: "#f59e0b", Schouders: "#c084fc", Armen: "#ec4899", Core: "#94a3b8" };
+    const muscleDatasets = muscleGroups.map(mg => ({
+      label: mg,
+      data: visibleKeys.map(k => Number((state.ovMuscleMetric === "sets" ? (bucketMap[k].musclesSets[mg] || 0) : (bucketMap[k].musclesVol[mg] || 0)).toFixed(1))),
+      backgroundColor: muscleColors[mg], borderRadius: 3
+    }));
 
-  const ctx2 = document.getElementById("ovMuscleChart").getContext("2d");
-  if (ovMuscleChartInstance) ovMuscleChartInstance.destroy();
-  ovMuscleChartInstance = new Chart(ctx2, {
-    type: "bar", data: { labels, datasets: muscleDatasets },
-    options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-      plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
-      scales: { x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } } }
-    }
-  });
+    const ctx2 = document.getElementById("ovMuscleChart").getContext("2d");
+    if (ovMuscleChartInstance) ovMuscleChartInstance.destroy();
+    ovMuscleChartInstance = new Chart(ctx2, {
+      type: "bar", data: { labels, datasets: muscleDatasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+        plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
+        scales: { x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } } }
+      }
+    });
+  }
 }
 
 function renderBodyMeasurementsTab() {
@@ -3056,10 +3248,12 @@ function renderTrainingProgressSection(sets) {
   const exEmptyMsg = document.getElementById("trExerciseEmptyMsg");
   if (exDetails && exContent && exEmptyMsg) {
     if (hasCsv) {
+      exDetails.setAttribute("open", "");
       exDetails.open = true;
       exContent.style.display = "block";
       exEmptyMsg.style.display = "none";
     } else {
+      exDetails.removeAttribute("open");
       exDetails.open = false;
       exContent.style.display = "none";
       exEmptyMsg.style.display = "block";
@@ -3333,6 +3527,17 @@ function switchTab(tabName) {
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   const target = document.getElementById(`tab-${tabName}`);
   if (target) target.classList.add("active");
+  if (tabName === "overview") {
+    try { renderOverviewDashboard(getCombinedSets()); } catch (e) {}
+  } else if (tabName === "charts") {
+    try {
+      const sets = getCombinedSets();
+      renderTrainingProgressSection(sets);
+      if (hasStrengthCsvData()) renderExerciseChart();
+    } catch (e) {}
+  } else if (tabName === "planner") {
+    try { renderPlannerTab(); } catch (e) {}
+  }
 }
 
 // === EVENT LISTENERS BINDEN ===
