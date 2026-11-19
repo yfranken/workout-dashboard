@@ -938,12 +938,9 @@
       <!-- Op PC naast elkaar: Dranken (links) en Eten (rechts) -->
       <div class="add-grid-pc">
         <div>
-          <div style="font-size:0.8rem; font-weight:700; color:var(--accent); margin-bottom:6px;">🥤 Dranken (mL)</div>
-          <div class="pill-row" id="drinkCatPills">
+          <div style="font-size:0.8rem; font-weight:700; color:var(--accent); margin-bottom:6px;">🥤 Favoriete Dranken (mL)</div>
+          <div class="pill-row" id="drinkCatPills" style="display:none;">
             <span class="pill active" data-dcat="fav">★ Favorieten</span>
-            <span class="pill" data-dcat="warm">Warme dranken</span>
-            <span class="pill" data-dcat="thee">Thee</span>
-            <span class="pill" data-dcat="fris">Frisdranken</span>
           </div>
           <div class="drink-grid" id="drinkGrid"></div>
 
@@ -955,12 +952,9 @@
         </div>
 
         <div class="add-food-col">
-          <div style="font-size:0.8rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Eten (stuk / gram)</div>
-          <div class="pill-row" id="foodCatPills">
+          <div style="font-size:0.8rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Favoriet Eten (stuk / gram)</div>
+          <div class="pill-row" id="foodCatPills" style="display:none;">
             <span class="pill active" data-fcat="fav">★ Favorieten</span>
-            <span class="pill" data-fcat="fruit">Fruit &amp; Stuks</span>
-            <span class="pill" data-fcat="zuivel">Zuivel &amp; Eiwit</span>
-            <span class="pill" data-fcat="snack">Tussendoor</span>
           </div>
           <div class="drink-grid" id="foodQuickGrid"></div>
         </div>
@@ -2285,25 +2279,24 @@ function renderNutritionTab() {
     `;
   }
 
-  // Dranken grid
+  // Dranken grid (toont uitsluitend favoriete dranken)
   document.getElementById("drinksTotalBadge").textContent = `${totals.drinkMl} ml vocht`;
   const allDrinksPool = [...state.customDrinks, ...DEFAULT_DRINKS];
-  const filteredDrinks = allDrinksPool.filter(d =>
-    state.selectedDrinkCat === "fav" ? state.drinkFavorites.includes(d.id) : d.cat === state.selectedDrinkCat
-  );
-  document.getElementById("drinkGrid").innerHTML = filteredDrinks.map(d => {
-    const isFav = state.drinkFavorites.includes(d.id);
-    const isSel = state.selectedDrinkId === d.id;
-    return `
-      <div class="drink-card ${isSel ? "selected" : ""}" data-select-drink="${d.id}">
-        <span>
-          <span class="drink-fav-star" data-fav-drink="${d.id}">${isFav ? "★" : "☆"}</span>
-          ${escapeHtml(d.name)}
-        </span>
-        <span style="font-size:0.7rem; color:var(--muted);">${d.fixedVol ? d.fixedVol + "ml" : "+"}</span>
-      </div>
-    `;
-  }).join("");
+  const filteredDrinks = allDrinksPool.filter(d => state.drinkFavorites.includes(d.id));
+  document.getElementById("drinkGrid").innerHTML = filteredDrinks.length > 0
+    ? filteredDrinks.map(d => {
+        const isSel = state.selectedDrinkId === d.id;
+        return `
+          <div class="drink-card ${isSel ? "selected" : ""}" data-select-drink="${d.id}">
+            <span>
+              <span class="drink-fav-star" data-fav-drink="${d.id}" title="Verwijder uit favorieten">★</span>
+              ${escapeHtml(d.name)}
+            </span>
+            <span style="font-size:0.7rem; color:var(--muted);">${d.fixedVol ? d.fixedVol + "ml" : "+"}</span>
+          </div>
+        `;
+      }).join("")
+    : `<div style="grid-column:1/-1; font-size:0.75rem; color:var(--muted); padding:6px;">Geen favoriete dranken. Zoek hierboven een drank en klik op ☆ om toe te voegen.</div>`;
 
   const volPicker = document.getElementById("drinkVolumePicker");
   if (state.selectedDrinkId) {
@@ -2319,27 +2312,24 @@ function renderNutritionTab() {
     volPicker.style.display = "none";
   }
 
-  // Snelkeuze Eten grid (Favorieten + Categorieën, in stuk of gram)
+  // Snelkeuze Eten grid (toont uitsluitend favoriete etenswaren)
   const allFoodPool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
-  const filteredFoods = allFoodPool.filter(item =>
-    state.selectedFoodCat === "fav"
-      ? state.foodFavorites.includes(item.id || item.name)
-      : (item.cat || "snack") === state.selectedFoodCat
-  );
-  document.getElementById("foodQuickGrid").innerHTML = filteredFoods.map(item => {
-    const fKey = item.id || item.name;
-    const isFav = state.foodFavorites.includes(fKey);
-    const unitBadge = item.unitType === "stuk" ? `${item.defaultQty || 1} stuk` : `${item.defaultQty || 100}g`;
-    return `
-      <div class="drink-card" data-quick-food="${escapeHtml(fKey)}">
-        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-          <span class="drink-fav-star" data-fav-food="${escapeHtml(fKey)}">${isFav ? "★" : "☆"}</span>
-          ${escapeHtml(item.name)}
-        </span>
-        <span style="font-size:0.7rem; color:var(--muted); margin-left:4px;">+${unitBadge}</span>
-      </div>
-    `;
-  }).join("");
+  const filteredFoods = allFoodPool.filter(item => state.foodFavorites.includes(item.id || item.name));
+  document.getElementById("foodQuickGrid").innerHTML = filteredFoods.length > 0
+    ? filteredFoods.map(item => {
+        const fKey = item.id || item.name;
+        const unitBadge = item.unitType === "stuk" ? `${item.defaultQty || 1} stuk` : `${item.defaultQty || 100}g`;
+        return `
+          <div class="drink-card" data-quick-food="${escapeHtml(fKey)}">
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <span class="drink-fav-star" data-fav-food="${escapeHtml(fKey)}" title="Verwijder uit favorieten">★</span>
+              ${escapeHtml(item.name)}
+            </span>
+            <span style="font-size:0.7rem; color:var(--muted); margin-left:4px;">+${unitBadge}</span>
+          </div>
+        `;
+      }).join("")
+    : `<div style="grid-column:1/-1; font-size:0.75rem; color:var(--muted); padding:6px;">Geen favoriet eten. Zoek hierboven een product en klik op ☆ om toe te voegen.</div>`;
 
   document.getElementById("chkCompleteFoodDay").checked = Boolean(log.completed);
 }
@@ -3279,11 +3269,19 @@ function renderTrainingProgressSection(sets) {
     }
   }
 
-  // Verzamel alle uitgevoerde sessies (CSV krachttraining + voltooide Planner activiteiten zonder dubbeltelling)
+  // Verzamel alle uitgevoerde sessies rechtstreeks uit Garmin & Hevy CSV + voltooide Planner activiteiten (zonder dubbeltelling)
+  const rawCsvSets = [...(state.garminSets || []), ...(state.hevySets || [])];
+  const csvSourceSets = (Array.isArray(sets) && sets.length > 0) ? sets : rawCsvSets;
   const csvDayMap = {};
-  for (const s of sets) {
+  for (const s of csvSourceSets) {
+    if (!s || !s.dateDay) continue;
     if (!csvDayMap[s.dateDay]) {
-      csvDayMap[s.dateDay] = { date: s.dateDay, title: s.workoutTitle || "Krachttraining", durationMin: 0, source: s.source };
+      csvDayMap[s.dateDay] = {
+        date: s.dateDay,
+        title: s.workoutTitle || (s.source === "garmin" ? "Garmin Krachttraining" : "Hevy Krachttraining"),
+        durationMin: 0,
+        source: s.source || "hevy"
+      };
     }
     if (s.workoutDurationMin > 0) {
       csvDayMap[s.dateDay].durationMin = Math.max(csvDayMap[s.dateDay].durationMin, s.workoutDurationMin);
@@ -3549,11 +3547,9 @@ function switchTab(tabName) {
   if (tabName === "overview") {
     try { renderOverviewDashboard(getCombinedSets()); } catch (e) {}
   } else if (tabName === "charts") {
-    try {
-      const sets = getCombinedSets();
-      renderTrainingProgressSection(sets);
-      if (hasStrengthCsvData()) renderExerciseChart();
-    } catch (e) {}
+    const sets = getCombinedSets();
+    try { renderTrainingProgressSection(sets); } catch (e) { console.error(e); }
+    try { if (hasStrengthCsvData()) renderExerciseChart(); } catch (e) { console.error(e); }
   } else if (tabName === "planner") {
     try { renderPlannerTab(); } catch (e) {}
   }
