@@ -544,6 +544,67 @@
       background: var(--accent);
       color: #0f172a;
     }
+
+    /* Geanimeerde uitklapbare hoeveelheid-bewerker onder potloodje */
+    .meal-row-wrap {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 11px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .meal-row-wrap .meal-row {
+      border: none;
+      margin-bottom: 0;
+      border-radius: 0;
+    }
+    .meal-edit-drawer {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 10px;
+      background: rgba(15, 23, 42, 0.85);
+      border-top: 0px solid var(--card-border);
+      transition: max-height 0.28s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.22s ease, padding 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .meal-edit-drawer.open {
+      max-height: 76px;
+      opacity: 1;
+      padding: 8px 10px;
+      border-top-width: 1px;
+    }
+    .btn-edit-pencil {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      border-radius: 7px;
+      padding: 5px 8px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .btn-edit-pencil.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn-confirm-check {
+      background: var(--accent-hevy);
+      border: none;
+      color: #0f172a;
+      border-radius: 7px;
+      padding: 6px 11px;
+      font-weight: 800;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    .btn-confirm-check:active {
+      filter: brightness(0.92);
+    }
   </style>
 </head>
 <body>
@@ -1527,6 +1588,7 @@ let state = {
   selectedDrinkId: null,
   selectedFoodCat: "fav",
   selectedTargetSection: "extra",
+  editingMealKey: null,
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   selectedPlannerDate: TODAY_YMD
@@ -2164,83 +2226,118 @@ function renderNutritionTab() {
 
     const step = Number(bItem.step || (bItem.unitType === "stuk" ? 1 : 25));
     const unitSuffix = bItem.unitType === "gram" ? "g" : (bItem.unitType === "ml" ? " ml" : ` ${bItem.unitLabel || "portie"}`);
+    const editKey = `basis:${bItem.id}`;
+    const isEditing = state.editingMealKey === editKey;
 
-    const controlHtml = (bItem.unitType === "gram" || bItem.unitType === "ml")
+    const drawerControls = (bItem.unitType === "gram" || bItem.unitType === "ml")
       ? `<div class="stepper">
            <button type="button" class="step-btn" data-basis-step="-${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">-${step}</button>
-           <input type="number" data-basis-inp="${escapeHtml(bItem.id)}" class="step-val-input" step="5" min="0" value="${qty}" style="width:50px !important; padding:4px 2px !important;" />
+           <input type="number" data-basis-inp="${escapeHtml(bItem.id)}" class="step-val-input" step="5" min="0" value="${qty}" style="width:54px !important; padding:4px 2px !important;" />
            <button type="button" class="step-btn" data-basis-step="${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">+${step}</button>
-           <button type="button" class="step-btn" data-basis-clear="${escapeHtml(bItem.id)}" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
          </div>`
       : `<div class="stepper">
            <button type="button" class="step-btn" data-basis-step="-${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">-</button>
-           <span style="padding:0 5px; font-weight:700; font-size:0.82rem;">${qty}×</span>
+           <span style="padding:0 8px; font-weight:700; font-size:0.82rem;">${qty}×</span>
            <button type="button" class="step-btn" data-basis-step="${step}" data-basis-id="${escapeHtml(bItem.id)}" style="padding:5px 8px;">+</button>
-           <button type="button" class="step-btn" data-basis-clear="${escapeHtml(bItem.id)}" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
          </div>`;
 
     secHtml[targetSec].push(`
-      <div class="meal-row" style="padding:8px 9px; margin-bottom:6px;">
-        <div class="meal-info">
-          <div class="meal-title">${escapeHtml(bItem.name)}</div>
-          <div class="meal-macros">${qty}${unitSuffix} · ${Math.round(m.kcal)} kcal · ${m.p.toFixed(1)}g E · ${Math.round(m.c)}g KH · ${m.f.toFixed(1)}g V</div>
-          ${bItem.desc ? `<div style="font-size:0.64rem; color:var(--muted); margin-top:1px;">${escapeHtml(bItem.desc)}</div>` : ""}
+      <div class="meal-row-wrap">
+        <div class="meal-row" style="padding:8px 9px;">
+          <div class="meal-info">
+            <div class="meal-title">${escapeHtml(bItem.name)}</div>
+            <div class="meal-macros">${qty}${unitSuffix} · ${Math.round(m.kcal)} kcal · ${m.p.toFixed(1)}g E · ${Math.round(m.c)}g KH · ${m.f.toFixed(1)}g V</div>
+            ${bItem.desc ? `<div style="font-size:0.64rem; color:var(--muted); margin-top:1px;">${escapeHtml(bItem.desc)}</div>` : ""}
+          </div>
+          <div style="display:flex; gap:5px; align-items:center;">
+            <button type="button" class="btn-edit-pencil ${isEditing ? "active" : ""}" data-toggle-meal-edit="${escapeHtml(editKey)}" title="Hoeveelheid aanpassen">✏️</button>
+            <button type="button" class="step-btn" data-basis-clear="${escapeHtml(bItem.id)}" style="color:var(--danger); padding:5px 7px;" title="Verwijder voor vandaag">✕</button>
+          </div>
         </div>
-        ${controlHtml}
+        <div class="meal-edit-drawer ${isEditing ? "open" : ""}" data-drawer-key="${escapeHtml(editKey)}">
+          ${drawerControls}
+          <button type="button" class="btn-confirm-check" data-close-meal-edit="${escapeHtml(editKey)}" title="Bevestigen">✓</button>
+        </div>
       </div>
     `);
   });
 
-  // Voeg gelogde dranken toe onder hun gekozen subkopje (met aanpasbare mL!)
+  // Voeg gelogde dranken toe onder hun gekozen subkopje (met uitklapbare mL-bewerker onder potloodje)
   (log.drinks || []).forEach((d, idx) => {
     const targetSec = sections.includes(d.section) ? d.section : "extra";
     secKcal[targetSec] += Number(d.kcal || 0);
     const isEspresso = d.name.toLowerCase().includes("espresso");
-    const drinkControl = isEspresso
-      ? `<span style="font-size:0.75rem; font-weight:700; color:var(--muted); padding:0 6px;">${d.ml} ml</span>`
-      : `<div class="stepper" style="padding:2px;">
-           <button type="button" class="step-btn" data-drink-step="-50" data-drink-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">-50</button>
-           <input type="number" data-drink-ml-inp="${idx}" value="${d.ml}" step="10" min="10" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.76rem !important;" />
-           <button type="button" class="step-btn" data-drink-step="50" data-drink-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">+50</button>
+    const editKey = `drink:${idx}`;
+    const isEditing = state.editingMealKey === editKey;
+
+    const rightActions = isEspresso
+      ? `<button type="button" class="step-btn" data-del-drink="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>`
+      : `<div style="display:flex; gap:5px; align-items:center;">
+           <button type="button" class="btn-edit-pencil ${isEditing ? "active" : ""}" data-toggle-meal-edit="${escapeHtml(editKey)}" title="Hoeveelheid aanpassen">✏️</button>
+           <button type="button" class="step-btn" data-del-drink="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>
          </div>`;
 
-    secHtml[targetSec].push(`
-      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:rgba(56,189,248,0.28);">
-        <div class="meal-info">
-          <div class="meal-title">🥤 ${escapeHtml(d.name)}</div>
-          <div class="meal-macros">${d.ml} ml · ${Math.round(d.kcal)} kcal · ${Number(d.p).toFixed(1)}g E · ${Number(d.c).toFixed(1)}g KH · ${Number(d.f).toFixed(1)}g V</div>
+    const drawerHtml = isEspresso ? "" : `
+      <div class="meal-edit-drawer ${isEditing ? "open" : ""}" data-drawer-key="${escapeHtml(editKey)}">
+        <div class="stepper" style="padding:2px;">
+          <button type="button" class="step-btn" data-drink-step="-50" data-drink-idx="${idx}" style="padding:5px 8px; font-size:0.76rem;">-50</button>
+          <input type="number" data-drink-ml-inp="${idx}" value="${d.ml}" step="10" min="10" class="step-val-input" style="width:54px !important; padding:4px 2px !important; font-size:0.8rem !important;" />
+          <button type="button" class="step-btn" data-drink-step="50" data-drink-idx="${idx}" style="padding:5px 8px; font-size:0.76rem;">+50</button>
         </div>
-        ${drinkControl}
-        <button type="button" class="step-btn" data-del-drink="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>
+        <button type="button" class="btn-confirm-check" data-close-meal-edit="${escapeHtml(editKey)}" title="Bevestigen">✓</button>
+      </div>
+    `;
+
+    secHtml[targetSec].push(`
+      <div class="meal-row-wrap" style="border-color:rgba(56,189,248,0.28);">
+        <div class="meal-row" style="padding:7px 9px; gap:6px;">
+          <div class="meal-info">
+            <div class="meal-title">🥤 ${escapeHtml(d.name)}</div>
+            <div class="meal-macros">${d.ml} ml · ${Math.round(d.kcal)} kcal · ${Number(d.p).toFixed(1)}g E · ${Number(d.c).toFixed(1)}g KH · ${Number(d.f).toFixed(1)}g V</div>
+          </div>
+          ${rightActions}
+        </div>
+        ${drawerHtml}
       </div>
     `);
   });
 
-  // Voeg gelogde extra etenswaren toe onder hun gekozen subkopje
+  // Voeg gelogde extra etenswaren toe onder hun gekozen subkopje (met uitklapbare bewerker onder potloodje)
   (log.extras || []).forEach((ex, idx) => {
     const targetSec = sections.includes(ex.section) ? ex.section : "extra";
     secKcal[targetSec] += Number(ex.kcal || 0);
     const hasGrams = ex.grams !== undefined && ex.grams !== null;
-    const qtyControl = hasGrams
+    const editKey = `extra:${idx}`;
+    const isEditing = state.editingMealKey === editKey;
+
+    const drawerControls = hasGrams
       ? `<div class="stepper" style="padding:2px;">
-           <button type="button" class="step-btn" data-extra-step="-10" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">-10</button>
-           <input type="number" data-extra-grams="${idx}" value="${ex.grams}" step="5" min="1" class="step-val-input" style="width:46px !important; padding:3px 2px !important; font-size:0.76rem !important;" />
-           <button type="button" class="step-btn" data-extra-step="10" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">+10</button>
+           <button type="button" class="step-btn" data-extra-step="-10" data-extra-idx="${idx}" style="padding:5px 8px; font-size:0.76rem;">-10</button>
+           <input type="number" data-extra-grams="${idx}" value="${ex.grams}" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important; font-size:0.8rem !important;" />
+           <button type="button" class="step-btn" data-extra-step="10" data-extra-idx="${idx}" style="padding:5px 8px; font-size:0.76rem;">+10</button>
          </div>`
       : `<div class="stepper" style="padding:2px;">
-           <button type="button" class="step-btn" data-extra-mult="-0.5" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">-</button>
-           <span style="font-size:0.74rem; font-weight:700; padding:0 4px;">${ex.mult || 1} st</span>
-           <button type="button" class="step-btn" data-extra-mult="0.5" data-extra-idx="${idx}" style="padding:4px 6px; font-size:0.74rem;">+</button>
+           <button type="button" class="step-btn" data-extra-mult="-0.5" data-extra-idx="${idx}" style="padding:5px 8px; font-size:0.76rem;">-</button>
+           <span style="font-size:0.78rem; font-weight:700; padding:0 6px;">${ex.mult || 1} st</span>
+           <button type="button" class="step-btn" data-extra-mult="0.5" data-extra-idx="${idx}" style="padding:5px 8px; font-size:0.76rem;">+</button>
          </div>`;
 
     secHtml[targetSec].push(`
-      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:rgba(16,185,129,0.28);">
-        <div class="meal-info">
-          <div class="meal-title">🍽️ ${escapeHtml(ex.baseName || ex.name)}</div>
-          <div class="meal-macros">${hasGrams ? ex.grams + "g · " : (ex.mult || 1) + " stuk · "}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
+      <div class="meal-row-wrap" style="border-color:rgba(16,185,129,0.28);">
+        <div class="meal-row" style="padding:7px 9px; gap:6px;">
+          <div class="meal-info">
+            <div class="meal-title">🍽️ ${escapeHtml(ex.baseName || ex.name)}</div>
+            <div class="meal-macros">${hasGrams ? ex.grams + "g · " : (ex.mult || 1) + " stuk · "}${Math.round(ex.kcal)} kcal · ${Number(ex.p).toFixed(1)}g E · ${Math.round(ex.c)}g KH · ${Number(ex.f).toFixed(1)}g V</div>
+          </div>
+          <div style="display:flex; gap:5px; align-items:center;">
+            <button type="button" class="btn-edit-pencil ${isEditing ? "active" : ""}" data-toggle-meal-edit="${escapeHtml(editKey)}" title="Hoeveelheid aanpassen">✏️</button>
+            <button type="button" class="step-btn" data-del-extra="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>
+          </div>
         </div>
-        ${qtyControl}
-        <button type="button" class="step-btn" data-del-extra="${idx}" style="color:var(--danger); padding:5px 7px;" title="Verwijderen">✕</button>
+        <div class="meal-edit-drawer ${isEditing ? "open" : ""}" data-drawer-key="${escapeHtml(editKey)}">
+          ${drawerControls}
+          <button type="button" class="btn-confirm-check" data-close-meal-edit="${escapeHtml(editKey)}" title="Bevestigen">✓</button>
+        </div>
       </div>
     `);
   });
@@ -3983,6 +4080,38 @@ function bindEvents() {
 
   // Gecombineerde interactie op alle 4 subkopjes (Dynamische Basisdag items + Dranken + Extra etenswaren)
   document.getElementById("daySectionsContainer").addEventListener("click", e => {
+    const toggleEditBtn = e.target.closest("[data-toggle-meal-edit]");
+    if (toggleEditBtn) {
+      const key = toggleEditBtn.getAttribute("data-toggle-meal-edit");
+      if (state.editingMealKey === key) {
+        const drawer = toggleEditBtn.closest(".meal-row-wrap")?.querySelector(".meal-edit-drawer");
+        if (drawer) drawer.classList.remove("open");
+        toggleEditBtn.classList.remove("active");
+        state.editingMealKey = null;
+      } else {
+        // Sluit eventueel openstaande andere drawer met animatie
+        document.querySelectorAll("#daySectionsContainer .meal-edit-drawer.open").forEach(d => d.classList.remove("open"));
+        document.querySelectorAll("#daySectionsContainer .btn-edit-pencil.active").forEach(b => b.classList.remove("active"));
+        state.editingMealKey = key;
+        toggleEditBtn.classList.add("active");
+        const drawer = toggleEditBtn.closest(".meal-row-wrap")?.querySelector(".meal-edit-drawer");
+        if (drawer) {
+          requestAnimationFrame(() => drawer.classList.add("open"));
+        }
+      }
+      return;
+    }
+
+    const closeEditBtn = e.target.closest("[data-close-meal-edit]");
+    if (closeEditBtn) {
+      const wrap = closeEditBtn.closest(".meal-row-wrap");
+      const drawer = wrap?.querySelector(".meal-edit-drawer");
+      const pencil = wrap?.querySelector(".btn-edit-pencil");
+      if (drawer) drawer.classList.remove("open");
+      if (pencil) pencil.classList.remove("active");
+      state.editingMealKey = null;
+      return;
+    }
     const basisStepBtn = e.target.closest("[data-basis-step]");
     if (basisStepBtn) {
       const bId = basisStepBtn.getAttribute("data-basis-id");
