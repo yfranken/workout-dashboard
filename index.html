@@ -1595,6 +1595,7 @@ let state = {
 };
 
 let exerciseChartInstance = null;
+let trainingActivityChartInstance = null;
 let ovCorrChartInstance = null;
 let ovMuscleChartInstance = null;
 let bodyMainChartInstance = null;
@@ -1830,6 +1831,8 @@ const SPORT_PRESETS = {
   "Hardlopen":            { met: 8.5, defaultMin: 30, isStrength: false, color: "#fbbf24" },
   "Zwemmen":              { met: 6.5, defaultMin: 45, isStrength: false, color: "#06b6d4" },
   "Krachttraining":       { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
+  "Kracht (Garmin)":      { met: 5.0, defaultMin: 60, isStrength: true,  color: "#f59e0b" },
+  "Kracht (Hevy)":        { met: 5.0, defaultMin: 60, isStrength: true,  color: "#10b981" },
   "Upper Body":           { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
   "Lower Body":           { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
   "Push":                 { met: 5.0, defaultMin: 60, isStrength: true,  color: "#c084fc" },
@@ -3410,7 +3413,7 @@ function renderTrainingProgressSection(sets) {
 
   // Verzamel alle uitgevoerde sessies rechtstreeks uit Garmin & Hevy CSV + voltooide Planner activiteiten (zonder dubbeltelling)
   const rawCsvSets = [...(state.garminSets || []), ...(state.hevySets || [])];
-  const csvSourceSets = (Array.isArray(sets) && sets.length > 0) ? sets : rawCsvSets;
+  const csvSourceSets = rawCsvSets.length > 0 ? rawCsvSets : (Array.isArray(sets) ? sets : []);
   const csvDayMap = {};
   for (const s of csvSourceSets) {
     if (!s || !s.dateDay) continue;
@@ -3430,9 +3433,10 @@ function renderTrainingProgressSection(sets) {
   const allActivities = [];
   Object.values(csvDayMap).forEach(c => {
     const mins = c.durationMin > 0 ? Math.round(c.durationMin) : 55;
+    const sportLabel = c.source === "garmin" ? "Kracht (Garmin)" : "Kracht (Hevy)";
     allActivities.push({
       date: c.date,
-      sport: "Krachttraining",
+      sport: sportLabel,
       title: c.title,
       durationMin: mins,
       burnedKcal: estimateBurnedKcal("Krachttraining", mins),
@@ -3686,9 +3690,11 @@ function switchTab(tabName) {
   if (tabName === "overview") {
     try { renderOverviewDashboard(getCombinedSets()); } catch (e) {}
   } else if (tabName === "charts") {
-    const sets = getCombinedSets();
-    try { renderTrainingProgressSection(sets); } catch (e) { console.error(e); }
-    try { if (hasStrengthCsvData()) renderExerciseChart(); } catch (e) { console.error(e); }
+    requestAnimationFrame(() => {
+      const sets = getCombinedSets();
+      try { renderTrainingProgressSection(sets); } catch (e) { console.error(e); }
+      try { if (hasStrengthCsvData()) renderExerciseChart(); } catch (e) { console.error(e); }
+    });
   } else if (tabName === "planner") {
     try { renderPlannerTab(); } catch (e) {}
   }
