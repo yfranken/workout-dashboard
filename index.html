@@ -2930,7 +2930,8 @@ function refreshAll() {
   try { renderOverviewDashboard(sets); } catch (e) {}
   try { renderPlannerTab(); } catch (e) {}
   try { renderNutritionTab(); } catch (e) {}
-  try { renderExerciseChart(); } catch (e) {}
+  try { renderTrainingProgressSection(sets); } catch (e) {}
+  try { if (hasStrengthCsvData()) renderExerciseChart(); } catch (e) {}
   try { renderBodyMeasurementsTab(); } catch (e) {}
   renderPrefsList();
   renderPulleyGroupsUI(allExercises);
@@ -2948,6 +2949,175 @@ function openPointInspector(exercise, day, entry) {
     btn.classList.toggle("active", Number(btn.getAttribute("data-factor")) === Number(entry.appliedFactor || 1));
   });
   insp.classList.add("visible");
+}
+
+function getISOWeekKey(ymd) {
+  const d = new Date(ymd + "T12:00:00");
+  const dayNum = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dayNum + 3);
+  const firstThursday = new Date(d.getFullYear(), 0, 4);
+  const weekNo = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+  return `${d.getFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+function renderTrainingProgressSection(sets) {
+  const hasCsv = hasStrengthCsvData();
+
+  // Beheer inklapbare Oefening Progressie
+  const exDetails = document.getElementById("trExerciseDetails");
+  const exContent = document.getElementById("trExerciseContent");
+  const exEmptyMsg = document.getElementById("trExerciseEmptyMsg");
+  if (exDetails && exContent && exEmptyMsg) {
+    if (hasCsv) {
+      exDetails.open = true;
+      exContent.style.display = "block";
+      exEmptyMsg.style.display = "none";
+    } else {
+      exDetails.open = false;
+      exContent.style.display = "none";
+      exEmptyMsg.style.display = "block";
+    }
+  }
+
+  // Verzamel alle uitgevoerde sessies (CSV krachttraining + voltooide Planner activiteiten zonder dubbeltelling)
+  const csvDayMap = {};
+  for (const s of sets) {
+    if (!csvDayMap[s.dateDay]) {
+      csvDayMap[s.dateDay] = { date: s.dateDay, title: s.workoutTitle || "Krachttraining", durationMin: 0, source: s.source };
+    }
+    if (s.workoutDurationMin > 0) {
+      csvDayMap[s.dateDay].durationMin = Math.max(csvDayMap[s.dateDay].durationMin, s.workoutDurationMin);
+    }
+  }
+
+  const allActivities = [];
+  Object.values(csvDayMap).forEach(c => {
+    const mins = c.durationMin > 0 ? Math.round(c.durationMin) : 55;
+    allActivities.push({
+      date: c.date,
+      sport: "Krachttraining",
+      title: c.title,
+      durationMin: mins,
+      burnedKcal: estimateBurnedKcal("Krachttraining", mins),
+      source: c.source
+    });
+  });
+
+  for (const [pDate, rawList] of Object.entries(state.plannedWorkouts || {})) {
+    const completedWos = getNormalizedDayWorkouts(pDate).filter(w => w.completed);
+    const hasCsvOnDay = Boolean(csvDayMap[pDate]);
+    completedWos.forEach(w => {
+      if (hasCsvOnDay && w.isStrength) return;
+      const sportCat = SPORT_PRESETS[w.title]
+        ? (w.isStrength ? "Krachttraining" : w.title)
+        : (w.isStrength ? "Krachttraining" : w.title);
+      allActivities.push({
+        date: pDate,
+        sport: sportCat,
+        title: w.title,
+        durationMin: w.durationMin,
+        burnedKcal: w.burnedKcal,
+        source: "planner"
+      });
+    });
+  }
+
+  // Update KPI kaarten bovenaan Training
+  const totalSessions = allActivities.length;
+  const totalMins = allActivities.reduce((a, b) => a + Number(b.durationMin || 0), 0);
+  const totalBurned = allActivities.reduce((a, b) => a + Number(b.burnedKcal || 0), 0);
+  const totalVolTons = sets.reduce((sum, s) => sum + s.volume, 0) / 1000;
+
+  document.getElementById("kpiWorkouts").textContent = totalSessions;
+  const csvCount = Object.keys(csvDayMap).length;
+  const planCount = totalSessions - csvCount;
+  document.getElementById("kpiWorkoutsSub").textContent = hasCsv
+    ? `${csvCount} CSV · ${planCount} Planner`
+    : `${Math.round(totalMins / 60)} uur · ${totalMins} min`;
+
+  const secLbl = document.getElementById("kpiSecondLabel");
+  if (hasCsv) {
+    if (secLbl) secLbl.textContent = "Totaal Volume & Tijd";
+    document.getElementById("kpiVolume").textContent = `${totalVolTons.toFixed(1)} t`;
+    document.getElementById("kpiSetsSub").textContent = `${sets.length} sets · ${totalMins} min`;
+  } else {
+    if (secLbl) secLbl.textContent = "Actieve Tijd & Kcal";
+    document.getElementById("kpiVolume").textContent = `${totalMins} min`;
+    document.getElementById("kpiSetsSub").textContent = `~${totalBurned.toLocaleString("nl-NL")} kcal verbrand`;
+  }
+
+  // Groepeer activiteiten voor grafiek per week / maand / kwartaal
+  const gran = state.trActivityGran || "week";
+  const metric = state.trActivityMetric || "minutes";
+  const buckets = {};
+  const sportTotals = {};
+
+  allActivities.forEach(act => {
+    const key = gran === "week" ? getISOWeekKey(act.date) : getBucketKey(act.date, gran);
+    if (!buckets[key]) buckets[key] = {};
+    const val = metric === "minutes" ? act.durationMin : (metric === "kcal" ? act.burnedKcal : 1);
+    buckets[key][act.sport] = (buckets[key][act.sport] || 0) + val;
+    sportTotals[act.sport] = (sportTotals[act.sport] || 0) + val;
+  });
+
+  const sortedKeys = Object.keys(buckets).sort().slice(-10);
+  const labels = sortedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
+  const sportsList = Object.keys(sportTotals).sort((a, b) => sportTotals[b] - sportTotals[a]);
+  const fallbackPalette = ["#38bdf8", "#10b981", "#ec4899", "#f59e0b", "#c084fc", "#06b6d4", "#fbbf24"];
+
+  const datasets = sportsList.map((sp, idx) => {
+    const col = (SPORT_PRESETS[sp] && SPORT_PRESETS[sp].color) || fallbackPalette[idx % fallbackPalette.length];
+    return {
+      label: sp,
+      data: sortedKeys.map(k => Math.round(buckets[k][sp] || 0)),
+      backgroundColor: col,
+      borderRadius: 4
+    };
+  });
+
+  const ctx = document.getElementById("trainingActivityChart")?.getContext("2d");
+  if (ctx) {
+    if (trainingActivityChartInstance) trainingActivityChartInstance.destroy();
+    trainingActivityChartInstance = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels.length > 0 ? labels : ["Geen data"],
+        datasets: datasets.length > 0 ? datasets : [{ label: "Activiteiten", data: [0], backgroundColor: "#334155" }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
+          tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" }
+        },
+        scales: {
+          x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
+          y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } }
+        }
+      }
+    });
+  }
+
+  // Recente uitgevoerde activiteiten lijst onder de grafiek
+  const recentEl = document.getElementById("recentActivitiesList");
+  if (recentEl) {
+    const recent = [...allActivities].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12);
+    if (recent.length === 0) {
+      recentEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); text-align:center; padding:8px;">Nog geen uitgevoerde trainingen. Plan of vink een activiteit af in <strong>Planner</strong> (of upload een CSV).</div>`;
+    } else {
+      recentEl.innerHTML = recent.map(act => `
+        <div class="pref-row" style="padding:6px 4px;">
+          <span style="font-size:0.8rem;">
+            <strong>${escapeHtml(act.title)}</strong>
+            <span style="color:var(--muted); font-size:0.72rem;"> · ${formatShortNL(act.date)}</span>
+          </span>
+          <span style="font-size:0.75rem; color:var(--accent-hevy); font-weight:600;">${act.durationMin} min · ~${act.burnedKcal} kcal</span>
+        </div>
+      `).join("");
+    }
+  }
 }
 
 function renderExerciseChart() {
@@ -3136,24 +3306,107 @@ function bindEvents() {
     renderNutritionTab();
     switchTab("nutrition");
   });
+  function syncPlannerKcalPreview() {
+    const sel = document.getElementById("planWorkoutSelect").value;
+    const customName = document.getElementById("planCustomSportName").value.trim();
+    const sportName = sel === "__custom__" ? (customName || "Activiteit") : sel;
+    const dur = Math.max(1, Number(document.getElementById("planDurationInput").value) || 45);
+    document.getElementById("planKcalInput").value = estimateBurnedKcal(sportName, dur);
+  }
+
+  document.getElementById("planWorkoutSelect").addEventListener("change", e => {
+    const val = e.target.value;
+    const customInp = document.getElementById("planCustomSportName");
+    if (val === "__custom__") {
+      customInp.style.display = "block";
+      customInp.focus();
+    } else {
+      customInp.style.display = "none";
+      const preset = SPORT_PRESETS[val];
+      if (preset && preset.defaultMin) {
+        document.getElementById("planDurationInput").value = preset.defaultMin;
+        document.querySelectorAll("#planDurationPills .pill").forEach(p => {
+          p.classList.toggle("active", Number(p.getAttribute("data-dur")) === preset.defaultMin);
+        });
+      }
+    }
+    syncPlannerKcalPreview();
+  });
+
+  document.getElementById("planDurationPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    const mins = Number(pill.getAttribute("data-dur")) || 45;
+    document.getElementById("planDurationInput").value = mins;
+    document.querySelectorAll("#planDurationPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    syncPlannerKcalPreview();
+  });
+
+  document.getElementById("planDurationInput").addEventListener("input", () => {
+    const val = Number(document.getElementById("planDurationInput").value) || 0;
+    document.querySelectorAll("#planDurationPills .pill").forEach(p => {
+      p.classList.toggle("active", Number(p.getAttribute("data-dur")) === val);
+    });
+    syncPlannerKcalPreview();
+  });
+
   document.getElementById("btnAddPlannedWorkout").addEventListener("click", () => {
-    const val = document.getElementById("planWorkoutSelect").value;
-    if (!val) return;
+    const selVal = document.getElementById("planWorkoutSelect").value;
+    const customVal = document.getElementById("planCustomSportName").value.trim();
+    const title = selVal === "__custom__" ? customVal : selVal;
+    if (!title) { alert("Vul een naam in voor de activiteit."); return; }
+
+    const durationMin = Math.max(1, Number(document.getElementById("planDurationInput").value) || 45);
+    const burnedKcal = Math.max(0, Number(document.getElementById("planKcalInput").value) || estimateBurnedKcal(title, durationMin));
+    const completed = document.getElementById("planWorkoutStatus").value === "completed";
+    const isStrength = Boolean((SPORT_PRESETS[title] && SPORT_PRESETS[title].isStrength) || /upper|lower|push|pull|full|kracht/i.test(title));
+
     const d = state.selectedPlannerDate;
     if (!state.plannedWorkouts[d]) state.plannedWorkouts[d] = [];
-    state.plannedWorkouts[d].push(val);
+    state.plannedWorkouts[d].push({ title, durationMin, burnedKcal, completed, isStrength });
     saveFoodState();
-    renderPlannerTab();
-    renderNutritionTab();
+    refreshAll();
   });
+
   document.getElementById("plannedWorkoutsList").addEventListener("click", e => {
+    const d = state.selectedPlannerDate;
+    const toggleBtn = e.target.closest("[data-toggle-plan]");
+    if (toggleBtn) {
+      const idx = Number(toggleBtn.getAttribute("data-toggle-plan"));
+      const normalized = getNormalizedDayWorkouts(d);
+      if (normalized[idx]) {
+        normalized[idx].completed = !normalized[idx].completed;
+        state.plannedWorkouts[d] = normalized;
+        saveFoodState();
+        refreshAll();
+      }
+      return;
+    }
     const del = e.target.closest("[data-del-plan]");
     if (!del) return;
-    const d = state.selectedPlannerDate;
     state.plannedWorkouts[d].splice(Number(del.getAttribute("data-del-plan")), 1);
     saveFoodState();
-    renderPlannerTab();
-    renderNutritionTab();
+    refreshAll();
+  });
+
+  // Training voortgang grafiek knoppen
+  document.getElementById("trActivityMetricPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.trActivityMetric = pill.getAttribute("data-am");
+    document.querySelectorAll("#trActivityMetricPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderTrainingProgressSection(getCombinedSets());
+  });
+
+  document.getElementById("trActivityGranPills").addEventListener("click", e => {
+    const pill = e.target.closest(".period-pill");
+    if (!pill) return;
+    state.trActivityGran = pill.getAttribute("data-agran");
+    document.querySelectorAll("#trActivityGranPills .period-pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderTrainingProgressSection(getCombinedSets());
   });
 
   // Voeding events
