@@ -558,19 +558,19 @@
       </div>
     </div>
 
-    <div class="kpi-grid-3">
+    <div class="kpi-grid-3" id="ovKpiGrid">
       <div class="kpi">
         <div class="kpi-label">Sessies &amp; Tijd</div>
         <div class="kpi-val" id="ovKpiSessions">0</div>
         <div class="kpi-sub" id="ovKpiMinutes">0 min · 0/wk</div>
       </div>
-      <div class="kpi">
+      <div class="kpi" id="ovKpiVolCard">
         <div class="kpi-label">Volume &amp; Sets</div>
         <div class="kpi-val" id="ovKpiVolume">0 t</div>
         <div class="kpi-sub" id="ovKpiSetsReps">0 sets · 0 reps</div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">Spier / Vet Delta</div>
+      <div class="kpi" id="ovKpiBodyCard">
+        <div class="kpi-label" id="ovKpiBodyLabel">Spier / Vet Delta</div>
         <div class="kpi-val" id="ovKpiBodyDelta">-</div>
         <div class="kpi-sub" id="ovKpiFatDelta">Laad metingen</div>
       </div>
@@ -582,22 +582,23 @@
         <div>
           <span class="field-lbl">Linker as (Training / Voeding):</span>
           <select id="ovTrainMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
-            <option value="volume">Totaal Volume (ton)</option>
-            <option value="sessions">Aantal Workouts</option>
             <option value="minutes">Trainingsminuten</option>
+            <option value="sessions">Aantal Workouts</option>
+            <option value="burnedKcal">Verbrande Kcal (training)</option>
+            <option value="avgKcal">Gem. Voeding (kcal/dag)</option>
+            <option value="avgProtein">Gem. Eiwit (g/dag)</option>
+            <option value="volume">Totaal Volume (ton)</option>
             <option value="sets">Aantal Sets</option>
             <option value="reps">Aantal Herhalingen (reps)</option>
-            <option value="avgKcal">Gem. Kcal / dag</option>
-            <option value="avgProtein">Gem. Eiwit (g/dag)</option>
           </select>
         </div>
         <div>
           <span class="field-lbl">Rechter as (Meting):</span>
           <select id="ovBodyMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
+            <option value="weight">Lichaamsgewicht (kg)</option>
             <option value="smm">Skeletspiermassa (kg)</option>
             <option value="fatMass">Vetmassa (kg)</option>
             <option value="fatPct">Vetpercentage (%)</option>
-            <option value="weight">Lichaamsgewicht (kg)</option>
             <option value="smmPct">Spierpercentage (%)</option>
           </select>
         </div>
@@ -608,16 +609,26 @@
     </div>
 
     <div class="card">
-      <h2>
-        <span>Getrainde Spiergroepen</span>
-        <div class="pill-row" id="ovMuscleMetricPills" style="margin-bottom:0;">
-          <span class="pill active" data-mm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
-          <span class="pill" data-mm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
+      <details id="ovMuscleDetails">
+        <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <span>Getrainde Spiergroepen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
+          <span class="badge" id="ovMuscleToggleBadge">▼</span>
+        </summary>
+        <div id="ovMuscleContent" style="margin-top:10px;">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:6px;">
+            <div class="pill-row" id="ovMuscleMetricPills" style="margin-bottom:0;">
+              <span class="pill active" data-mm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
+              <span class="pill" data-mm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="ovMuscleChart"></canvas>
+          </div>
         </div>
-      </h2>
-      <div class="chart-wrap">
-        <canvas id="ovMuscleChart"></canvas>
-      </div>
+        <div id="ovMuscleEmptyMsg" style="display:none; margin-top:10px; padding:12px; background:#0f172a; border-radius:10px; border:1px dashed var(--card-border); font-size:0.8rem; color:var(--muted); text-align:center;">
+          Voeg Hevy of Garmin CSV toe onder instellingen om getrainde spiergroepen weer te geven
+        </div>
+      </details>
     </div>
   </div>
 
@@ -656,20 +667,61 @@
       <div id="plannerDaySummary" style="font-size:0.82rem; color:var(--muted); margin-bottom:10px;"></div>
 
       <div style="border-top:1px solid var(--card-border); padding-top:10px;">
-        <span class="field-lbl" style="font-weight:600; color:var(--text);">Workout inplannen op deze dag:</span>
+        <span class="field-lbl" style="font-weight:700; color:var(--text); margin-bottom:6px;">Activiteit / Workout toevoegen op deze dag:</span>
         <div class="manual-grid" style="margin-top:4px;">
-          <select id="planWorkoutSelect" style="margin-bottom:0; font-size:0.82rem;">
-            <option value="">-- Kies workout --</option>
-            <option value="Upper Body">Upper Body</option>
-            <option value="Lower Body">Lower Body</option>
-            <option value="Push">Push</option>
-            <option value="Pull">Pull</option>
-            <option value="Full Body">Full Body</option>
-            <option value="Cardio / Hardlopen">Cardio / Hardlopen</option>
-          </select>
-          <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:0; padding:8px;">Inplannen</button>
+          <div>
+            <span class="field-lbl">Sport / Workout:</span>
+            <select id="planWorkoutSelect" style="margin-bottom:4px; font-size:0.82rem; padding:8px;">
+              <option value="BodyPump">BodyPump</option>
+              <option value="Hometrainer / Fietsen">Hometrainer / Fietsen</option>
+              <option value="Wandelen">Wandelen</option>
+              <option value="Skeeleren">Skeeleren</option>
+              <option value="Hardlopen">Hardlopen</option>
+              <option value="Zwemmen">Zwemmen</option>
+              <option value="Krachttraining">Krachttraining</option>
+              <option value="Upper Body">Upper Body</option>
+              <option value="Lower Body">Lower Body</option>
+              <option value="Push">Push</option>
+              <option value="Pull">Pull</option>
+              <option value="Full Body">Full Body</option>
+              <option value="__custom__">+ Eigen activiteit...</option>
+            </select>
+            <input type="text" id="planCustomSportName" placeholder="Naam activiteit..." style="display:none; margin-bottom:4px; padding:7px; font-size:0.8rem;" />
+          </div>
+          <div>
+            <span class="field-lbl">Status:</span>
+            <select id="planWorkoutStatus" style="margin-bottom:4px; font-size:0.82rem; padding:8px;">
+              <option value="planned">📅 Ingepland</option>
+              <option value="completed">✅ Uitgevoerd</option>
+            </select>
+          </div>
         </div>
-        <div id="plannedWorkoutsList" style="margin-top:8px;"></div>
+
+        <div style="margin-top:6px;">
+          <span class="field-lbl">Duur (kies snel of pas minuten aan):</span>
+          <div class="pill-row" id="planDurationPills" style="margin-bottom:6px;">
+            <span class="pill" data-dur="10" style="padding:4px 8px; font-size:0.72rem;">10m</span>
+            <span class="pill" data-dur="15" style="padding:4px 8px; font-size:0.72rem;">15m</span>
+            <span class="pill" data-dur="30" style="padding:4px 8px; font-size:0.72rem;">30m</span>
+            <span class="pill" data-dur="45" style="padding:4px 8px; font-size:0.72rem;">45m</span>
+            <span class="pill active" data-dur="60" style="padding:4px 8px; font-size:0.72rem;">60m</span>
+            <span class="pill" data-dur="90" style="padding:4px 8px; font-size:0.72rem;">1,5u</span>
+            <span class="pill" data-dur="120" style="padding:4px 8px; font-size:0.72rem;">2u</span>
+          </div>
+          <div class="manual-grid" style="margin-top:0;">
+            <div>
+              <span class="field-lbl">Exacte duur (min):</span>
+              <input type="number" id="planDurationInput" value="60" min="1" step="5" style="margin-bottom:4px; padding:7px; font-size:0.82rem;" />
+            </div>
+            <div>
+              <span class="field-lbl">Verbrande kcal (schatting):</span>
+              <input type="number" id="planKcalInput" value="450" min="0" step="10" style="margin-bottom:4px; padding:7px; font-size:0.82rem;" />
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:6px; padding:9px;">Toevoegen aan agenda</button>
+        <div id="plannedWorkoutsList" style="margin-top:10px;"></div>
       </div>
     </div>
   </div>
@@ -970,80 +1022,114 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   </div>
 
   <!-- ========================================================= -->
-  <!-- TAB 4: OEFENING PROGRESSIE & OVERLOAD ADVIES              -->
+  <!-- TAB 4: TRAINING VOORTGANG & OEFENING PROGRESSIE           -->
   <!-- ========================================================= -->
   <div id="tab-charts" class="panel">
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="kpi-label">Workouts Totaal</div>
+        <div class="kpi-label">Uitgevoerde Sessies</div>
         <div class="kpi-val" id="kpiWorkouts">0</div>
-        <div class="kpi-sub" id="kpiWorkoutsSub">0 Garmin · 0 Hevy</div>
+        <div class="kpi-sub" id="kpiWorkoutsSub">0 activiteiten</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Totaal Volume</div>
-        <div class="kpi-val" id="kpiVolume">0 t</div>
-        <div class="kpi-sub" id="kpiSetsSub">0 actieve sets</div>
+        <div class="kpi-label" id="kpiSecondLabel">Actieve Tijd &amp; Kcal</div>
+        <div class="kpi-val" id="kpiVolume">0 min</div>
+        <div class="kpi-sub" id="kpiSetsSub">0 kcal verbrand</div>
       </div>
     </div>
 
+    <!-- Nieuw onderdeel: Training voortgang (voor alle uitgevoerde workouts & sporten) -->
     <div class="card">
       <h2>
-        <span>Oefening Progressie</span>
-        <div class="zoom-controls">
-          <button type="button" class="btn-sm" id="btnZoomIn" title="Inzoomen">+</button>
-          <button type="button" class="btn-sm" id="btnZoomOut" title="Uitzoomen">&minus;</button>
-          <button type="button" class="btn-sm" id="btnZoomResetEx">Reset</button>
+        <span>Training voortgang</span>
+        <div class="pill-row" id="trActivityMetricPills" style="margin-bottom:0;">
+          <span class="pill active" data-am="minutes" style="padding:3px 8px; font-size:0.72rem;">Minuten</span>
+          <span class="pill" data-am="kcal" style="padding:3px 8px; font-size:0.72rem;">Verbrande kcal</span>
+          <span class="pill" data-am="sessions" style="padding:3px 8px; font-size:0.72rem;">Sessies</span>
         </div>
       </h2>
-      <select id="exerciseSelect"></select>
-
-      <!-- Ingebouwd Progressive Overload Advies voor volgende sessie -->
-      <div class="overload-banner" id="overloadAdviceBox" style="display:none;">
-        <div>
-          <strong style="color:var(--accent-hevy);">Volgende sessie advies:</strong>
-          <div id="overloadAdviceText" style="color:var(--text); margin-top:2px;">-</div>
-        </div>
-        <button type="button" class="btn-sm" id="btnCopyWorkoutSummary" title="Kopieer laatste sessies voor Gemini">Kopieer</button>
-      </div>
-
-      <div class="pill-row" id="metricPills">
-        <span class="pill active" data-metric="e1rm">Geschatte 1RM (kg)</span>
-        <span class="pill" data-metric="maxWeight">Max Gewicht (kg)</span>
-        <span class="pill" data-metric="volume">Sessie Volume (kg)</span>
+      <div class="period-pills-3" id="trActivityGranPills" style="margin-bottom:8px;">
+        <div class="period-pill active" data-agran="week">Per Week</div>
+        <div class="period-pill" data-agran="month">Per Maand</div>
+        <div class="period-pill" data-agran="quarter">Per Kwartaal</div>
       </div>
       <div class="chart-wrap">
-        <canvas id="exerciseChart"></canvas>
+        <canvas id="trainingActivityChart"></canvas>
       </div>
+      <div id="recentActivitiesList" style="margin-top:10px; max-height:190px; overflow-y:auto;"></div>
+    </div>
 
-      <div class="point-inspector" id="pointInspector">
-        <div class="inspector-head">
-          <div>
-            <strong id="inspTitle" style="color:var(--text);">-</strong>
-            <div id="inspSub" style="font-size:0.72rem; color:var(--muted);"></div>
+    <!-- Inklapbaar onderdeel: Oefening Progressie (alleen actief bij Hevy/Garmin CSV) -->
+    <div class="card">
+      <details id="trExerciseDetails">
+        <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <span>Oefening Progressie <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
+          <span class="badge" id="trExerciseToggleBadge">▼</span>
+        </summary>
+
+        <div id="trExerciseEmptyMsg" style="display:none; margin-top:10px; padding:12px; background:#0f172a; border-radius:10px; border:1px dashed var(--card-border); font-size:0.8rem; color:var(--muted); text-align:center;">
+          Voeg Hevy of Garmin CSV toe onder instellingen om voortgang van oefeningen weer te geven
+        </div>
+
+        <div id="trExerciseContent" style="margin-top:10px;">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+            <div class="zoom-controls">
+              <button type="button" class="btn-sm" id="btnZoomIn" title="Inzoomen">+</button>
+              <button type="button" class="btn-sm" id="btnZoomOut" title="Uitzoomen">&minus;</button>
+              <button type="button" class="btn-sm" id="btnZoomResetEx">Reset</button>
+            </div>
           </div>
-          <button type="button" class="btn-sm" id="btnCloseInspector" style="padding:2px 7px;">✕</button>
-        </div>
-        <div class="inspector-btns" id="inspectorBtns">
-          <button type="button" class="insp-btn" data-factor="1">1× (Normaal)</button>
-          <button type="button" class="insp-btn" data-factor="2">× 2</button>
-          <button type="button" class="insp-btn" data-factor="0.5">÷ 2</button>
-          <button type="button" class="insp-btn danger" data-factor="0">Verberg</button>
-        </div>
-      </div>
+          <select id="exerciseSelect"></select>
 
-      <div class="period-bar">
-        <div class="period-pills" id="periodPills">
-          <div class="period-pill" data-period="1m">1 Maand</div>
-          <div class="period-pill" data-period="3m">Kwartaal</div>
-          <div class="period-pill" data-period="1y">Jaar</div>
-          <div class="period-pill active" data-period="all">Altijd</div>
+          <!-- Ingebouwd Progressive Overload Advies voor volgende sessie -->
+          <div class="overload-banner" id="overloadAdviceBox" style="display:none;">
+            <div>
+              <strong style="color:var(--accent-hevy);">Volgende sessie advies:</strong>
+              <div id="overloadAdviceText" style="color:var(--text); margin-top:2px;">-</div>
+            </div>
+            <button type="button" class="btn-sm" id="btnCopyWorkoutSummary" title="Kopieer laatste sessies voor Gemini">Kopieer</button>
+          </div>
+
+          <div class="pill-row" id="metricPills">
+            <span class="pill active" data-metric="e1rm">Geschatte 1RM (kg)</span>
+            <span class="pill" data-metric="maxWeight">Max Gewicht (kg)</span>
+            <span class="pill" data-metric="volume">Sessie Volume (kg)</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="exerciseChart"></canvas>
+          </div>
+
+          <div class="point-inspector" id="pointInspector">
+            <div class="inspector-head">
+              <div>
+                <strong id="inspTitle" style="color:var(--text);">-</strong>
+                <div id="inspSub" style="font-size:0.72rem; color:var(--muted);"></div>
+              </div>
+              <button type="button" class="btn-sm" id="btnCloseInspector" style="padding:2px 7px;">✕</button>
+            </div>
+            <div class="inspector-btns" id="inspectorBtns">
+              <button type="button" class="insp-btn" data-factor="1">1× (Normaal)</button>
+              <button type="button" class="insp-btn" data-factor="2">× 2</button>
+              <button type="button" class="insp-btn" data-factor="0.5">÷ 2</button>
+              <button type="button" class="insp-btn danger" data-factor="0">Verberg</button>
+            </div>
+          </div>
+
+          <div class="period-bar">
+            <div class="period-pills" id="periodPills">
+              <div class="period-pill" data-period="1m">1 Maand</div>
+              <div class="period-pill" data-period="3m">Kwartaal</div>
+              <div class="period-pill" data-period="1y">Jaar</div>
+              <div class="period-pill active" data-period="all">Altijd</div>
+            </div>
+            <div class="period-nav" id="periodNavBar" style="display:none;">
+              <button type="button" class="nav-arrow" id="prevPeriodBtn">&#9664;</button>
+              <span class="nav-label" id="periodLabel">-</span>
+              <button type="button" class="nav-arrow" id="nextPeriodBtn" disabled>&#9654;</button>
+            </div>
+          </div>
         </div>
-        <div class="period-nav" id="periodNavBar" style="display:none;">
-          <button type="button" class="nav-arrow" id="prevPeriodBtn">&#9664;</button>
-          <span class="nav-label" id="periodLabel">-</span>
-          <button type="button" class="nav-arrow" id="nextPeriodBtn" disabled>&#9654;</button>
-        </div>
-      </div>
+      </details>
     </div>
   </div>
 
@@ -1082,7 +1168,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="bodyWaterCard">
       <h2>
         <span>Lichaamswater (L)</span>
         <span class="badge" id="waterBadge">- L</span>
@@ -1092,17 +1178,17 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="bodySegArmsCard">
       <h2><span>Segmentaal: Armen (L/R)</span><span class="badge">Links: Spier · Rechts: Vet</span></h2>
       <div class="chart-wrap"><canvas id="bodySegArmsChart"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="bodySegLegsCard">
       <h2><span>Segmentaal: Benen (L/R)</span><span class="badge">Links: Spier · Rechts: Vet</span></h2>
       <div class="chart-wrap"><canvas id="bodySegLegsChart"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="bodySegTrunkCard">
       <h2><span>Segmentaal: Romp / Buik</span><span class="badge">Links: Spier · Rechts: Vet</span></h2>
       <div class="chart-wrap"><canvas id="bodySegTrunkChart"></canvas></div>
     </div>
@@ -1609,7 +1695,8 @@ async function pullFromCloud(forceOverwriteLocal = false) {
     const remoteTs = new Date(data.updated_at).getTime() || 0;
     const localTs = new Date(localStorage.getItem("cloud_last_sync_at") || 0).getTime() || 0;
 
-    if (forceOverwriteLocal || remoteTs > localTs) {
+    const hasAnyLocalData = state.garminSets.length > 0 || state.hevySets.length > 0 || state.bodyMeasurements.length > 0 || Object.keys(state.foodLogs).length > 0 || Object.keys(state.plannedWorkouts).length > 0;
+    if (forceOverwriteLocal || !hasAnyLocalData || remoteTs > localTs) {
       await applySyncPayload(data.payload, true);
       localStorage.setItem("cloud_last_sync_at", data.updated_at);
       refreshAll();
