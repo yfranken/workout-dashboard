@@ -1213,8 +1213,8 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
             <div class="period-pills" id="periodPills">
               <div class="period-pill" data-period="1m">1 Maand</div>
               <div class="period-pill" data-period="3m">Kwartaal</div>
-              <div class="period-pill" data-period="1y">Jaar</div>
-              <div class="period-pill active" data-period="all">Altijd</div>
+              <div class="period-pill active" data-period="1y">Jaar</div>
+              <div class="period-pill" data-period="all">Altijd</div>
             </div>
             <div class="period-nav" id="periodNavBar" style="display:none;">
               <button type="button" class="nav-arrow" id="prevPeriodBtn">&#9664;</button>
@@ -1551,7 +1551,7 @@ let state = {
   showBaselineBand: safeParseJSON("show_baseline_band", true),
   smartOverload: safeParseJSON("smart_overload_v1", true),
   selectedMetric: "e1rm",
-  period: "all",
+  period: "1y",
   periodOffset: 0,
   inspectedPoint: null,
   ovGranularity: "quarter",
@@ -3501,7 +3501,30 @@ function renderTrainingProgressSection(sets) {
     sportTotals[act.sport] = (sportTotals[act.sport] || 0) + val;
   });
 
-  const sortedKeys = Object.keys(buckets).sort().slice(-10);
+  // Bouw een doorlopende reeks periodes inclusief periodes zonder sessies (0)
+  const latestActDate = allActivities.reduce((maxD, a) => (a.date > maxD ? a.date : maxD), TODAY_YMD);
+  const anchorDate = new Date((latestActDate > TODAY_YMD ? latestActDate : TODAY_YMD) + "T12:00:00");
+  const continuousKeys = [];
+  if (gran === "week") {
+    for (let w = 9; w >= 0; w--) {
+      const d = new Date(anchorDate);
+      d.setDate(anchorDate.getDate() - w * 7);
+      continuousKeys.push(getISOWeekKey(formatYMD(d)));
+    }
+  } else if (gran === "month") {
+    for (let m = 9; m >= 0; m--) {
+      const d = new Date(anchorDate.getFullYear(), anchorDate.getMonth() - m, 15);
+      continuousKeys.push(getBucketKey(formatYMD(d), "month"));
+    }
+  } else {
+    for (let q = 7; q >= 0; q--) {
+      const d = new Date(anchorDate.getFullYear(), anchorDate.getMonth() - q * 3, 15);
+      continuousKeys.push(getBucketKey(formatYMD(d), "quarter"));
+    }
+  }
+  // Voeg ook eventuele oudere actieve buckets toe indien buiten het venster, maar behoud alle tussenliggende lege periodes
+  const allKnownKeys = [...new Set([...continuousKeys, ...Object.keys(buckets)])].sort();
+  const sortedKeys = allKnownKeys.length > 10 ? allKnownKeys.slice(-10) : allKnownKeys;
   const labels = sortedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
   const sportsList = Object.keys(sportTotals).sort((a, b) => sportTotals[b] - sportTotals[a]);
   const fallbackPalette = ["#38bdf8", "#10b981", "#ec4899", "#f59e0b", "#c084fc", "#06b6d4", "#fbbf24"];
@@ -3630,17 +3653,76 @@ function renderExerciseChart() {
     datasets.push({ label: "Baseline band", data: visibleBaselines.map(b => Number(b.low.toFixed(1))), borderColor: "rgba(16, 185, 129, 0.25)", backgroundColor: "rgba(16, 185, 129, 0.08)", borderWidth: 1, pointRadius: 0, fill: "-1", tension: 0.35 });
   }
 
+  let trendPctLabel = null;
+  let trendLastIdx = -1;
   if (isTrendEnabledFor(chosen) && values.length >= 2) {
+    const firstVal = values[0];
+    const lastVal = values[values.length - 1];
+    trendLastIdx = values.length - 1;
+    if (firstVal > 0) {
+      const pctDiff = ((lastVal - firstVal) / firstVal) * 100;
+      const sign = pctDiff >= 0 ? "+" : "";
+      trendPctLabel = `${sign}${pctDiff.toFixed(1)}%`;
+    }
     datasets.push({
-      label: "Trend", data: values.map((_, idx) => idx === 0 ? values[0] : (idx === values.length - 1 ? values[values.length - 1] : null)),
-      borderColor: "rgba(248, 250, 252, 0.55)", borderWidth: 2, borderDash: [6, 6], pointRadius: 0, spanGaps: true, fill: false, tension: 0
+      label: "Trend",
+      data: values.map((_, idx) => idx === 0 ? firstVal : (idx === trendLastIdx ? lastVal : null)),
+      borderColor: "rgba(248, 250, 252, 0.65)",
+      borderWidth: 2,
+      borderDash: [6, 6],
+      pointRadius: values.map((_, idx) => idx === trendLastIdx ? 5 : 0),
+      pointBackgroundColor: values.map((_, idx) => idx === trendLastIdx ? "#f8fafc" : "transparent"),
+      spanGaps: true,
+      fill: false,
+      tension: 0
     });
   }
+
+  const trendEndDeltaPlugin = {
+    id: "trendEndDeltaPlugin",
+    afterDatasetsDraw(chart) {
+      if (!trendPctLabel || trendLastIdx < 0) return;
+      const mainMeta = chart.getDatasetMeta(0);
+      const pt = mainMeta && mainMeta.data && mainMeta.data[trendLastIdx];
+      if (!pt) return;
+      const { ctx: c } = chart;
+      const isPos = trendPctLabel.startsWith("+");
+      const bgCol = isPos ? "rgba(16, 185, 129, 0.92)" : "rgba(239, 68, 68, 0.92)";
+      const xPos = Math.min(chart.chartArea.right - 28, Math.max(chart.chartArea.left + 28, pt.x));
+      const yPos = Math.max(chart.chartArea.top + 14, pt.y - 22);
+
+      c.save();
+      c.font = "700 11px -apple-system, BlinkMacSystemFont, sans-serif";
+      const tw = c.measureText(trendPctLabel).width + 12;
+      const th = 20;
+
+      // Verbindingslijntje naar laatste punt
+      c.strokeStyle = bgCol;
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(pt.x, pt.y - 5);
+      c.lineTo(xPos, yPos + th / 2);
+      c.stroke();
+
+      // Badge / datapunt boven het laatste punt
+      c.fillStyle = bgCol;
+      c.beginPath();
+      c.roundRect(xPos - tw / 2, yPos - th / 2, tw, th, 999);
+      c.fill();
+
+      c.fillStyle = "#0f172a";
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(trendPctLabel, xPos, yPos + 0.5);
+      c.restore();
+    }
+  };
 
   const ctx = document.getElementById("exerciseChart").getContext("2d");
   if (exerciseChartInstance) exerciseChartInstance.destroy();
   exerciseChartInstance = new Chart(ctx, {
     type: "line", data: { labels, datasets },
+    plugins: [trendEndDeltaPlugin],
     options: {
       responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
       onClick: (event, elements) => { if (elements && elements.length > 0) openPointInspector(chosen, timeline[elements[0].index].day, timeline[elements[0].index]); },
