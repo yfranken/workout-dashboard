@@ -508,6 +508,42 @@
       pointer-events: none;
     }
 
+
+    /* Zoekveld met ingebouwd wis-kruisje */
+    .search-input-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .search-input-wrap input[type="text"] {
+      padding-right: 32px;
+      margin-bottom: 0;
+    }
+    .search-clear-btn {
+      position: absolute;
+      right: 8px;
+      background: #334155;
+      border: none;
+      color: var(--text);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 0.72rem;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .search-clear-btn.visible {
+      display: flex;
+    }
+    .search-clear-btn:active {
+      background: var(--accent);
+      color: #0f172a;
+    }
   </style>
 </head>
 <body>
@@ -929,8 +965,11 @@
       </div>
 
       <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
-      <div style="display:flex; gap:6px; margin-bottom:4px;">
-        <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. Chocomel 0%, Lipton, skyr)..." style="margin-bottom:4px;" />
+      <div style="display:flex; gap:6px; margin-bottom:6px; align-items:center;">
+        <div class="search-input-wrap">
+          <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. Chocomel 0%, Lipton, skyr)..." />
+          <button type="button" class="search-clear-btn" id="btnClearUnifiedSearch" title="Zoekveld wissen">✕</button>
+        </div>
         <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
       </div>
       <div id="unifiedSearchResults" style="max-height:240px; overflow-y:auto; margin-bottom:10px;"></div>
@@ -1281,7 +1320,10 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
           Trendlijn alle
         </label>
       </h2>
-      <input type="text" id="prefSearch" placeholder="Zoek oefening..." />
+      <div class="search-input-wrap" style="margin-bottom:9px;">
+        <input type="text" id="prefSearch" placeholder="Zoek oefening..." />
+        <button type="button" class="search-clear-btn" id="btnClearPrefSearch" title="Zoekveld wissen">✕</button>
+      </div>
       <div id="prefsListContainer" class="pref-list"></div>
     </div>
 
@@ -4491,13 +4533,31 @@ function bindEvents() {
     }
   }
 
-  document.getElementById("unifiedSearchInput").addEventListener("input", e => {
+  const unifiedInpEl = document.getElementById("unifiedSearchInput");
+  const clearUnifiedBtn = document.getElementById("btnClearUnifiedSearch");
+  function syncUnifiedClearBtn() {
+    if (clearUnifiedBtn && unifiedInpEl) {
+      clearUnifiedBtn.classList.toggle("visible", unifiedInpEl.value.length > 0);
+    }
+  }
+
+  unifiedInpEl.addEventListener("input", e => {
     const val = e.target.value;
+    syncUnifiedClearBtn();
     renderLocalUnifiedMatches(val);
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     if (val.trim().length >= 3) {
       searchDebounceTimer = setTimeout(() => runOnlineFoodSearch(val), 1100);
     }
+  });
+
+  clearUnifiedBtn.addEventListener("click", () => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    if (activeSearchAbort) { try { activeSearchAbort.abort(); } catch (e) {} }
+    unifiedInpEl.value = "";
+    syncUnifiedClearBtn();
+    document.getElementById("unifiedSearchResults").innerHTML = "";
+    unifiedInpEl.focus();
   });
 
   document.getElementById("btnUnifiedSearch").addEventListener("click", () => {
@@ -4591,6 +4651,7 @@ function bindEvents() {
       log.touched = true;
       saveFoodState();
       document.getElementById("unifiedSearchInput").value = "";
+      syncUnifiedClearBtn();
       document.getElementById("unifiedSearchResults").innerHTML = "";
       renderNutritionTab(); renderPlannerTab();
       return;
@@ -4608,6 +4669,7 @@ function bindEvents() {
         log.touched = true;
         saveFoodState();
         document.getElementById("unifiedSearchInput").value = "";
+        syncUnifiedClearBtn();
         document.getElementById("unifiedSearchResults").innerHTML = "";
         renderNutritionTab(); renderPlannerTab();
       }
@@ -4618,6 +4680,7 @@ function bindEvents() {
       const item = JSON.parse(addLocal.getAttribute("data-search-add-local"));
       addFoodItemToLog(item);
       document.getElementById("unifiedSearchInput").value = "";
+      syncUnifiedClearBtn();
       document.getElementById("unifiedSearchResults").innerHTML = "";
       return;
     }
@@ -4628,6 +4691,7 @@ function bindEvents() {
       const grams = Math.max(1, Number(document.getElementById(inpId)?.value) || 100);
       addFoodItemToLog(per100, grams);
       document.getElementById("unifiedSearchInput").value = "";
+      syncUnifiedClearBtn();
       document.getElementById("unifiedSearchResults").innerHTML = "";
     }
   });
@@ -4791,7 +4855,18 @@ function bindEvents() {
     localStorage.setItem("smart_overload_v1", JSON.stringify(state.smartOverload));
     renderExerciseChart();
   });
-  document.getElementById("prefSearch").addEventListener("input", renderPrefsList);
+  const prefInpEl = document.getElementById("prefSearch");
+  const clearPrefBtn = document.getElementById("btnClearPrefSearch");
+  prefInpEl.addEventListener("input", () => {
+    clearPrefBtn.classList.toggle("visible", prefInpEl.value.length > 0);
+    renderPrefsList();
+  });
+  clearPrefBtn.addEventListener("click", () => {
+    prefInpEl.value = "";
+    clearPrefBtn.classList.remove("visible");
+    renderPrefsList();
+    prefInpEl.focus();
+  });
   document.getElementById("prefsListContainer").addEventListener("click", e => {
     const star = e.target.closest("[data-action='toggle-fav']");
     if (!star) return;
