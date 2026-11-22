@@ -431,6 +431,26 @@
     }
     .cal-bar-food-orange { background: #f59e0b; color: #0f172a; }
     .cal-bar-food-green  { background: #10b981; color: #0f172a; }
+
+    .cal-bar-food-free   { background: #475569; color: #f8fafc; }
+    .nutri-cal-cell.food-free {
+      background: rgba(148, 163, 184, 0.22);
+      border-color: #64748b;
+      color: #cbd5e1;
+    }
+    .day-mode-banner {
+      background: rgba(56, 189, 248, 0.09);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 11px 12px;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+    }
+    .day-mode-banner.is-free {
+      background: rgba(148, 163, 184, 0.12);
+      border-color: #64748b;
+    }
+
     .cal-bar-wo-blue     { background: #38bdf8; color: #0f172a; }
     .cal-bar-wo-green    { background: #10b981; color: #0f172a; }
 
@@ -746,6 +766,7 @@
       <div style="font-size:0.7rem; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
         <span><span class="cal-pill-bar cal-bar-food-orange" style="display:inline-flex; padding:1px 5px;">🍽️</span> Bezig</span>
         <span><span class="cal-pill-bar cal-bar-food-green" style="display:inline-flex; padding:1px 5px;">🍽️</span> Afgerond</span>
+        <span><span class="cal-pill-bar cal-bar-food-free" style="display:inline-flex; padding:1px 5px;">🌴</span> Vrij</span>
         <span><span class="cal-pill-bar cal-bar-wo-blue" style="display:inline-flex; padding:1px 5px;">🏋️</span> Gepland</span>
         <span><span class="cal-pill-bar cal-bar-wo-green" style="display:inline-flex; padding:1px 5px;">🏋️</span> Voltooid</span>
       </div>
@@ -762,6 +783,23 @@
         <button type="button" class="btn-sm btn-accent" id="btnGoToDayFood" style="color:#0f172a;">Open Voeding &rarr;</button>
       </h2>
       <div id="plannerDaySummary" style="font-size:0.82rem; color:var(--muted); margin-bottom:10px;"></div>
+
+      <!-- Optie 3: Snelle voedingsstatus / grove dag-schatting of vrije dag in Planner -->
+      <div style="border-top:1px solid var(--card-border); padding-top:9px; margin-bottom:10px;">
+        <span class="field-lbl" style="font-weight:700; color:var(--text); margin-bottom:5px;">Snelle dag-status voeding (bijv. uit eten / weekend weg):</span>
+        <div class="pill-row" id="plannerFoodModePills" style="margin-bottom:6px;">
+          <span class="pill" data-pfmode="normal" style="padding:4px 9px; font-size:0.73rem;">📋 Normaal loggen</span>
+          <span class="pill" data-pfmode="est_normal" style="padding:4px 9px; font-size:0.73rem;">≈ Normaal (~2300)</span>
+          <span class="pill" data-pfmode="est_rich" style="padding:4px 9px; font-size:0.73rem;">≈ Rijk (~3000)</span>
+          <span class="pill" data-pfmode="est_feast" style="padding:4px 9px; font-size:0.73rem;">≈ Feest (~3600)</span>
+          <span class="pill" data-pfmode="free" style="padding:4px 9px; font-size:0.73rem;">🌴 Vrije dag</span>
+        </div>
+        <div id="plannerCustomEstRow" style="display:none; gap:6px; align-items:center; margin-top:4px;">
+          <input type="number" id="plannerEstKcal" value="2800" step="50" min="500" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem;" placeholder="Kcal" />
+          <input type="number" id="plannerEstProt" value="135" step="5" min="0" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem;" placeholder="Eiwit (g)" />
+          <button type="button" class="btn-sm btn-hevy" id="btnSavePlannerCustomEst" style="color:#0f172a; white-space:nowrap; height:33px;">Opslaan</button>
+        </div>
+      </div>
 
       <div style="border-top:1px solid var(--card-border); padding-top:10px;">
         <span class="field-lbl" style="font-weight:700; color:var(--text); margin-bottom:6px;">Activiteit / Workout toevoegen op deze dag:</span>
@@ -846,9 +884,10 @@
           <span class="nav-label" id="nutriCalMonthLabel">Oktober '26</span>
           <button type="button" class="nav-arrow" id="nutriCalNextMonthBtn">&#9654;</button>
         </div>
-        <div style="font-size:0.68rem; color:var(--muted); display:flex; gap:10px; justify-content:center; margin-bottom:6px;">
+        <div style="font-size:0.68rem; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:6px;">
           <span><span class="legend-dot" style="background:#f59e0b;"></span>Deels gelogd</span>
           <span><span class="legend-dot" style="background:#10b981;"></span>Afgerond</span>
+          <span><span class="legend-dot" style="background:#64748b;"></span>Vrije dag</span>
           <span><span class="legend-dot" style="background:#334155;"></span>Niet gelogd</span>
         </div>
         <div class="cal-header">
@@ -896,6 +935,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Optie 3: Banner & snelle dagmodus-keuze in Voeding (Grove schatting / Vrije dag) -->
+    <div id="nutriDayModeContainer"></div>
 
     <!-- 1. Dagmenu (Basisdag + Toegevoegde items onder Ontbijt, Lunch, Tussendoor & Extra) -->
     <div class="card">
@@ -1017,7 +1059,55 @@
     <div class="card">
       <h2>
         <span>Toevoegen</span>
+        <div style="display:flex; gap:5px; align-items:center;">
+          <button type="button" class="btn-sm btn-accent" id="btnToggleMealPaste" style="color:#0f172a;">+ Plak maaltijd/dag</button>
+          <button type="button" class="btn-sm" id="btnToggleQuickDayMode" title="Grove dag-schatting of vrije dag">🌴 Dag-modus</button>
+        </div>
       </h2>
+
+      <!-- Optie 1: Plak maaltijd / uit eten / hele dag uit chat -->
+      <div id="mealPasteBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong style="font-size:0.84rem; color:var(--accent);">📋 Plak maaltijd, drankje of hele dag</strong>
+          <button type="button" class="btn-sm" id="btnCloseMealPaste" style="padding:2px 7px;">✕</button>
+        </div>
+        <span class="field-lbl" style="line-height:1.4; margin-bottom:6px;">
+          Plak hier een of meerdere regels (bijv. uit de chat na uit eten of hotelbuffet). Gebruik optioneel <strong>Ontbijt:</strong>, <strong>Lunch:</strong>, <strong>Tussendoor:</strong>, <strong>Diner:</strong>, <strong>Drank:</strong> of <strong>Extra:</strong> (zonder kopje komt het onder het gekozen pill-kopje):
+        </span>
+        <textarea id="mealPasteText" rows="5" placeholder="Bijv:
+Ontbijt: Hotelbuffet pancakes, roerei & yoghurt (850 kcal, 38g eiwit, 95g kh, 32g vet)
+Lunch: Tomatensoep met stokbrood kruidenboter (520 kcal, 14g eiwit, 62g kh, 22g vet)
+Diner: Black Angus burger met friet & mayo (1180 kcal, 48g eiwit, 98g kh, 64g vet)
+Drank: Wellness Weizen 330ml (150 kcal, 2g eiwit, 13g kh, 0g vet)"></textarea>
+        <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-size:0.76rem;">
+          <input type="checkbox" id="chkPasteReplaceBasis" />
+          Standaard basisdag op deze dag op 0 zetten (handig bij hotelontbijt / dagje weg)
+        </label>
+        <div class="manual-grid" style="margin-top:0;">
+          <button type="button" class="btn btn-hevy" id="btnParseMealPaste" style="margin-top:0; padding:8px;">Inladen op deze dag</button>
+          <button type="button" class="btn-sm" id="btnCancelMealPaste">Annuleren</button>
+        </div>
+      </div>
+
+      <!-- Optie 3: Snelle grove schatting of vrije dag vanuit Voeding -->
+      <div id="nutriQuickModeBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--card-border); margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong style="font-size:0.83rem; color:var(--text);">🌴 Snelle dag-schatting of vrije dag</strong>
+          <button type="button" class="btn-sm" id="btnCloseQuickDayMode" style="padding:2px 7px;">✕</button>
+        </div>
+        <div class="pill-row" id="nutriQuickModePills" style="margin-bottom:8px;">
+          <span class="pill" data-nfmode="normal" style="padding:4px 9px; font-size:0.74rem;">📋 Normaal loggen</span>
+          <span class="pill" data-nfmode="est_normal" style="padding:4px 9px; font-size:0.74rem;">≈ Normale dag (~2300 kcal)</span>
+          <span class="pill" data-nfmode="est_rich" style="padding:4px 9px; font-size:0.74rem;">≈ Rijke dag (~3000 kcal)</span>
+          <span class="pill" data-nfmode="est_feast" style="padding:4px 9px; font-size:0.74rem;">≈ Feestdag (~3600 kcal)</span>
+          <span class="pill" data-nfmode="free" style="padding:4px 9px; font-size:0.74rem;">🌴 Vrije dag (niet geteld)</span>
+        </div>
+        <div class="manual-grid" style="margin-top:0;">
+          <div><span class="field-lbl">Aangepaste schatting Kcal:</span><input type="number" id="nutriCustomEstKcal" value="2800" step="50" style="margin-bottom:4px; padding:6px; font-size:0.8rem;" /></div>
+          <div><span class="field-lbl">Schatting Eiwit (g):</span><input type="number" id="nutriCustomEstProt" value="135" step="5" style="margin-bottom:4px; padding:6px; font-size:0.8rem;" /></div>
+        </div>
+        <button type="button" class="btn btn-accent" id="btnApplyCustomNutriEst" style="margin-top:4px; padding:7px; color:#0f172a;">Grove schatting toepassen</button>
+      </div>
       <div class="pill-row" id="targetSectionPills" style="margin-bottom:10px;">
         <span class="pill" data-tsec="ontbijt">🌅 Ontbijt</span>
         <span class="pill" data-tsec="lunch">🥪 Lunch</span>
@@ -1950,8 +2040,63 @@ function computeBasisItemMacros(bItem, qty) {
   };
 }
 
+const DAY_ESTIMATE_PRESETS = {
+  est_normal: { label: "Normale dag", kcal: 2300, p: 145, c: 235, f: 75 },
+  est_rich:   { label: "Rijke dag / uit eten", kcal: 3000, p: 130, c: 310, f: 120 },
+  est_feast:  { label: "Feestdag / weekend", kcal: 3600, p: 125, c: 375, f: 155 }
+};
+
+function setFoodDayMode(ymd, modeKey, customKcal = null, customProt = null) {
+  const log = getOrCreateFoodDay(ymd);
+  if (modeKey === "normal") {
+    log.dayMode = "normal";
+    log.estimateData = null;
+  } else if (modeKey === "free") {
+    log.dayMode = "free";
+    log.estimateData = null;
+    log.completed = false;
+  } else {
+    const preset = DAY_ESTIMATE_PRESETS[modeKey] || { label: "Grove schatting", kcal: 2800, p: 135, c: 280, f: 105 };
+    const kcal = customKcal !== null ? Math.max(100, Number(customKcal) || preset.kcal) : preset.kcal;
+    const p = customProt !== null ? Math.max(0, Number(customProt) || preset.p) : preset.p;
+    const remKcal = Math.max(0, kcal - p * 4);
+    const c = Math.round((remKcal * 0.58) / 4);
+    const f = Math.round((remKcal * 0.42) / 9);
+    log.dayMode = "estimate";
+    log.estimateData = {
+      presetKey: modeKey,
+      label: customKcal !== null ? "Aangepaste schatting" : preset.label,
+      kcal, p, c, f
+    };
+    log.touched = true;
+    log.completed = true;
+  }
+  saveFoodState();
+}
+
 function computeDayNutrition(ymd) {
   const log = state.foodLogs[ymd];
+  if (log && log.dayMode === "free") {
+    return {
+      kcal: 0, p: 0, c: 0, f: 0, drinkMl: 0,
+      dayMode: "free", isFreeDay: true, isEstimate: false, estimateLabel: "",
+      completed: false, touched: false
+    };
+  }
+  if (log && log.dayMode === "estimate" && log.estimateData) {
+    const ed = log.estimateData;
+    return {
+      kcal: Math.round(Number(ed.kcal || 0)),
+      p: Math.round(Number(ed.p || 0)),
+      c: Math.round(Number(ed.c || 0)),
+      f: Math.round(Number(ed.f || 0)),
+      drinkMl: 2000,
+      dayMode: "estimate", isFreeDay: false, isEstimate: true, estimateLabel: ed.label || "Grove schatting",
+      completed: Boolean(log.completed !== false),
+      touched: true
+    };
+  }
+
   let totalKcal = 0, totalP = 0, totalC = 0, totalF = 0, totalDrinkMl = 0;
 
   (state.basisItems || []).forEach(bItem => {
@@ -1995,9 +2140,130 @@ function computeDayNutrition(ymd) {
     c: Math.round(totalC),
     f: Math.round(totalF),
     drinkMl: totalDrinkMl,
+    dayMode: "normal", isFreeDay: false, isEstimate: false, estimateLabel: "",
     completed: Boolean(log && log.completed),
     touched: Boolean(log && (log.touched || log.completed || (log.drinks && log.drinks.length > 0) || (log.extras && log.extras.length > 0) || (log.dinner && log.dinner.confirmed)))
   };
+}
+
+// === OPTIE 1: PARSER VOOR GEPLAKTE MAALTIJD / UIT ETEN / HELE DAG ===
+function parseAndApplyPastedMeals(rawText, defaultYmd, defaultSection, clearBasis) {
+  const lines = rawText.split(/
+?
+/).map(l => l.trim()).filter(Boolean);
+  let activeYmd = defaultYmd;
+  const dayNames = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
+  const mon = getMondayOfDate(defaultYmd);
+  let addedCount = 0;
+  const touchedDates = new Set();
+
+  for (const rawLine of lines) {
+    let clean = rawLine.replace(/\*\*/g, "").replace(/^[-•*]\s*/, "").trim();
+    if (!clean) continue;
+
+    // Check of regel begint met datum YYYY-MM-DD:
+    const mYmd = clean.match(/^(\d{4}-\d{2}-\d{2})\s*[:\-–]\s*(.*)$/);
+    if (mYmd) {
+      activeYmd = mYmd[1];
+      clean = mYmd[2].trim();
+      if (!clean) continue;
+    } else {
+      // Check of regel alleen een dagnaam-kopje is (bijv. "Vrijdag:" of "Zaterdag:")
+      const lowerOnly = clean.toLowerCase().replace(/[:\-–]$/, "").trim();
+      const dHeaderIdx = dayNames.indexOf(lowerOnly);
+      if (dHeaderIdx !== -1) {
+        const d = new Date(mon);
+        d.setDate(mon.getDate() + dHeaderIdx);
+        activeYmd = formatYMD(d);
+        continue;
+      }
+    }
+
+    // Check of regel een maaltijd-prefix heeft: Ontbijt:, Lunch:, Tussendoor:, Extra:, Diner:, Avondeten:, Drank:
+    let targetSec = defaultSection || "extra";
+    let isDinnerLine = false;
+    let isDrinkLine = false;
+
+    const mPrefix = clean.match(/^(ontbijt|lunch|tussendoor|extra|diner|avondeten|drank|drinken)\s*[:\-–]\s*(.+)$/i);
+    if (mPrefix) {
+      const pKey = mPrefix[1].toLowerCase();
+      clean = mPrefix[2].trim();
+      if (pKey === "ontbijt") targetSec = "ontbijt";
+      else if (pKey === "lunch") targetSec = "lunch";
+      else if (pKey === "tussendoor") targetSec = "tussendoor";
+      else if (pKey === "extra") targetSec = "extra";
+      else if (pKey === "diner" || pKey === "avondeten") isDinnerLine = true;
+      else if (pKey === "drank" || pKey === "drinken") isDrinkLine = true;
+    }
+
+    const mKcal = clean.match(/(\d{2,4})\s*kcal/i);
+    const mProt = clean.match(/(\d{1,3}(?:[.,]\d)?)\s*g?\s*(?:eiwit|eiwitten|protein|e\b)/i);
+    const mCarb = clean.match(/(\d{1,3}(?:[.,]\d)?)\s*g?\s*(?:koolhydraten|kh\b|carbs)/i);
+    const mFat  = clean.match(/(\d{1,3}(?:[.,]\d)?)\s*g?\s*(?:vet|vetten|v\b|fat)/i);
+    const mMl   = clean.match(/(\d{2,4})\s*ml\b/i);
+
+    if (!mKcal && !mProt && !mMl) continue;
+
+    const kcal = mKcal ? Math.round(Number(mKcal[1])) : 0;
+    const p = mProt ? Number(mProt[1].replace(",", ".")) : 0;
+    const c = mCarb ? Number(mCarb[1].replace(",", ".")) : 0;
+    const f = mFat  ? Number(mFat[1].replace(",", ".")) : 0;
+
+    let title = clean
+      .replace(/\([^)]*(?:kcal|eiwit|kh|vet)[^)]*\)/gi, "")
+      .replace(/\s*[-–]\s*\d+\s*kcal.*$/i, "")
+      .replace(/\b\d{2,4}\s*ml\b/gi, "")
+      .trim();
+    if (!title) title = isDrinkLine ? "Drankje" : "Uit eten / maaltijd";
+
+    const log = getOrCreateFoodDay(activeYmd);
+    // Als dag op 'free' of 'estimate' stond, zet terug naar 'normal'
+    if (log.dayMode === "free" || log.dayMode === "estimate") {
+      log.dayMode = "normal";
+      log.estimateData = null;
+    }
+
+    if (clearBasis && !touchedDates.has(activeYmd)) {
+      (state.basisItems || []).forEach(b => { log.basisOverrides[b.id] = 0; });
+    }
+    touchedDates.add(activeYmd);
+
+    if (isDrinkLine || (mMl && /weizen|bier|latte|cappuccino|koffie|thee|cola|sap|drank|wijn|chocomel|smoothie/i.test(title))) {
+      const ml = mMl ? Number(mMl[1]) : 250;
+      const factor = ml / 100;
+      log.drinks.push({
+        name: title,
+        ml,
+        section: targetSec,
+        kcal100: factor > 0 ? kcal / factor : kcal,
+        p100: factor > 0 ? p / factor : p,
+        c100: factor > 0 ? c / factor : c,
+        f100: factor > 0 ? f / factor : f,
+        kcal, p, c, f
+      });
+    } else if (isDinnerLine) {
+      log.dinner = { title, kcal, p, c, f, portionMult: 1, confirmed: true };
+    } else {
+      log.extras.push({
+        name: title,
+        baseName: title,
+        section: targetSec,
+        mult: 1,
+        baseKcal: kcal,
+        baseP: p,
+        baseC: c,
+        baseF: f,
+        kcal, p, c, f
+      });
+    }
+    log.touched = true;
+    addedCount++;
+  }
+
+  if (addedCount > 0) {
+    saveFoodState();
+  }
+  return addedCount;
 }
 
 function isTrainingDay(ymd) {
@@ -2108,7 +2374,8 @@ function renderNutriDateCalendar() {
     const fInfo = computeDayNutrition(cellYmd);
 
     let statusCls = "";
-    if (fInfo.completed) statusCls = "food-green";
+    if (fInfo.isFreeDay) statusCls = "food-free";
+    else if (fInfo.completed) statusCls = "food-green";
     else if (fInfo.touched) statusCls = "food-orange";
 
     html += `<div class="nutri-cal-cell ${inMonth ? "" : "other-month"} ${statusCls} ${isSel ? "selected" : ""}" data-pick-nutri-day="${cellYmd}">${cur.getDate()}</div>`;
@@ -2138,6 +2405,33 @@ function renderNutritionTab() {
   renderNutriDateCalendar();
   document.getElementById("nutriDayTypeBadge").textContent = trainDay ? "🏋️ Trainingsdag" : "🛋️ Rustdag";
   document.getElementById("nutriDayTypeBadge").style.color = trainDay ? "var(--accent-hevy)" : "var(--muted)";
+
+  const modeCont = document.getElementById("nutriDayModeContainer");
+  if (modeCont) {
+    if (totals.isFreeDay) {
+      modeCont.innerHTML = `
+        <div class="day-mode-banner is-free" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div>
+            <strong>🌴 Vrije dag (bewust niet geteld)</strong>
+            <div style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Deze dag telt niet als 0 kcal mee in je week- en maandgemiddelden.</div>
+          </div>
+          <button type="button" class="btn-sm btn-accent" data-set-nutri-mode="normal" style="color:#0f172a;">Terug naar loggen</button>
+        </div>
+      `;
+    } else if (totals.isEstimate) {
+      modeCont.innerHTML = `
+        <div class="day-mode-banner" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div>
+            <strong style="color:var(--accent);">≈ Grove dag-schatting: ${escapeHtml(totals.estimateLabel)}</strong>
+            <div style="font-size:0.74rem; color:var(--muted); margin-top:2px;">Ingesteld op ${totals.kcal} kcal · ${totals.p}g E · ${totals.c}g KH · ${totals.f}g V</div>
+          </div>
+          <button type="button" class="btn-sm" data-set-nutri-mode="normal">Terug naar los loggen</button>
+        </div>
+      `;
+    } else {
+      modeCont.innerHTML = "";
+    }
+  }
 
   // Doelen & Voortgangsbalken
   const goalKcal = trainDay ? Number(state.nutriGoals.kcalTrain || 2550) : Number(state.nutriGoals.kcalRest || 2250);
@@ -2508,8 +2802,10 @@ function renderPlannerTab() {
     const hasOpenPlan = dayWorkouts.some(w => !w.completed);
 
     let pillBarsHtml = "";
-    if (foodInfo.completed) {
-      pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-green" title="Voeding afgerond">🍽️</div>`;
+    if (foodInfo.isFreeDay) {
+      pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-free" title="Vrije dag (niet geteld)">🌴</div>`;
+    } else if (foodInfo.completed) {
+      pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-green" title="Voeding afgerond">${foodInfo.isEstimate ? "≈🍽️" : "🍽️"}</div>`;
     } else if (foodInfo.touched) {
       pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-orange" title="Voeding deels gelogd">🍽️</div>`;
     }
@@ -2537,7 +2833,16 @@ function renderPlannerTab() {
   const completedPlans = pList.filter(w => w.completed);
   const totalBurnedDay = completedPlans.reduce((acc, w) => acc + (w.burnedKcal || 0), 0);
 
-  const statusTxt = fTotals.completed ? "✅ Voeding afgerond" : (fTotals.touched ? "🟠 Voeding deels gelogd" : "⚪ Nog geen voeding gelogd");
+  const statusTxt = fTotals.isFreeDay
+    ? "🌴 Vrije dag (bewust niet geteld)"
+    : (fTotals.isEstimate
+        ? `≈ Grove schatting (${escapeHtml(fTotals.estimateLabel)})`
+        : (fTotals.completed ? "✅ Voeding afgerond" : (fTotals.touched ? "🟠 Voeding deels gelogd" : "⚪ Nog geen voeding gelogd")));
+  const curDayLog = state.foodLogs[selYmd];
+  const activePfMode = fTotals.isFreeDay ? "free" : (fTotals.isEstimate ? (curDayLog?.estimateData?.presetKey || "est_rich") : "normal");
+  document.querySelectorAll("#plannerFoodModePills .pill").forEach(p => {
+    p.classList.toggle("active", p.getAttribute("data-pfmode") === activePfMode);
+  });
   let woSummaryLine = "Geen geregistreerde activiteit op deze dag";
   if (hasCsv || completedPlans.length > 0) {
     const parts = [];
@@ -3015,7 +3320,7 @@ function renderOverviewDashboard(sets) {
   for (const m of state.bodyMeasurements) ensureBucket(getBucketKey(m.date, gran)).bodyEntries.push(m);
   for (const [fDate, fLog] of Object.entries(state.foodLogs)) {
     const t = computeDayNutrition(fDate);
-    if (t.touched) ensureBucket(getBucketKey(fDate, gran)).foodDays.push(t);
+    if (t.touched && !t.isFreeDay) ensureBucket(getBucketKey(fDate, gran)).foodDays.push(t);
   }
 
   const allKeys = Object.keys(bucketMap).sort();
@@ -4332,6 +4637,78 @@ function bindEvents() {
       const idx = Number(extraInp.getAttribute("data-extra-grams"));
       updateExtraItemGrams(idx, Number(extraInp.value) || 100);
     }
+  });
+
+
+  // Optie 3: Snelle voedingsstatus / grove schatting in Planner
+  document.getElementById("plannerFoodModePills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    const mode = pill.getAttribute("data-pfmode");
+    setFoodDayMode(state.selectedPlannerDate, mode);
+    refreshAll();
+  });
+
+  document.getElementById("btnSavePlannerCustomEst").addEventListener("click", () => {
+    const k = Number(document.getElementById("plannerEstKcal").value) || 2800;
+    const p = Number(document.getElementById("plannerEstProt").value) || 135;
+    setFoodDayMode(state.selectedPlannerDate, "est_custom", k, p);
+    refreshAll();
+  });
+
+  // Optie 1: Plak maaltijd / uit eten / hele dag in Voeding
+  document.getElementById("btnToggleMealPaste").addEventListener("click", () => {
+    const box = document.getElementById("mealPasteBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  });
+  document.getElementById("btnCloseMealPaste").addEventListener("click", () => {
+    document.getElementById("mealPasteBox").style.display = "none";
+  });
+  document.getElementById("btnCancelMealPaste").addEventListener("click", () => {
+    document.getElementById("mealPasteBox").style.display = "none";
+  });
+  document.getElementById("btnParseMealPaste").addEventListener("click", () => {
+    const txt = document.getElementById("mealPasteText").value;
+    const clearBasis = document.getElementById("chkPasteReplaceBasis").checked;
+    const count = parseAndApplyPastedMeals(txt, state.selectedNutriDate, state.selectedTargetSection, clearBasis);
+    if (count === 0) {
+      alert("Geen maaltijden of calorieën herkend. Zorg dat elke regel bijv. '(650 kcal, 40g eiwit, 60g kh, 22g vet)' bevat.");
+      return;
+    }
+    document.getElementById("mealPasteText").value = "";
+    document.getElementById("mealPasteBox").style.display = "none";
+    renderNutritionTab();
+    renderPlannerTab();
+  });
+
+  // Optie 3: Snelle dag-modus (grove schatting / vrije dag) in Voeding
+  document.getElementById("btnToggleQuickDayMode").addEventListener("click", () => {
+    const box = document.getElementById("nutriQuickModeBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+  });
+  document.getElementById("btnCloseQuickDayMode").addEventListener("click", () => {
+    document.getElementById("nutriQuickModeBox").style.display = "none";
+  });
+  document.getElementById("nutriQuickModePills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    const mode = pill.getAttribute("data-nfmode");
+    setFoodDayMode(state.selectedNutriDate, mode);
+    document.getElementById("nutriQuickModeBox").style.display = "none";
+    refreshAll();
+  });
+  document.getElementById("btnApplyCustomNutriEst").addEventListener("click", () => {
+    const k = Number(document.getElementById("nutriCustomEstKcal").value) || 2800;
+    const p = Number(document.getElementById("nutriCustomEstProt").value) || 135;
+    setFoodDayMode(state.selectedNutriDate, "est_custom", k, p);
+    document.getElementById("nutriQuickModeBox").style.display = "none";
+    refreshAll();
+  });
+  document.getElementById("nutriDayModeContainer").addEventListener("click", e => {
+    const btn = e.target.closest("[data-set-nutri-mode]");
+    if (!btn) return;
+    setFoodDayMode(state.selectedNutriDate, btn.getAttribute("data-set-nutri-mode"));
+    refreshAll();
   });
 
   document.getElementById("btnResetDayDefaults").addEventListener("click", () => {
