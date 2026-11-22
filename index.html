@@ -2148,9 +2148,7 @@ function computeDayNutrition(ymd) {
 
 // === OPTIE 1: PARSER VOOR GEPLAKTE MAALTIJD / UIT ETEN / HELE DAG ===
 function parseAndApplyPastedMeals(rawText, defaultYmd, defaultSection, clearBasis) {
-  const lines = rawText.split(/
-?
-/).map(l => l.trim()).filter(Boolean);
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   let activeYmd = defaultYmd;
   const dayNames = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
   const mon = getMondayOfDate(defaultYmd);
