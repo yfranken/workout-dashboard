@@ -1203,12 +1203,9 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <!-- 5. Dag Afronden voor Planner -->
-    <div class="card" style="border-color:var(--accent-hevy);">
-      <label class="toggle-label" style="color:var(--text); font-weight:700; font-size:0.9rem; justify-content:space-between;">
-        <span>✅ Dag voeding afronden (Groen vinkje in Planner)</span>
-        <input type="checkbox" id="chkCompleteFoodDay" style="width:20px; height:20px;" />
-      </label>
-    </div>
+    <button type="button" class="btn btn-hevy" id="btnToggleCompleteFoodDay" style="padding:14px; font-size:0.95rem; margin-bottom:14px;">
+      ✅ Dag afronden
+    </button>
   </div>
 
   <!-- ========================================================= -->
@@ -2809,7 +2806,14 @@ function renderNutritionTab() {
       }).join("")
     : `<div style="grid-column:1/-1; font-size:0.75rem; color:var(--muted); padding:6px;">Geen favoriet eten. Zoek hierboven een product en klik op ☆ om toe te voegen.</div>`;
 
-  document.getElementById("chkCompleteFoodDay").checked = Boolean(log.completed);
+  const completeBtn = document.getElementById("btnToggleCompleteFoodDay");
+  if (completeBtn) {
+    const isDone = Boolean(log.completed);
+    completeBtn.textContent = isDone ? "✅ Dag afgerond (klik om terug te draaien)" : "✅ Dag afronden";
+    completeBtn.style.background = isDone ? "rgba(16, 185, 129, 0.18)" : "var(--accent-hevy)";
+    completeBtn.style.color = isDone ? "var(--accent-hevy)" : "#0f172a";
+    completeBtn.style.border = isDone ? "1.5px solid var(--accent-hevy)" : "none";
+  }
 }
 
 // === RENDER PLANNER TAB ===
@@ -5625,11 +5629,13 @@ function bindEvents() {
     document.getElementById("customFoodFat").value = "";
   });
 
-  document.getElementById("chkCompleteFoodDay").addEventListener("change", e => {
+  document.getElementById("btnToggleCompleteFoodDay").addEventListener("click", () => {
     const log = getOrCreateFoodDay(state.selectedNutriDate);
-    log.completed = e.target.checked;
+    log.completed = !log.completed;
     log.touched = true;
-    saveFoodState(); renderPlannerTab();
+    saveFoodState();
+    renderNutritionTab();
+    renderPlannerTab();
   });
 
   // Voedingsdoelen opslaan
