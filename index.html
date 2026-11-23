@@ -3836,7 +3836,7 @@ function renderTrainingProgressSection(sets) {
     const col = (SPORT_PRESETS[sp] && SPORT_PRESETS[sp].color) || fallbackPalette[idx % fallbackPalette.length];
     return {
       label: sp,
-      data: sortedKeys.map(k => Math.round(buckets[k][sp] || 0)),
+      data: sortedKeys.map(k => Math.round((buckets[k] && buckets[k][sp]) || 0)),
       backgroundColor: col,
       borderRadius: 4
     };
