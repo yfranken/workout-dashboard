@@ -1203,8 +1203,8 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <!-- 5. Dag Afronden voor Planner -->
-    <button type="button" class="btn btn-hevy" id="btnToggleCompleteFoodDay" style="padding:14px; font-size:0.95rem; margin-bottom:14px;">
-      ✅ Dag afronden
+    <button type="button" class="btn btn-hevy" id="btnToggleCompleteFoodDay" style="padding:14px; font-size:0.95rem; margin-bottom:14px; line-height:1.3;">
+      Dag afronden
     </button>
   </div>
 
@@ -2809,7 +2809,9 @@ function renderNutritionTab() {
   const completeBtn = document.getElementById("btnToggleCompleteFoodDay");
   if (completeBtn) {
     const isDone = Boolean(log.completed);
-    completeBtn.textContent = isDone ? "✅ Dag afgerond (klik om terug te draaien)" : "✅ Dag afronden";
+    completeBtn.innerHTML = isDone
+      ? `<div>Dag afgerond</div><div style="font-size:0.75rem; font-weight:500; opacity:0.85; margin-top:2px;">(Klik om terug te draaien)</div>`
+      : `Dag afronden`;
     completeBtn.style.background = isDone ? "rgba(16, 185, 129, 0.18)" : "var(--accent-hevy)";
     completeBtn.style.color = isDone ? "var(--accent-hevy)" : "#0f172a";
     completeBtn.style.border = isDone ? "1.5px solid var(--accent-hevy)" : "none";
