@@ -307,7 +307,7 @@
     }
     .nav-arrow {
       background: #1e293b; border: 1px solid var(--card-border); color: var(--text);
-      border-radius: 7px; padding: 5px 12px; font-size: 0.85rem; font-weight: 700;
+      border-radius: 7px; padding: 5px 9px; font-size: 0.82rem; font-weight: 700;
       cursor: pointer;
     }
     .nav-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -669,9 +669,15 @@
         <div class="period-pill" data-gran="year">Per Jaar</div>
       </div>
       <div class="period-nav" id="ovNavBar">
-        <button type="button" class="nav-arrow" id="ovPrevBtn">&#9664;</button>
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="nav-arrow" id="ovPrevPageBtn" title="Vorige reeks" disabled>&#9194;</button>
+          <button type="button" class="nav-arrow" id="ovPrevBtn" title="1 periode terug">&#9664;</button>
+        </div>
         <span class="nav-label" id="ovRangeLabel">Alle jaren</span>
-        <button type="button" class="nav-arrow" id="ovNextBtn" disabled>&#9654;</button>
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="nav-arrow" id="ovNextBtn" title="1 periode vooruit" disabled>&#9654;</button>
+          <button type="button" class="nav-arrow" id="ovNextPageBtn" title="Volgende reeks" disabled>&#9193;</button>
+        </div>
       </div>
     </div>
 
@@ -1222,9 +1228,15 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
         <div class="period-pill" data-trgran="year">Per Jaar</div>
       </div>
       <div class="period-nav" id="trNavBar">
-        <button type="button" class="nav-arrow" id="trPrevBtn">&#9664;</button>
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="nav-arrow" id="trPrevPageBtn" title="Vorige reeks" disabled>&#9194;</button>
+          <button type="button" class="nav-arrow" id="trPrevBtn" title="1 periode terug">&#9664;</button>
+        </div>
         <span class="nav-label" id="trRangeLabel">-</span>
-        <button type="button" class="nav-arrow" id="trNextBtn" disabled>&#9654;</button>
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="nav-arrow" id="trNextBtn" title="1 periode vooruit" disabled>&#9654;</button>
+          <button type="button" class="nav-arrow" id="trNextPageBtn" title="Volgende reeks" disabled>&#9193;</button>
+        </div>
       </div>
     </div>
 
@@ -1361,9 +1373,15 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
           <div class="period-pill active" data-bperiod="all">Altijd</div>
         </div>
         <div class="period-nav" id="bodyPeriodNavBar" style="display:none;">
-          <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn">&#9664;</button>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="nav-arrow" id="bodyPrevPagePeriodBtn" title="Vorige reeks" disabled>&#9194;</button>
+            <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="1 periode terug">&#9664;</button>
+          </div>
           <span class="nav-label" id="bodyPeriodLabel">-</span>
-          <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" disabled>&#9654;</button>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="1 periode vooruit" disabled>&#9654;</button>
+            <button type="button" class="nav-arrow" id="bodyNextPagePeriodBtn" title="Volgende reeks" disabled>&#9193;</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1671,6 +1689,9 @@ let state = {
   trActivityMetric: "minutes",
   trWindowStart: null,
   trWindowEnd: null,
+  trWindowSize: 10,
+  trVisibleKeys: [],
+  trVisibleLabels: [],
   // Voeding & Planner state
   nutriGoals: safeParseJSON("nutri_goals_v1", {
     kcalRest: 2250,
@@ -3352,7 +3373,9 @@ function renderOverviewDashboard(sets) {
   const visibleKeys = allKeys.slice(startIdx, endIdx);
 
   document.getElementById("ovPrevBtn").disabled = startIdx === 0;
+  document.getElementById("ovPrevPageBtn").disabled = startIdx === 0;
   document.getElementById("ovNextBtn").disabled = state.ovOffset === 0;
+  document.getElementById("ovNextPageBtn").disabled = state.ovOffset === 0;
   document.getElementById("ovRangeLabel").textContent = visibleKeys.length > 0 ? `${formatBucketLabel(visibleKeys[0], gran)} – ${formatBucketLabel(visibleKeys[visibleKeys.length - 1], gran)}` : "Geen data";
 
   let totalSessions = 0, totalMinutes = 0, totalVolKg = 0, totalSets = 0, totalReps = 0;
@@ -3517,9 +3540,13 @@ function renderBodyMeasurementsTab() {
     const lbl = document.getElementById("bodyPeriodLabel");
     if (lbl) lbl.textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
     const prevB = document.getElementById("bodyPrevPeriodBtn");
+    const prevPageB = document.getElementById("bodyPrevPagePeriodBtn");
     const nextB = document.getElementById("bodyNextPeriodBtn");
+    const nextPageB = document.getElementById("bodyNextPagePeriodBtn");
     if (prevB) prevB.disabled = !range.hasOlder;
+    if (prevPageB) prevPageB.disabled = !range.hasOlder;
     if (nextB) nextB.disabled = (state.bodyPeriodOffset || 0) === 0;
+    if (nextPageB) nextPageB.disabled = (state.bodyPeriodOffset || 0) === 0;
   } else if (bodyNavBar) {
     bodyNavBar.style.display = "none";
   }
@@ -3839,6 +3866,7 @@ function computeContinuousPeriodWindow(gran, offset, earliestYmd, latestYmd, exi
   return {
     visibleKeys,
     labels,
+    windowSize,
     safeOffset,
     hasOlder: startIdx > 0,
     hasNewer: safeOffset > 0,
@@ -3944,14 +3972,21 @@ function renderTrainingProgressSection(sets) {
   const earliestActDate = allActivities.reduce((minD, a) => (a.date < minD ? a.date : minD), TODAY_YMD);
   const win = computeContinuousPeriodWindow(gran, state.trOffset, earliestActDate, latestActDate, Object.keys(buckets));
   state.trOffset = win.safeOffset;
+  state.trWindowSize = win.windowSize;
   state.trWindowStart = win.startYmd;
   state.trWindowEnd = win.endYmd;
+  state.trVisibleKeys = win.visibleKeys;
+  state.trVisibleLabels = win.labels;
 
   const trPrevBtn = document.getElementById("trPrevBtn");
+  const trPrevPageBtn = document.getElementById("trPrevPageBtn");
   const trNextBtn = document.getElementById("trNextBtn");
+  const trNextPageBtn = document.getElementById("trNextPageBtn");
   const trRangeLbl = document.getElementById("trRangeLabel");
   if (trPrevBtn) trPrevBtn.disabled = !win.hasOlder;
+  if (trPrevPageBtn) trPrevPageBtn.disabled = !win.hasOlder;
   if (trNextBtn) trNextBtn.disabled = !win.hasNewer;
+  if (trNextPageBtn) trNextPageBtn.disabled = !win.hasNewer;
   if (trRangeLbl) {
     trRangeLbl.textContent = win.labels.length > 0 ? `${win.labels[0]} – ${win.labels[win.labels.length - 1]}` : "-";
   }
@@ -4078,41 +4113,104 @@ function renderExerciseChart() {
     }
   }
 
-  let timeline = fullTimeline;
-  let visibleBaselines = baselines;
-
-  if (state.trWindowStart && state.trWindowEnd) {
-    const slicedT = [], slicedB = [];
-    for (let i = 0; i < fullTimeline.length; i++) {
-      if (fullTimeline[i].day >= state.trWindowStart && fullTimeline[i].day <= state.trWindowEnd) {
-        slicedT.push(fullTimeline[i]);
-        slicedB.push(baselines[i]);
+  const gran = state.trGranularity || "week";
+  const bucketedTimeline = {};
+  for (let i = 0; i < fullTimeline.length; i++) {
+    const entry = fullTimeline[i];
+    const bBase = baselines[i] || { base: 0, low: 0, high: 0 };
+    const bKey = gran === "week" ? getISOWeekKey(entry.day) : getBucketKey(entry.day, gran);
+    if (!bucketedTimeline[bKey]) {
+      bucketedTimeline[bKey] = {
+        ...entry,
+        baseLow: bBase.low,
+        baseHigh: bBase.high,
+        sessionDays: [entry.day]
+      };
+    } else {
+      const cur = bucketedTimeline[bKey];
+      cur.sessionDays.push(entry.day);
+      if (state.selectedMetric === "volume") {
+        cur.volume += entry.volume;
+        cur.baseLow += bBase.low;
+        cur.baseHigh += bBase.high;
+        if (entry[state.selectedMetric] >= cur[state.selectedMetric]) {
+          cur.day = entry.day;
+          cur.source = entry.source;
+          cur.corrected = entry.corrected;
+          cur.appliedFactor = entry.appliedFactor;
+        }
+      } else if (entry[state.selectedMetric] >= cur[state.selectedMetric]) {
+        cur.day = entry.day;
+        cur.source = entry.source;
+        cur.corrected = entry.corrected;
+        cur.appliedFactor = entry.appliedFactor;
+        cur.maxWeight = entry.maxWeight;
+        cur.e1rm = entry.e1rm;
+        cur.volume = entry.volume;
+        cur.baseLow = bBase.low;
+        cur.baseHigh = bBase.high;
       }
     }
-    timeline = slicedT;
-    visibleBaselines = slicedB;
   }
 
-  const labels = timeline.map(d => d.day);
-  const values = timeline.map(d => Number(d[state.selectedMetric].toFixed(1)));
-  const pointColors = timeline.map(d => d.corrected ? "#c084fc" : (d.source === "garmin" ? "#f59e0b" : "#10b981"));
+  const alignedKeys = (Array.isArray(state.trVisibleKeys) && state.trVisibleKeys.length > 0)
+    ? state.trVisibleKeys
+    : Object.keys(bucketedTimeline).sort();
+  const labels = (Array.isArray(state.trVisibleLabels) && state.trVisibleLabels.length === alignedKeys.length)
+    ? state.trVisibleLabels
+    : alignedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
+
+  const timeline = alignedKeys.map(k => bucketedTimeline[k] || null);
+  const values = timeline.map(d => d ? Number(d[state.selectedMetric].toFixed(1)) : null);
+  const pointColors = timeline.map(d => !d ? "transparent" : (d.corrected ? "#c084fc" : (d.source === "garmin" ? "#f59e0b" : "#10b981")));
 
   const datasets = [{
-    label: chosen, data: values, borderColor: "#38bdf8", backgroundColor: "rgba(56, 189, 248, 0.12)",
-    pointBackgroundColor: pointColors, pointBorderColor: pointColors, pointRadius: 4.5, pointHoverRadius: 7, tension: 0.25, fill: !state.showBaselineBand
+    label: chosen,
+    data: values,
+    borderColor: "#38bdf8",
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    pointBackgroundColor: pointColors,
+    pointBorderColor: pointColors,
+    pointRadius: timeline.map(d => d ? 4.5 : 0),
+    pointHoverRadius: timeline.map(d => d ? 7 : 0),
+    spanGaps: true,
+    tension: 0.25,
+    fill: !state.showBaselineBand
   }];
 
-  if (state.showBaselineBand && visibleBaselines.length >= 3) {
-    datasets.push({ label: "Bovengrens", data: visibleBaselines.map(b => Number(b.high.toFixed(1))), borderColor: "rgba(16, 185, 129, 0.25)", borderWidth: 1, pointRadius: 0, fill: false, tension: 0.35 });
-    datasets.push({ label: "Baseline band", data: visibleBaselines.map(b => Number(b.low.toFixed(1))), borderColor: "rgba(16, 185, 129, 0.25)", backgroundColor: "rgba(16, 185, 129, 0.08)", borderWidth: 1, pointRadius: 0, fill: "-1", tension: 0.35 });
+  const validBucketCount = timeline.filter(Boolean).length;
+  if (state.showBaselineBand && validBucketCount >= 3) {
+    datasets.push({
+      label: "Bovengrens",
+      data: timeline.map(d => d ? Number(d.baseHigh.toFixed(1)) : null),
+      borderColor: "rgba(16, 185, 129, 0.25)",
+      borderWidth: 1,
+      pointRadius: 0,
+      spanGaps: true,
+      fill: false,
+      tension: 0.35
+    });
+    datasets.push({
+      label: "Baseline band",
+      data: timeline.map(d => d ? Number(d.baseLow.toFixed(1)) : null),
+      borderColor: "rgba(16, 185, 129, 0.25)",
+      backgroundColor: "rgba(16, 185, 129, 0.08)",
+      borderWidth: 1,
+      pointRadius: 0,
+      spanGaps: true,
+      fill: "-1",
+      tension: 0.35
+    });
   }
 
   let trendPctLabel = null;
   let trendLastIdx = -1;
-  if (isTrendEnabledFor(chosen) && values.length >= 2) {
-    const firstVal = values[0];
-    const lastVal = values[values.length - 1];
-    trendLastIdx = values.length - 1;
+  const nonNullIndices = values.map((v, i) => (v !== null ? i : -1)).filter(i => i !== -1);
+  if (isTrendEnabledFor(chosen) && nonNullIndices.length >= 2) {
+    const firstIdx = nonNullIndices[0];
+    trendLastIdx = nonNullIndices[nonNullIndices.length - 1];
+    const firstVal = values[firstIdx];
+    const lastVal = values[trendLastIdx];
     if (firstVal > 0) {
       const pctDiff = ((lastVal - firstVal) / firstVal) * 100;
       const sign = pctDiff >= 0 ? "+" : "";
@@ -4120,7 +4218,7 @@ function renderExerciseChart() {
     }
     datasets.push({
       label: "Trend",
-      data: values.map((_, idx) => idx === 0 ? firstVal : (idx === trendLastIdx ? lastVal : null)),
+      data: values.map((_, idx) => idx === firstIdx ? firstVal : (idx === trendLastIdx ? lastVal : null)),
       borderColor: "rgba(248, 250, 252, 0.65)",
       borderWidth: 2,
       borderDash: [6, 6],
@@ -4179,9 +4277,31 @@ function renderExerciseChart() {
     plugins: [trendEndDeltaPlugin],
     options: {
       responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-      onClick: (event, elements) => { if (elements && elements.length > 0) openPointInspector(chosen, timeline[elements[0].index].day, timeline[elements[0].index]); },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)", filter: item => item.datasetIndex === 0 } },
-      scales: { x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } }, y: { ticks: { color: "#94a3b8" }, grid: { color: "#334155" } } }
+      onClick: (event, elements) => {
+        if (elements && elements.length > 0) {
+          const entry = timeline[elements[0].index];
+          if (entry) openPointInspector(chosen, entry.day, entry);
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(15, 23, 42, 0.95)",
+          filter: item => item.datasetIndex === 0 && item.raw !== null,
+          callbacks: {
+            title: items => {
+              if (!items || !items.length) return "";
+              const idx = items[0].dataIndex;
+              const entry = timeline[idx];
+              return entry ? `${labels[idx]} (${formatShortNL(entry.day)})` : labels[idx];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } }
+      }
     }
   });
 }
@@ -4254,7 +4374,17 @@ function bindEvents() {
     renderOverviewDashboard(getCombinedSets());
   });
   document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("ovPrevPageBtn").addEventListener("click", () => {
+    const step = state.ovGranularity === "month" ? 12 : (state.ovGranularity === "quarter" ? 8 : 10);
+    state.ovOffset += step;
+    renderOverviewDashboard(getCombinedSets());
+  });
   document.getElementById("ovNextBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("ovNextPageBtn").addEventListener("click", () => {
+    const step = state.ovGranularity === "month" ? 12 : (state.ovGranularity === "quarter" ? 8 : 10);
+    state.ovOffset = Math.max(0, state.ovOffset - step);
+    renderOverviewDashboard(getCombinedSets());
+  });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovMuscleMetricPills").addEventListener("click", e => {
@@ -4400,8 +4530,18 @@ function bindEvents() {
     refreshTrainingTabAll();
   });
 
+  document.getElementById("trPrevPageBtn").addEventListener("click", () => {
+    state.trOffset = (state.trOffset || 0) + (state.trWindowSize || 10);
+    refreshTrainingTabAll();
+  });
+
   document.getElementById("trNextBtn").addEventListener("click", () => {
     state.trOffset = Math.max(0, (state.trOffset || 0) - 1);
+    refreshTrainingTabAll();
+  });
+
+  document.getElementById("trNextPageBtn").addEventListener("click", () => {
+    state.trOffset = Math.max(0, (state.trOffset || 0) - (state.trWindowSize || 10));
     refreshTrainingTabAll();
   });
 
@@ -5558,8 +5698,16 @@ function bindEvents() {
     state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 1;
     renderBodyMeasurementsTab();
   });
+  document.getElementById("bodyPrevPagePeriodBtn").addEventListener("click", () => {
+    state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 2;
+    renderBodyMeasurementsTab();
+  });
   document.getElementById("bodyNextPeriodBtn").addEventListener("click", () => {
     state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 1);
+    renderBodyMeasurementsTab();
+  });
+  document.getElementById("bodyNextPagePeriodBtn").addEventListener("click", () => {
+    state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 2);
     renderBodyMeasurementsTab();
   });
   document.getElementById("btnAddBodyMeasurement").addEventListener("click", async () => {
