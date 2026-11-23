@@ -5332,6 +5332,50 @@ function bindEvents() {
           : detectIsDrinkProduct(p, fullLabel);
         const isEspresso = /espresso/i.test(fullLabel);
 
+        function extractPortionQty(prod, drinkMode) {
+          // 1. Check expliciete portiegrootte (serving_quantity of getal in serving_size)
+          let srv = parseFloat(prod.serving_quantity);
+          if ((!srv || isNaN(srv)) && prod.serving_size) {
+            const mSrv = String(prod.serving_size).match(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|ml|cl)/i);
+            if (mSrv) {
+              srv = parseFloat(mSrv[1].replace(",", "."));
+              if (mSrv[2].toLowerCase() === "cl") srv *= 10;
+            }
+          }
+          if (srv && srv >= 15 && srv <= 1200) {
+            return { qty: Math.round(srv), sourceLabel: "Portie" };
+          }
+
+          // 2. Check verpakkingsgewicht/inhoud (product_quantity of quantity zoals "450 g" of "330 ml")
+          let pkg = parseFloat(prod.product_quantity);
+          const qStr = String(prod.quantity || "");
+          if ((!pkg || isNaN(pkg)) && qStr) {
+            const mPkg = qStr.match(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|kg|ml|cl|l)/i);
+            if (mPkg) {
+              pkg = parseFloat(mPkg[1].replace(",", "."));
+              const u = mPkg[2].toLowerCase();
+              if (u === "kg" || u === "l") pkg *= 1000;
+              else if (u === "cl") pkg *= 10;
+            }
+          } else if (pkg && String(prod.product_quantity_unit || "").toLowerCase() === "kg") {
+            pkg *= 1000;
+          }
+
+          if (pkg && !isNaN(pkg)) {
+            if (drinkMode && pkg >= 30 && pkg <= 750) {
+              return { qty: Math.round(pkg), sourceLabel: "Fles/blik" };
+            }
+            if (!drinkMode && pkg >= 20 && pkg <= 650) {
+              return { qty: Math.round(pkg), sourceLabel: "Verpakking" };
+            }
+          }
+          return { qty: drinkMode ? (isEspresso ? 35 : 250) : 100, sourceLabel: null };
+        }
+
+        const portionInfo = extractPortionQty(p, isDrink);
+        const stdQty = portionInfo.qty;
+        const drinkVolChoices = [...new Set([stdQty, 250, 330, 500])].sort((a, b) => a - b);
+
         const per100 = {
           id: itemId,
           name: fullLabel,
@@ -5339,9 +5383,9 @@ function bindEvents() {
           isDrink,
           cat: isDrink ? "fris" : "snack",
           unitType: isDrink ? "ml" : "gram",
-          vols: isEspresso ? [35] : [250, 330, 500],
+          vols: isEspresso ? [35] : drinkVolChoices,
           fixedVol: isEspresso ? 35 : null,
-          defaultQty: isDrink ? (isEspresso ? 35 : 250) : 100,
+          defaultQty: stdQty,
           kcal100: Math.round(n["energy-kcal_100g"] ?? n["energy-kcal"] ?? (n["energy_100g"] ? n["energy_100g"] / 4.184 : 0)),
           p100: Number((n.proteins_100g ?? n.proteins ?? 0).toFixed(1)),
           c100: Number((n.carbohydrates_100g ?? n.carbohydrates ?? 0).toFixed(1)),
@@ -5351,37 +5395,47 @@ function bindEvents() {
         const toggleTypeBtn = `<button type="button" class="btn-sm" data-toggle-api-type="${idx}" data-cache-key="${escapeHtml(cacheKey)}" style="padding:2px 6px; font-size:0.68rem; color:var(--muted);" title="Wissel tussen Eten (g) en Drinken (mL)">⇄ ${isDrink ? "Eten" : "Drinken"}</button>`;
 
         if (isDrink) {
+          const chipBtns = drinkVolChoices.slice(0, 3).map(v =>
+            `<button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="${v}" style="padding:3px 6px; font-size:0.71rem; ${v === stdQty && portionInfo.sourceLabel ? "border-color:var(--accent); color:var(--accent);" : ""}">${v}</button>`
+          ).join("");
           const quickChips = isEspresso
             ? `<button type="button" class="btn-sm btn-accent" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="35" style="color:#0f172a;">+35 ml</button>`
-            : `<button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="250" style="padding:3px 6px; font-size:0.71rem;">250</button>
-               <button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="330" style="padding:3px 6px; font-size:0.71rem;">330</button>
-               <button type="button" class="btn-sm" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-fixed-ml="500" style="padding:3px 6px; font-size:0.71rem;">500</button>
-               <input type="number" id="apiMl_${idx}" value="250" step="10" min="1" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.75rem !important;" title="Aantal mL" />
-               <button type="button" class="btn-sm btn-accent" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-ml-input="apiMl_${idx}" style="color:#0f172a; padding:4px 7px;">+ml</button>`;
+            : `${chipBtns}
+               <input type="number" id="apiMl_${idx}" value="${stdQty}" step="10" min="1" class="step-val-input" style="width:48px !important; padding:3px 2px !important; font-size:0.75rem !important;" title="Aantal mL" />
+               <button type="button" class="btn-sm btn-accent" data-add-api-drink="${escapeHtml(JSON.stringify(per100))}" data-ml-input="apiMl_${idx}" style="color:#0f172a; padding:4px 7px;">+${stdQty}ml</button>`;
+
+          const drinkSub = portionInfo.sourceLabel
+            ? `${portionInfo.sourceLabel}: ${stdQty}ml (${Math.round(per100.kcal100 * stdQty / 100)} kcal) · 100ml: ${per100.kcal100} kcal`
+            : `Per 100ml: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH`;
 
           return `
             <div class="pref-row" style="padding:6px 4px; gap:5px; flex-wrap:wrap;">
               <span class="drink-fav-star" data-search-fav-api="${escapeHtml(JSON.stringify(per100))}" style="font-size:1.1rem;" title="Bewaar drank als favoriet">${isFav ? "★" : "☆"}</span>
               <div style="flex:1; min-width:130px; font-size:0.78rem;">
                 <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🥤 ${escapeHtml(per100.baseName)}</strong>
-                <span style="color:var(--muted); font-size:0.7rem;">Per 100ml: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH</span>
+                <span style="color:var(--muted); font-size:0.7rem;">${drinkSub}</span>
               </div>
               <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">${toggleTypeBtn}${quickChips}</div>
             </div>
           `;
         }
 
+        const portionKcal = Math.round((per100.kcal100 * stdQty) / 100);
+        const foodSub = portionInfo.sourceLabel
+          ? `<span style="color:var(--accent-hevy); font-weight:600;">${portionInfo.sourceLabel}: ${stdQty}g (${portionKcal} kcal)</span> · 100g: ${per100.kcal100} kcal · ${per100.p100}g E`
+          : `Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH · ${per100.f100}g V`;
+
         return `
           <div class="pref-row" style="padding:6px 4px; gap:5px; flex-wrap:wrap;">
             <span class="drink-fav-star" data-search-fav-api="${escapeHtml(JSON.stringify(per100))}" style="font-size:1.1rem;" title="Bewaar als favoriet">${isFav ? "★" : "☆"}</span>
             <div style="flex:1; min-width:130px; font-size:0.78rem;">
               <strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🍽️ ${escapeHtml(per100.baseName)}</strong>
-              <span style="color:var(--muted); font-size:0.71rem;">Per 100g: ${per100.kcal100} kcal · ${per100.p100}g E · ${per100.c100}g KH · ${per100.f100}g V</span>
+              <span style="color:var(--muted); font-size:0.71rem;">${foodSub}</span>
             </div>
             <div style="display:flex; gap:4px; align-items:center;">
               ${toggleTypeBtn}
-              <input type="number" id="apiGrams_${idx}" value="100" step="5" min="1" class="step-val-input" style="width:50px !important; padding:4px 2px !important;" title="Aantal gram" />
-              <button type="button" class="btn-sm btn-hevy" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ g</button>
+              <input type="number" id="apiGrams_${idx}" value="${stdQty}" step="5" min="1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" title="Aantal gram" />
+              <button type="button" class="btn-sm btn-hevy" data-add-api-food="${escapeHtml(JSON.stringify(per100))}" data-grams-input="apiGrams_${idx}" style="color:#0f172a;">+ ${stdQty}g</button>
             </div>
           </div>
         `;
@@ -5405,7 +5459,7 @@ function bindEvents() {
 
     try {
       // Gebruik cgi/search.pl met search_terms (v2 negeert search_terms) en beperkte fields voor snelle respons
-      const fields = "product_name,product_name_nl,brands,quantity,categories_tags,nutriments";
+      const fields = "product_name,product_name_nl,brands,quantity,product_quantity,product_quantity_unit,serving_size,serving_quantity,categories_tags,nutriments";
       const nlUrl = `https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=${fields}`;
       let resp = await fetch(nlUrl, { signal: controller.signal });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
@@ -5465,6 +5519,18 @@ function bindEvents() {
   document.getElementById("btnUnifiedSearch").addEventListener("click", () => {
     if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     runOnlineFoodSearch(document.getElementById("unifiedSearchInput").value);
+  });
+
+  document.getElementById("unifiedSearchResults").addEventListener("input", e => {
+    if (e.target.id && e.target.id.startsWith("apiGrams_")) {
+      const btn = e.target.parentElement?.querySelector("[data-add-api-food]");
+      const val = Math.max(1, Number(e.target.value) || 0);
+      if (btn && val > 0) btn.textContent = `+ ${val}g`;
+    } else if (e.target.id && e.target.id.startsWith("apiMl_")) {
+      const btn = e.target.parentElement?.querySelector("[data-add-api-drink]");
+      const val = Math.max(1, Number(e.target.value) || 0);
+      if (btn && val > 0) btn.textContent = `+${val}ml`;
+    }
   });
 
   document.getElementById("unifiedSearchResults").addEventListener("click", e => {
