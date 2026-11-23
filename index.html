@@ -1226,12 +1226,13 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <div class="card">
       <h2>
         <span>Training voortgang</span>
-        <div class="pill-row" id="trActivityMetricPills" style="margin-bottom:0;">
-          <span class="pill active" data-am="minutes" style="padding:3px 8px; font-size:0.72rem;">Minuten</span>
-          <span class="pill" data-am="kcal" style="padding:3px 8px; font-size:0.72rem;">Verbrande kcal</span>
-          <span class="pill" data-am="sessions" style="padding:3px 8px; font-size:0.72rem;">Sessies</span>
-        </div>
+        <span class="badge" id="trActivityPeriodBadge">Per Week</span>
       </h2>
+      <div class="pill-row" id="trActivityMetricPills" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px;">
+        <span class="pill active" data-am="minutes" style="text-align:center;">Minuten</span>
+        <span class="pill" data-am="kcal" style="text-align:center;">Verbrande kcal</span>
+        <span class="pill" data-am="sessions" style="text-align:center;">Sessies</span>
+      </div>
       <div class="period-pills-3" id="trActivityGranPills" style="margin-bottom:8px;">
         <div class="period-pill active" data-agran="week">Per Week</div>
         <div class="period-pill" data-agran="month">Per Maand</div>
@@ -1239,6 +1240,11 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </div>
       <div class="chart-wrap">
         <canvas id="trainingActivityChart"></canvas>
+      </div>
+      <div class="period-nav" id="trActivityNavBar" style="margin-top:8px;">
+        <button type="button" class="nav-arrow" id="trActPrevBtn">&#9664;</button>
+        <span class="nav-label" id="trActRangeLabel">-</span>
+        <button type="button" class="nav-arrow" id="trActNextBtn" disabled>&#9654;</button>
       </div>
       <div id="recentActivitiesList" style="margin-top:10px; max-height:190px; overflow-y:auto;"></div>
     </div>
@@ -1349,6 +1355,19 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </h2>
       <div class="chart-wrap">
         <canvas id="bodyMainChart"></canvas>
+      </div>
+      <div class="period-bar">
+        <div class="period-pills" id="bodyPeriodPills">
+          <div class="period-pill" data-bperiod="6m">6 Maanden</div>
+          <div class="period-pill" data-bperiod="1y">1 Jaar</div>
+          <div class="period-pill" data-bperiod="2y">2 Jaar</div>
+          <div class="period-pill active" data-bperiod="all">Altijd</div>
+        </div>
+        <div class="period-nav" id="bodyPeriodNavBar" style="display:none;">
+          <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn">&#9664;</button>
+          <span class="nav-label" id="bodyPeriodLabel">-</span>
+          <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" disabled>&#9654;</button>
+        </div>
       </div>
     </div>
 
@@ -1648,6 +1667,11 @@ let state = {
   ovOffset: 0,
   ovMuscleMetric: "sets",
   bodyMainMode: "kg",
+  bodyPeriod: "all",
+  bodyPeriodOffset: 0,
+  trActivityGran: "week",
+  trActivityMetric: "minutes",
+  trActivityOffset: 0,
   // Voeding & Planner state
   nutriGoals: safeParseJSON("nutri_goals_v1", {
     kcalRest: 2250,
@@ -3463,12 +3487,43 @@ function renderOverviewDashboard(sets) {
   }
 }
 
+function getBodyPeriodRange(allDates) {
+  if (state.bodyPeriod === "all" || allDates.length === 0) return { startStr: null, endStr: null, hasOlder: false };
+  const latestDay = allDates[allDates.length - 1];
+  const earliestDay = allDates[0];
+  const anchor = new Date(latestDay + "T23:59:59");
+  const monthsStep = state.bodyPeriod === "6m" ? 6 : (state.bodyPeriod === "1y" ? 12 : 24);
+  const endDate = new Date(anchor);
+  endDate.setMonth(endDate.getMonth() - ((state.bodyPeriodOffset || 0) * monthsStep));
+  const startDate = new Date(endDate);
+  startDate.setMonth(startDate.getMonth() - monthsStep);
+  startDate.setDate(startDate.getDate() + 1);
+  const toYMD = d => d.toISOString().slice(0, 10);
+  return { startStr: toYMD(startDate), endStr: toYMD(endDate), hasOlder: earliestDay < toYMD(startDate) };
+}
+
 function renderBodyMeasurementsTab() {
-  const list = [...state.bodyMeasurements].sort((a, b) => a.date.localeCompare(b.date));
-  document.getElementById("bmCountLabel").textContent = list.length;
-  document.getElementById("bodyFileStatus").textContent = list.length > 0 ? `${list.length} metingen opgeslagen` : "Nog geen metingen";
+  const fullList = [...state.bodyMeasurements].sort((a, b) => a.date.localeCompare(b.date));
+  document.getElementById("bmCountLabel").textContent = fullList.length;
+  document.getElementById("bodyFileStatus").textContent = fullList.length > 0 ? `${fullList.length} metingen opgeslagen` : "Nog geen metingen";
   const clearBodyBtn = document.getElementById("btnClearBodyData");
-  if (clearBodyBtn) clearBodyBtn.style.display = list.length > 0 ? "inline-block" : "none";
+  if (clearBodyBtn) clearBodyBtn.style.display = fullList.length > 0 ? "inline-block" : "none";
+
+  let list = fullList;
+  const bodyNavBar = document.getElementById("bodyPeriodNavBar");
+  if (state.bodyPeriod !== "all" && fullList.length > 0) {
+    const range = getBodyPeriodRange(fullList.map(m => m.date));
+    list = fullList.filter(m => m.date >= range.startStr && m.date <= range.endStr);
+    if (bodyNavBar) bodyNavBar.style.display = "flex";
+    const lbl = document.getElementById("bodyPeriodLabel");
+    if (lbl) lbl.textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
+    const prevB = document.getElementById("bodyPrevPeriodBtn");
+    const nextB = document.getElementById("bodyNextPeriodBtn");
+    if (prevB) prevB.disabled = !range.hasOlder;
+    if (nextB) nextB.disabled = (state.bodyPeriodOffset || 0) === 0;
+  } else if (bodyNavBar) {
+    bodyNavBar.style.display = "none";
+  }
 
   if (list.length > 0) {
     const first = list[0], last = list[list.length - 1];
@@ -3554,7 +3609,7 @@ function renderBodyMeasurementsTab() {
     { label: "Romp Vet", data: list.map(m => m.buikV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3.5, yAxisID: "y1", spanGaps: true }
   ]);
 
-  document.getElementById("bmTableBody").innerHTML = [...list].reverse().map(m => `
+  document.getElementById("bmTableBody").innerHTML = [...fullList].reverse().map(m => `
     <tr>
       <td>${formatShortNL(m.date)}</td>
       <td><span class="scanner-pill ${m.scanner.toLowerCase().includes("evolt") ? "scanner-evolt" : "scanner-inbody"}">${escapeHtml(m.scanner)}</span></td>
@@ -3804,31 +3859,62 @@ function renderTrainingProgressSection(sets) {
     sportTotals[act.sport] = (sportTotals[act.sport] || 0) + val;
   });
 
-  // Bouw een doorlopende reeks periodes inclusief periodes zonder sessies (0)
+  const badgeEl = document.getElementById("trActivityPeriodBadge");
+  if (badgeEl) {
+    badgeEl.textContent = gran === "week" ? "Per Week" : (gran === "month" ? "Per Maand" : "Per Kwartaal");
+  }
+
+  // Bouw een doorlopende reeks periodes vanaf vroegste activiteit t/m heden inclusief periodes zonder sessies (0)
   const latestActDate = allActivities.reduce((maxD, a) => (a.date > maxD ? a.date : maxD), TODAY_YMD);
+  const earliestActDate = allActivities.reduce((minD, a) => (a.date < minD ? a.date : minD), TODAY_YMD);
   const anchorDate = new Date((latestActDate > TODAY_YMD ? latestActDate : TODAY_YMD) + "T12:00:00");
+  const startFloorDate = new Date(earliestActDate + "T12:00:00");
+  const windowSize = gran === "week" ? 10 : (gran === "month" ? 10 : 8);
+
   const continuousKeys = [];
   if (gran === "week") {
-    for (let w = 9; w >= 0; w--) {
-      const d = new Date(anchorDate);
-      d.setDate(anchorDate.getDate() - w * 7);
-      continuousKeys.push(getISOWeekKey(formatYMD(d)));
+    const cur = new Date(anchorDate);
+    let safety = 0;
+    while ((cur >= startFloorDate || continuousKeys.length < windowSize) && safety < 520) {
+      continuousKeys.unshift(getISOWeekKey(formatYMD(cur)));
+      cur.setDate(cur.getDate() - 7);
+      safety++;
     }
   } else if (gran === "month") {
-    for (let m = 9; m >= 0; m--) {
-      const d = new Date(anchorDate.getFullYear(), anchorDate.getMonth() - m, 15);
-      continuousKeys.push(getBucketKey(formatYMD(d), "month"));
+    let cur = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 15);
+    const floorMonth = new Date(startFloorDate.getFullYear(), startFloorDate.getMonth(), 1);
+    let safety = 0;
+    while ((cur >= floorMonth || continuousKeys.length < windowSize) && safety < 240) {
+      continuousKeys.unshift(getBucketKey(formatYMD(cur), "month"));
+      cur = new Date(cur.getFullYear(), cur.getMonth() - 1, 15);
+      safety++;
     }
   } else {
-    for (let q = 7; q >= 0; q--) {
-      const d = new Date(anchorDate.getFullYear(), anchorDate.getMonth() - q * 3, 15);
-      continuousKeys.push(getBucketKey(formatYMD(d), "quarter"));
+    let cur = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 15);
+    const floorQuarter = new Date(startFloorDate.getFullYear(), Math.floor(startFloorDate.getMonth() / 3) * 3, 1);
+    let safety = 0;
+    while ((cur >= floorQuarter || continuousKeys.length < windowSize) && safety < 120) {
+      continuousKeys.unshift(getBucketKey(formatYMD(cur), "quarter"));
+      cur = new Date(cur.getFullYear(), cur.getMonth() - 3, 15);
+      safety++;
     }
   }
-  // Voeg ook eventuele oudere actieve buckets toe indien buiten het venster, maar behoud alle tussenliggende lege periodes
+
   const allKnownKeys = [...new Set([...continuousKeys, ...Object.keys(buckets)])].sort();
-  const sortedKeys = allKnownKeys.length > 10 ? allKnownKeys.slice(-10) : allKnownKeys;
+  state.trActivityOffset = Math.min(state.trActivityOffset || 0, Math.max(0, allKnownKeys.length - windowSize));
+  const endIdx = allKnownKeys.length - state.trActivityOffset;
+  const startIdx = Math.max(0, endIdx - windowSize);
+  const sortedKeys = allKnownKeys.slice(startIdx, endIdx);
   const labels = sortedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
+
+  const trPrevBtn = document.getElementById("trActPrevBtn");
+  const trNextBtn = document.getElementById("trActNextBtn");
+  const trRangeLbl = document.getElementById("trActRangeLabel");
+  if (trPrevBtn) trPrevBtn.disabled = startIdx === 0;
+  if (trNextBtn) trNextBtn.disabled = (state.trActivityOffset || 0) === 0;
+  if (trRangeLbl) {
+    trRangeLbl.textContent = labels.length > 0 ? `${labels[0]} – ${labels[labels.length - 1]}` : "-";
+  }
   const sportsList = Object.keys(sportTotals).sort((a, b) => sportTotals[b] - sportTotals[a]);
   const fallbackPalette = ["#38bdf8", "#10b981", "#ec4899", "#f59e0b", "#c084fc", "#06b6d4", "#fbbf24"];
 
@@ -4241,8 +4327,19 @@ function bindEvents() {
     const pill = e.target.closest(".period-pill");
     if (!pill) return;
     state.trActivityGran = pill.getAttribute("data-agran");
+    state.trActivityOffset = 0;
     document.querySelectorAll("#trActivityGranPills .period-pill").forEach(p => p.classList.remove("active"));
     pill.classList.add("active");
+    renderTrainingProgressSection(getCombinedSets());
+  });
+
+  document.getElementById("trActPrevBtn").addEventListener("click", () => {
+    state.trActivityOffset = (state.trActivityOffset || 0) + 1;
+    renderTrainingProgressSection(getCombinedSets());
+  });
+
+  document.getElementById("trActNextBtn").addEventListener("click", () => {
+    state.trActivityOffset = Math.max(0, (state.trActivityOffset || 0) - 1);
     renderTrainingProgressSection(getCombinedSets());
   });
 
@@ -5388,6 +5485,23 @@ function bindEvents() {
     state.bodyMainMode = pill.getAttribute("data-bmode");
     document.querySelectorAll("#bodyMainModePills .pill").forEach(p => p.classList.remove("active"));
     pill.classList.add("active"); renderBodyMeasurementsTab();
+  });
+  document.getElementById("bodyPeriodPills").addEventListener("click", e => {
+    const pill = e.target.closest(".period-pill");
+    if (!pill) return;
+    state.bodyPeriod = pill.getAttribute("data-bperiod");
+    state.bodyPeriodOffset = 0;
+    document.querySelectorAll("#bodyPeriodPills .period-pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderBodyMeasurementsTab();
+  });
+  document.getElementById("bodyPrevPeriodBtn").addEventListener("click", () => {
+    state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 1;
+    renderBodyMeasurementsTab();
+  });
+  document.getElementById("bodyNextPeriodBtn").addEventListener("click", () => {
+    state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 1);
+    renderBodyMeasurementsTab();
   });
   document.getElementById("btnAddBodyMeasurement").addEventListener("click", async () => {
     const date = document.getElementById("bmDate").value;
