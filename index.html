@@ -3329,6 +3329,87 @@ function formatBucketLabel(key, gran) {
   return `${months[Number(m) - 1]} '${y.slice(2)}`;
 }
 
+function bucketKeyToContinuousPos(key, gran) {
+  if (!key) return 0;
+  if (gran === "week") {
+    const m = String(key).match(/^(\d{4})-W(\d{2})$/);
+    if (m) {
+      const r = getBucketDateRange(key, "week");
+      return new Date(r.start + "T12:00:00").getTime() / (7 * 86400000);
+    }
+  } else if (gran === "month") {
+    const [y, m] = String(key).split("-").map(Number);
+    return y * 12 + (m - 1);
+  } else if (gran === "quarter") {
+    const m = String(key).match(/^(\d{4})-Q(\d)$/);
+    if (m) return Number(m[1]) * 4 + (Number(m[2]) - 1);
+  } else if (gran === "year") {
+    return Number(key);
+  }
+  return 0;
+}
+
+function buildInterpolatedSeries(visibleKeys, gran, getValForKey, allKnownKeys) {
+  const values = visibleKeys.map(k => {
+    const v = getValForKey(k);
+    return (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : null;
+  });
+  const isEstimated = values.map(() => false);
+  if (visibleKeys.length === 0) return { values, isEstimated };
+
+  const firstVisIdx = values.findIndex(v => v !== null);
+  if (firstVisIdx === -1) return { values, isEstimated };
+
+  let lastVisIdx = -1;
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (values[i] !== null) { lastVisIdx = i; break; }
+  }
+
+  const sortedKnown = [...new Set(allKnownKeys)]
+    .map(k => ({ key: k, val: getValForKey(k), pos: bucketKeyToContinuousPos(k, gran) }))
+    .filter(item => item.val !== null && item.val !== undefined && !isNaN(item.val))
+    .sort((a, b) => a.pos - b.pos);
+
+  // 1. Start van de zichtbare periode (index 0) aanvullen als firstVisIdx > 0 en er eerdere data bestaat
+  if (firstVisIdx > 0) {
+    const firstVisKey = visibleKeys[firstVisIdx];
+    const firstVisPos = bucketKeyToContinuousPos(firstVisKey, gran);
+    const firstVisVal = values[firstVisIdx];
+    const startPos = bucketKeyToContinuousPos(visibleKeys[0], gran);
+
+    const prevPoints = sortedKnown.filter(p => p.pos < startPos);
+    if (prevPoints.length > 0) {
+      const prev = prevPoints[prevPoints.length - 1];
+      const span = firstVisPos - prev.pos;
+      const ratio = span > 0 ? (startPos - prev.pos) / span : 0;
+      const estStartVal = prev.val + (firstVisVal - prev.val) * ratio;
+      values[0] = Number(estStartVal.toFixed(1));
+      isEstimated[0] = true;
+    }
+  }
+
+  // 2. Einde van de zichtbare periode (index visibleKeys.length - 1) aanvullen als lastVisIdx < end en er latere data bestaat
+  const endVisIdx = visibleKeys.length - 1;
+  if (lastVisIdx < endVisIdx) {
+    const lastVisKey = visibleKeys[lastVisIdx];
+    const lastVisPos = bucketKeyToContinuousPos(lastVisKey, gran);
+    const lastVisVal = values[lastVisIdx];
+    const endPos = bucketKeyToContinuousPos(visibleKeys[endVisIdx], gran);
+
+    const nextPoints = sortedKnown.filter(p => p.pos > endPos);
+    if (nextPoints.length > 0) {
+      const next = nextPoints[0];
+      const span = next.pos - lastVisPos;
+      const ratio = span > 0 ? (endPos - lastVisPos) / span : 0;
+      const estEndVal = lastVisVal + (next.val - lastVisVal) * ratio;
+      values[endVisIdx] = Number(estEndVal.toFixed(1));
+      isEstimated[endVisIdx] = true;
+    }
+  }
+
+  return { values, isEstimated };
+}
+
 function renderOverviewDashboard(sets) {
   const gran = state.ovGranularity;
   const hasCsv = hasStrengthCsvData();
@@ -3502,12 +3583,15 @@ function renderOverviewDashboard(sets) {
     return 0;
   });
 
-  const bodyData = visibleKeys.map(k => {
-    const entries = bucketMap[k].bodyEntries;
-    if (!entries || entries.length === 0) return null;
-    const vals = entries.map(e => e[bodyMetric]).filter(v => v !== null && !isNaN(v));
+  const getBodyBucketVal = k => {
+    const b = bucketMap[k];
+    if (!b || !b.bodyEntries || b.bodyEntries.length === 0) return null;
+    const vals = b.bodyEntries.map(e => e[bodyMetric]).filter(v => v !== null && !isNaN(v));
     return vals.length > 0 ? Number((vals.reduce((a, c) => a + c, 0) / vals.length).toFixed(1)) : null;
-  });
+  };
+  const bodyInterp = buildInterpolatedSeries(visibleKeys, gran, getBodyBucketVal, allKeys);
+  const bodyData = bodyInterp.values;
+  const bodyIsEst = bodyInterp.isEstimated;
 
   const ctx1 = document.getElementById("ovCorrelationChart").getContext("2d");
   if (ovCorrChartInstance) ovCorrChartInstance.destroy();
@@ -3516,12 +3600,31 @@ function renderOverviewDashboard(sets) {
       labels,
       datasets: [
         { type: "bar", label: trainLabels[trainMetric], data: trainData, backgroundColor: "rgba(56, 189, 248, 0.55)", borderColor: "#38bdf8", borderWidth: 1, borderRadius: 5, yAxisID: "y" },
-        { type: "line", label: bodyLabels[bodyMetric], data: bodyData, borderColor: "#ec4899", backgroundColor: "#ec4899", pointRadius: 5, borderWidth: 2.5, spanGaps: true, tension: 0.25, yAxisID: "y1" }
+        {
+          type: "line",
+          label: bodyLabels[bodyMetric],
+          data: bodyData,
+          borderColor: "#ec4899",
+          backgroundColor: "#ec4899",
+          pointRadius: bodyIsEst.map(est => est ? 0 : 5),
+          pointHoverRadius: bodyIsEst.map(est => est ? 0 : 7),
+          pointHitRadius: bodyIsEst.map(est => est ? 0 : 8),
+          borderWidth: 2.5,
+          spanGaps: true,
+          tension: 0.25,
+          yAxisID: "y1"
+        }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-      plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 12, font: { size: 11 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
+      plugins: {
+        legend: { labels: { color: "#f8fafc", boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: "rgba(15, 23, 42, 0.95)",
+          filter: item => !(item.datasetIndex === 1 && bodyIsEst[item.dataIndex])
+        }
+      },
       scales: {
         x: { ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
         y: { type: "linear", position: "left", ticks: { color: "#38bdf8", font: { size: 10 } }, grid: { color: "#334155" } },
@@ -4204,8 +4307,14 @@ function renderExerciseChart() {
     : alignedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
 
   const timeline = alignedKeys.map(k => bucketedTimeline[k] || null);
-  const values = timeline.map(d => d ? Number(d[state.selectedMetric].toFixed(1)) : null);
-  const pointColors = timeline.map(d => !d ? "transparent" : (d.corrected ? "#c084fc" : (d.source === "garmin" ? "#f59e0b" : "#10b981")));
+  const getExBucketVal = k => {
+    const entry = bucketedTimeline[k];
+    return entry ? Number(entry[state.selectedMetric].toFixed(1)) : null;
+  };
+  const exInterp = buildInterpolatedSeries(alignedKeys, gran, getExBucketVal, Object.keys(bucketedTimeline));
+  const values = exInterp.values;
+  const exIsEst = exInterp.isEstimated;
+  const pointColors = timeline.map((d, idx) => (!d || exIsEst[idx]) ? "transparent" : (d.corrected ? "#c084fc" : (d.source === "garmin" ? "#f59e0b" : "#10b981")));
 
   const datasets = [{
     label: chosen,
@@ -4214,8 +4323,9 @@ function renderExerciseChart() {
     backgroundColor: "rgba(56, 189, 248, 0.12)",
     pointBackgroundColor: pointColors,
     pointBorderColor: pointColors,
-    pointRadius: timeline.map(d => d ? 4.5 : 0),
-    pointHoverRadius: timeline.map(d => d ? 7 : 0),
+    pointRadius: timeline.map((d, idx) => (d && !exIsEst[idx]) ? 4.5 : 0),
+    pointHoverRadius: timeline.map((d, idx) => (d && !exIsEst[idx]) ? 7 : 0),
+    pointHitRadius: timeline.map((d, idx) => (d && !exIsEst[idx]) ? 8 : 0),
     spanGaps: true,
     tension: 0.25,
     fill: !state.showBaselineBand
@@ -4248,7 +4358,7 @@ function renderExerciseChart() {
 
   let trendPctLabel = null;
   let trendLastIdx = -1;
-  const nonNullIndices = values.map((v, i) => (v !== null ? i : -1)).filter(i => i !== -1);
+  const nonNullIndices = values.map((v, i) => (v !== null && !exIsEst[i] ? i : -1)).filter(i => i !== -1);
   if (isTrendEnabledFor(chosen) && nonNullIndices.length >= 2) {
     const firstIdx = nonNullIndices[0];
     trendLastIdx = nonNullIndices[nonNullIndices.length - 1];
@@ -4330,7 +4440,7 @@ function renderExerciseChart() {
         legend: { display: false },
         tooltip: {
           backgroundColor: "rgba(15, 23, 42, 0.95)",
-          filter: item => item.datasetIndex === 0 && item.raw !== null,
+          filter: item => item.datasetIndex === 0 && item.raw !== null && !exIsEst[item.dataIndex],
           callbacks: {
             title: items => {
               if (!items || !items.length) return "";
