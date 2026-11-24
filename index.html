@@ -705,7 +705,8 @@
     <div class="header-actions">
       <span class="badge" id="cloudSyncBadge" title="Cloud Sync Status" style="cursor:pointer;">☁️ Lokaal</span>
       <span class="badge" id="totalBadge">0 sets</span>
-      <button type="button" class="icon-btn" id="btnOpenSettings" data-tab="upload" title="Data &amp; Sync">⚙</button>
+      <button type="button" class="icon-btn" id="btnOpenSettings" data-tab="upload" title="Data &amp; Instellingen">⚙</button>
+      <button type="button" class="icon-btn" id="btnOpenProfile" data-tab="profile" title="Account, Family &amp; Sportbuddy">👤</button>
     </div>
   </header>
 
@@ -1556,14 +1557,16 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       <p style="font-size:0.78rem; color:var(--muted); margin-top:0;">
         Stel je dagelijkse macro-doelen in (rustdag vs. trainingsdag). Je standaard basismaaltijden stel je direct in op het tabblad <strong>Voeding</strong> via <strong>⚙ Basisdag</strong>.
       </p>
-      <div class="manual-grid">
-        <div><span class="field-lbl">Kcal Rustdag:</span><input type="number" id="cfgKcalRest" /></div>
-        <div><span class="field-lbl">Kcal Trainingsdag:</span><input type="number" id="cfgKcalTrain" /></div>
-        <div><span class="field-lbl">Eiwitten doel (g):</span><input type="number" id="cfgProtGoal" /></div>
-        <div><span class="field-lbl">Koolhydraten doel (g):</span><input type="number" id="cfgCarbGoal" /></div>
-        <div><span class="field-lbl">Vetten doel (g):</span><input type="number" id="cfgFatGoal" /></div>
+      <div id="nutriGoalsFieldsBox" style="display:none; margin-top:8px;">
+        <div class="manual-grid">
+          <div><span class="field-lbl">Kcal Rustdag:</span><input type="number" id="cfgKcalRest" /></div>
+          <div><span class="field-lbl">Kcal Trainingsdag:</span><input type="number" id="cfgKcalTrain" /></div>
+          <div><span class="field-lbl">Eiwitten doel (g):</span><input type="number" id="cfgProtGoal" /></div>
+          <div><span class="field-lbl">Koolhydraten doel (g):</span><input type="number" id="cfgCarbGoal" /></div>
+          <div><span class="field-lbl">Vetten doel (g):</span><input type="number" id="cfgFatGoal" /></div>
+        </div>
       </div>
-      <button type="button" class="btn btn-hevy" id="btnSaveNutriGoals">Voedingsdoelen opslaan</button>
+      <button type="button" class="btn btn-hevy" id="btnSaveNutriGoals">Voedings doelen aanpassen</button>
     </div>
 
     <div class="card">
@@ -1595,7 +1598,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
 
     <div class="card">
       <h2>
-        <span>4. Favorieten &amp; Trendlijn</span>
+        <span>Favoriete oefeningen</span>
         <label class="toggle-label" style="color:var(--text);">
           <input type="checkbox" id="globalTrendToggle" />
           Trendlijn alle
@@ -1609,41 +1612,61 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <div class="card">
-      <h2>5. Baseline &amp; Katrolcorrectie</h2>
-      <div class="setting-box">
-        <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-weight:600;">
-          <input type="checkbox" id="autoFilterOutliersToggle" />
-          Verberg losse uitschieters (&lt; 65% of &gt; 145% van werkgewicht)
-        </label>
-        <label class="toggle-label" style="color:var(--muted); margin-bottom:8px;">
-          <input type="checkbox" id="showBaselineBandToggle" />
-          Toon baseline-band in grafiek
-        </label>
-        <label class="toggle-label" style="color:var(--text); font-weight:600;">
-          <input type="checkbox" id="smartOverloadToggle" />
-          <span>Slim compound (6-8r) vs. isolatie (10-15r) advies</span>
-          <span class="tooltip-icon" data-tooltip="Bepaalt progressieve overload op basis van oefeningstype: Compound oefeningen richten zich op 6-8 reps voor kracht/massa; isolatie oefeningen richten zich op 10-15 reps.">i</span>
-        </label>
-      </div>
-      <button type="button" class="btn btn-accent" id="btnAutoDetect">Analyseer grote katrol-wissels</button>
-      <div id="pulleyScanMsg" class="status-msg" style="margin-bottom:8px;"></div>
-      <div id="pulleyGroupsContainer"></div>
-      <div id="singlePointRulesBox" style="margin-top:10px;"></div>
+      <details>
+        <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none;">
+          5. Baseline &amp; Katrolcorrectie <span style="font-size:0.74rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span>
+        </summary>
+        <div style="margin-top:10px;">
+          <div class="setting-box">
+            <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-weight:600;">
+              <input type="checkbox" id="autoFilterOutliersToggle" />
+              Verberg losse uitschieters (&lt; 65% of &gt; 145% van werkgewicht)
+            </label>
+            <label class="toggle-label" style="color:var(--muted); margin-bottom:8px;">
+              <input type="checkbox" id="showBaselineBandToggle" />
+              Toon baseline-band in grafiek
+            </label>
+            <label class="toggle-label" style="color:var(--text); font-weight:600;">
+              <input type="checkbox" id="smartOverloadToggle" />
+              <span>Slim compound (6-8r) vs. isolatie (10-15r) advies</span>
+              <span class="tooltip-icon" data-tooltip="Bepaalt progressieve overload op basis van oefeningstype: Compound oefeningen richten zich op 6-8 reps voor kracht/massa; isolatie oefeningen richten zich op 10-15 reps.">i</span>
+            </label>
+          </div>
+          <button type="button" class="btn btn-accent" id="btnAutoDetect">Analyseer grote katrol-wissels</button>
+          <div id="pulleyScanMsg" class="status-msg" style="margin-bottom:8px;"></div>
+          <div id="pulleyGroupsContainer"></div>
+          <div id="singlePointRulesBox" style="margin-top:10px;"></div>
+        </div>
+      </details>
     </div>
 
     <div class="card">
-      <h2>6. Garmin &rarr; Hevy Namen Koppelen</h2>
-      <datalist id="hevyNamesList"></datalist>
-      <div id="mappingContainer" style="max-height:220px; overflow-y:auto;"></div>
-      <button type="button" class="btn btn-hevy" id="btnSaveMappings" style="margin-top:10px;">Koppelingen opslaan</button>
+      <details>
+        <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none;">
+          6. Garmin &rarr; Hevy Namen Koppelen <span style="font-size:0.74rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span>
+        </summary>
+        <div style="margin-top:10px;">
+          <datalist id="hevyNamesList"></datalist>
+          <div id="mappingContainer" style="max-height:220px; overflow-y:auto;"></div>
+          <button type="button" class="btn btn-hevy" id="btnSaveMappings" style="margin-top:10px;">Koppelingen opslaan</button>
+        </div>
+      </details>
     </div>
 
+    <div class="card">
+      <h2>Onderhoud</h2>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TAB 7 (VIA 👤): ACCOUNT, CLOUD SYNC & FAMILY/SPORTBUDDY  -->
+  <!-- ========================================================= -->
+  <div id="tab-profile" class="panel">
     <div class="card" style="border-color: var(--accent);">
       <h2>
         <span>7. Account &amp; Cloud Sync (PC ⇄ Mobiel)</span>
         <span class="badge" id="cloudCardBadge">Niet ingelogd</span>
       </h2>
-      <p style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
+      <p id="authIntroText" style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
         Log eenmalig in met je <strong>gebruikersnaam</strong> (of e-mailadres) en <strong>wachtwoord</strong>. Je persoonlijke gegevens zijn afgeschermd met Row Level Security (RLS) en synchroniseren automatisch tussen al je apparaten.
       </p>
 
@@ -1749,10 +1772,6 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       <div id="activeConnectionsList"></div>
     </div>
 
-    <div class="card">
-      <h2>Onderhoud</h2>
-      <button type="button" class="btn btn-danger" id="btnClearAll">Alle opgeslagen data wissen</button>
-    </div>
   </div>
 
 <script>
@@ -1949,7 +1968,7 @@ let currentAuthUser = null;
 let currentUserProfile = null;
 let myConnections = []; // Alle inkomende, uitgaande en actieve Family / Sportbuddy relaties
 let sharedActivitiesFeed = []; // Directe gedeelde activiteiten van actieve connecties (1-op-1, nooit transitief)
-let sharedFamilyDinners = {}; // Gedeeld weekmenu vanuit Family-koppelingen
+let sharedFamilyDinners = {}; // Gedeeld weekmenu vanuit Family-koppelingen: { [ymd]: { title, kcal, p, c, f, fromUsername, ownerId } }
 let authMode = "login";
 let pendingInviteRole = "family";
 let cloudPushTimer = null;
@@ -2006,6 +2025,9 @@ function updateAuthUI() {
   const outBox = document.getElementById("authLoggedOutBox");
   const inBox = document.getElementById("authLoggedInBox");
   if (!outBox || !inBox) return;
+
+  const introEl = document.getElementById("authIntroText");
+  if (introEl) introEl.style.display = currentAuthUser ? "none" : "block";
 
   if (currentAuthUser) {
     outBox.style.display = "none";
@@ -2130,6 +2152,68 @@ async function applySyncPayload(d, saveLocally = true) {
   }
 }
 
+// Publiceert avondeten van de week naar shared_weekmenu voor actieve Family-leden
+// waarbij 'Deel Weekmenu' aanstaat (inclusief doorgevoerde dagwisselingen).
+async function syncOwnSharedWeekmenu() {
+  if (!supaClient || !currentAuthUser) return;
+  try {
+    const uid = currentAuthUser.id;
+    const activeFamilyPeers = myConnections.filter(c => c.status === "active" && c.role === "family" && c.myShareWeekmenu);
+    await supaClient.from("shared_weekmenu").delete().eq("owner_id", uid);
+    if (activeFamilyPeers.length === 0) return;
+
+    const rows = [];
+    for (const [dateStr, fLog] of Object.entries(state.foodLogs || {})) {
+      if (fLog && fLog.dinner && fLog.dinner.title && !fLog.dinner.fromFamilyOwnerId) {
+        rows.push({
+          id: `${uid}_${dateStr}`,
+          owner_id: uid,
+          menu_date: dateStr,
+          title: String(fLog.dinner.title),
+          kcal: Number(fLog.dinner.kcal || 0),
+          p: Number(fLog.dinner.p || 0),
+          c: Number(fLog.dinner.c || 0),
+          f: Number(fLog.dinner.f || 0),
+          portion_mult: Number(fLog.dinner.portionMult ?? 1)
+        });
+      }
+    }
+    if (rows.length > 0) {
+      await supaClient.from("shared_weekmenu").insert(rows);
+    }
+  } catch (e) {
+    console.warn("Shared weekmenu sync overgeslagen:", e.message || e);
+  }
+}
+
+function applySharedFamilyDinnerProposals() {
+  if (!sharedFamilyDinners || typeof sharedFamilyDinners !== "object") return;
+  let changed = false;
+  for (const [dateStr, prop] of Object.entries(sharedFamilyDinners)) {
+    if (!prop || !prop.title) continue;
+    const log = getOrCreateFoodDay(dateStr);
+    // Als het family-lid een eigen gerecht heeft ingevuld/aangepast, nooit overschrijven
+    if (log.customDinnerOverride) continue;
+    if (!log.dinner || log.dinner.fromFamilyOwnerId) {
+      log.dinner = {
+        title: prop.title,
+        kcal: Number(prop.kcal || 0),
+        p: Number(prop.p || 0),
+        c: Number(prop.c || 0),
+        f: Number(prop.f || 0),
+        portionMult: Number(prop.portionMult ?? 1),
+        confirmed: false,
+        fromFamilyOwnerId: prop.ownerId,
+        fromFamilyUsername: prop.fromUsername
+      };
+      changed = true;
+    }
+  }
+  if (changed) {
+    localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
+  }
+}
+
 // Publiceert uitsluitend expliciet als 'Samen' gemarkeerde eigen activiteiten (owner_id = auth.uid())
 // Belangrijk: alleen eigen items worden hier weggeschreven, NOOIT activiteiten van anderen (geen doorsijpelen).
 async function syncOwnSharedActivities() {
@@ -2177,6 +2261,7 @@ async function pushToCloudNow() {
     if (error) throw error;
 
     await syncOwnSharedActivities();
+    await syncOwnSharedWeekmenu();
     localStorage.setItem("cloud_last_sync_at_" + currentAuthUser.id, nowIso);
     setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   } catch (err) {
@@ -2269,6 +2354,38 @@ async function loadConnectionsAndSharedData() {
         ownerUsername: activePeerLookup[act.owner_id].peerUsername,
         connectionRole: activePeerLookup[act.owner_id].role
       }));
+
+    // Haal gedeeld weekmenu op van actieve Family-leden waarbij 'share_weekmenu' aanstaat
+    const familyPeerLookup = {};
+    myConnections.filter(c => c.status === "active" && c.role === "family").forEach(c => {
+      const peerSharesWm = c.isRequester ? Boolean(c.tgt_share_weekmenu) : Boolean(c.req_share_weekmenu);
+      if (peerSharesWm) familyPeerLookup[c.peerId] = c;
+    });
+
+    sharedFamilyDinners = {};
+    const famIds = Object.keys(familyPeerLookup);
+    if (famIds.length > 0) {
+      const { data: wmRows } = await supaClient
+        .from("shared_weekmenu")
+        .select("*")
+        .in("owner_id", famIds);
+      (wmRows || []).forEach(r => {
+        const peer = familyPeerLookup[r.owner_id];
+        if (peer && r.menu_date) {
+          sharedFamilyDinners[r.menu_date] = {
+            title: r.title,
+            kcal: r.kcal,
+            p: r.p,
+            c: r.c,
+            f: r.f,
+            portionMult: r.portion_mult ?? 1,
+            ownerId: r.owner_id,
+            fromUsername: peer.peerUsername
+          };
+        }
+      });
+    }
+    applySharedFamilyDinnerProposals();
 
     renderSocialConnectionsUI();
   } catch (err) {
@@ -3193,6 +3310,22 @@ function renderNutritionTab() {
     }
   }
 
+  const ownCustomDinnerFormHtml = `
+    <details style="margin-top:8px; font-size:0.76rem; color:var(--muted);">
+      <summary style="cursor:pointer; color:var(--accent); font-weight:600;">🍽️ Eigen gerecht voor mij invullen (overschrijft niet bij sync)</summary>
+      <div style="margin-top:6px; background:#1e293b; padding:8px; border-radius:8px; border:1px solid var(--card-border);">
+        <input type="text" id="customOwnDinnerTitle" placeholder="Eigen gerecht (bijv. Wrap met kip & avocado)" style="margin-bottom:5px; padding:7px; font-size:0.78rem;" />
+        <div class="manual-grid" style="margin-top:0;">
+          <input type="number" id="customOwnDinnerKcal" placeholder="Kcal*" style="margin-bottom:4px; padding:6px; font-size:0.76rem;" />
+          <input type="number" step="0.1" id="customOwnDinnerProt" placeholder="Eiwit (g)" style="margin-bottom:4px; padding:6px; font-size:0.76rem;" />
+          <input type="number" step="0.1" id="customOwnDinnerCarb" placeholder="Koolhydraten (g)" style="margin-bottom:4px; padding:6px; font-size:0.76rem;" />
+          <input type="number" step="0.1" id="customOwnDinnerFat" placeholder="Vet (g)" style="margin-bottom:4px; padding:6px; font-size:0.76rem;" />
+        </div>
+        <button type="button" class="btn-sm btn-hevy" id="btnSaveOwnDinner" style="color:#0f172a; width:100%; padding:7px;">Opslaan als mijn avondeten</button>
+      </div>
+    </details>
+  `;
+
   if (log.dinner && log.dinner.title) {
     const isConf = Boolean(log.dinner.confirmed);
     const pMult = Number(log.dinner.portionMult ?? 1);
@@ -3200,13 +3333,16 @@ function renderNutritionTab() {
     const dProt = Number((Number(log.dinner.p || 0) * pMult).toFixed(1));
     const dCarb = Math.round(Number(log.dinner.c || 0) * pMult);
     const dFat = Number((Number(log.dinner.f || 0) * pMult).toFixed(1));
+    const famSub = log.customDinnerOverride
+      ? `<span style="color:var(--accent); margin-left:4px;">· Eigen keuze</span>`
+      : (log.dinner.fromFamilyUsername ? `<span style="color:var(--accent); margin-left:4px;">· Voorstel van @${escapeHtml(log.dinner.fromFamilyUsername)}</span>` : "");
 
     dinnerBox.innerHTML = `
       <div class="dinner-box ${isConf ? "" : "unconfirmed"}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
           <div style="flex:1; min-width:0;">
             <div style="font-size:0.7rem; font-weight:700; color:${isConf ? "var(--accent-hevy)" : "var(--accent-garmin)"};">
-              ${isConf ? "✓ BEVESTIGD AVONDETEN" : "⏳ VOORSTEL UIT WEEKMENU (NOG BEVESTIGEN)"}
+              ${isConf ? "✓ BEVESTIGD AVONDETEN" : "⏳ VOORSTEL UIT WEEKMENU (NOG BEVESTIGEN)"}${famSub}
             </div>
             <div style="font-weight:700; font-size:0.9rem; margin-top:2px;">${escapeHtml(log.dinner.title)}</div>
             <div style="font-size:0.74rem; color:var(--muted); margin-top:3px;">
@@ -3236,13 +3372,15 @@ function renderNutritionTab() {
             ${weekOptions.join("")}
           </select>
         </div>
+        ${ownCustomDinnerFormHtml}
       </div>
     `;
   } else {
     dinnerBox.innerHTML = `
       <div style="font-size:0.8rem; color:var(--muted); padding:6px 0;">
-        Nog geen avondeten ingepland voor deze dag. Klik op <strong>+ Plak Weekmenu</strong> of voeg hieronder een gerecht toe.
+        Nog geen avondeten ingepland voor deze dag. Klik op <strong>+ Plak Weekmenu</strong> of vul hieronder een eigen gerecht in.
       </div>
+      ${ownCustomDinnerFormHtml}
     `;
   }
 
@@ -4438,6 +4576,7 @@ function refreshAll() {
   document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
   document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
   document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
+  if (typeof syncNutriGoalsButtonLabel === "function") syncNutriGoalsButtonLabel();
   const urlInp = document.getElementById("cfgSupaUrl");
   const keyInp = document.getElementById("cfgSupaKey");
   if (urlInp) urlInp.value = adminSupaOverride.url || "";
@@ -5143,7 +5282,7 @@ function renderPrefsList() {
     <div class="pref-row">
       <button type="button" class="star-btn ${state.favorites.includes(ex) ? "active" : ""}" data-action="toggle-fav" data-ex="${escapeHtml(ex)}">★</button>
       <span class="pref-name">${escapeHtml(ex)}</span>
-      <label class="toggle-label"><input type="checkbox" data-action="toggle-trend" data-ex="${escapeHtml(ex)}" ${isTrendEnabledFor(ex) ? "checked" : ""} />Trend</label>
+      <label class="toggle-label"><input type="checkbox" data-action="toggle-trend" data-ex="${escapeHtml(ex)}" ${isTrendEnabledFor(ex) ? "checked" : ""} />Trendlijn tonen</label>
     </div>
   `).join("");
 }
@@ -5165,6 +5304,8 @@ function renderMappingUI() {
 function switchTab(tabName) {
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName));
   document.getElementById("btnOpenSettings").classList.toggle("active", tabName === "upload");
+  const profBtn = document.getElementById("btnOpenProfile");
+  if (profBtn) profBtn.classList.toggle("active", tabName === "profile");
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   const target = document.getElementById(`tab-${tabName}`);
   if (target) target.classList.add("active");
@@ -5188,6 +5329,10 @@ function bindEvents() {
     if (btn) switchTab(btn.getAttribute("data-tab"));
   });
   document.getElementById("btnOpenSettings").addEventListener("click", () => switchTab("upload"));
+  document.getElementById("btnOpenProfile").addEventListener("click", () => {
+    renderSocialConnectionsUI();
+    switchTab("profile");
+  });
 
   // Overview events
   document.getElementById("ovGranularityPills").addEventListener("click", e => {
@@ -5898,7 +6043,7 @@ function bindEvents() {
   document.getElementById("btnCloseWeekmenuPaste").addEventListener("click", () => {
     document.getElementById("weekmenuPasteBox").style.display = "none";
   });
-  document.getElementById("btnParseWeekmenu").addEventListener("click", () => {
+  document.getElementById("btnParseWeekmenu").addEventListener("click", async () => {
     const txt = document.getElementById("weekmenuPasteText").value;
     const parsedDays = parseWeekmenuText(txt);
     const keys = Object.keys(parsedDays);
@@ -5912,9 +6057,11 @@ function bindEvents() {
       d.setDate(mon.getDate() + Number(idxStr));
       const dStr = formatYMD(d);
       const log = getOrCreateFoodDay(dStr);
-      log.dinner = parsedDays[idxStr];
+      log.dinner = { ...parsedDays[idxStr], fromFamilyOwnerId: null, fromFamilyUsername: null };
+      log.customDinnerOverride = false;
     });
     saveFoodState();
+    await syncOwnSharedWeekmenu();
     document.getElementById("weekmenuPasteBox").style.display = "none";
     document.getElementById("weekmenuPasteText").value = "";
     renderNutritionTab();
@@ -5922,16 +6069,42 @@ function bindEvents() {
   });
 
   document.getElementById("dinnerContainer").addEventListener("click", e => {
-    if (e.target.id === "btnConfirmDinner") {
+    if (e.target.id === "btnSaveOwnDinner") {
+      const title = (document.getElementById("customOwnDinnerTitle")?.value || "").trim();
+      const kcal = Number(document.getElementById("customOwnDinnerKcal")?.value) || 0;
+      const p = Number(document.getElementById("customOwnDinnerProt")?.value) || 0;
+      const c = Number(document.getElementById("customOwnDinnerCarb")?.value) || 0;
+      const f = Number(document.getElementById("customOwnDinnerFat")?.value) || 0;
+      if (!title) { alert("Vul een naam in voor je eigen gerecht."); return; }
+      const log = getOrCreateFoodDay(state.selectedNutriDate);
+      log.dinner = {
+        title,
+        kcal,
+        p,
+        c,
+        f,
+        portionMult: 1,
+        confirmed: true,
+        fromFamilyOwnerId: null,
+        fromFamilyUsername: null
+      };
+      log.customDinnerOverride = true; // Beschermt tegen overschrijven bij Family-weekmenu sync
+      log.touched = true;
+      saveFoodState();
+      renderNutritionTab();
+      renderPlannerTab();
+    } else if (e.target.id === "btnConfirmDinner") {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
       if (log.dinner) {
         log.dinner.confirmed = !log.dinner.confirmed;
+        if (log.dinner.fromFamilyOwnerId) log.customDinnerOverride = true;
         log.touched = true;
         saveFoodState(); renderNutritionTab(); renderPlannerTab();
       }
     } else if (e.target.id === "btnRemoveDinner") {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
       log.dinner = null;
+      log.customDinnerOverride = true;
       saveFoodState(); renderNutritionTab(); renderPlannerTab();
     } else if (e.target.id === "btnDinnerPortionDown") {
       const log = getOrCreateFoodDay(state.selectedNutriDate);
@@ -5969,7 +6142,11 @@ function bindEvents() {
       const temp = curLog.dinner;
       curLog.dinner = targetLog.dinner;
       targetLog.dinner = temp;
-      saveFoodState(); renderNutritionTab(); renderPlannerTab();
+      if (curLog.dinner && curLog.dinner.fromFamilyOwnerId) curLog.customDinnerOverride = true;
+      if (targetLog.dinner && targetLog.dinner.fromFamilyOwnerId) targetLog.customDinnerOverride = true;
+      saveFoodState();
+      syncOwnSharedWeekmenu();
+      renderNutritionTab(); renderPlannerTab();
     }
   });
 
@@ -6572,14 +6749,39 @@ function bindEvents() {
     renderPlannerTab();
   });
 
-  // Voedingsdoelen opslaan
+  // Voedingsdoelen: inklapbaar/openklapbaar + knoptekst op basis van aanwezige waarden
+  function hasNutriGoalValues() {
+    const g = state.nutriGoals || {};
+    return [g.kcalRest, g.kcalTrain, g.protein, g.carbs, g.fat].some(v => v !== null && v !== undefined && v !== "" && Number(v) > 0);
+  }
+
+  function syncNutriGoalsButtonLabel() {
+    const box = document.getElementById("nutriGoalsFieldsBox");
+    const btn = document.getElementById("btnSaveNutriGoals");
+    if (!box || !btn) return;
+    if (box.style.display === "block") {
+      btn.textContent = "Voedingsdoelen opslaan";
+    } else {
+      btn.textContent = hasNutriGoalValues() ? "Voedings doelen aanpassen" : "Voedingsdoelen toevoegen";
+    }
+  }
+
   document.getElementById("btnSaveNutriGoals").addEventListener("click", () => {
-    state.nutriGoals.kcalRest = Number(document.getElementById("cfgKcalRest").value) || 2250;
-    state.nutriGoals.kcalTrain = Number(document.getElementById("cfgKcalTrain").value) || 2550;
-    state.nutriGoals.protein = Number(document.getElementById("cfgProtGoal").value) || 155;
-    state.nutriGoals.carbs = Number(document.getElementById("cfgCarbGoal").value) || 240;
-    state.nutriGoals.fat = Number(document.getElementById("cfgFatGoal").value) || 75;
+    const box = document.getElementById("nutriGoalsFieldsBox");
+    if (!box) return;
+    if (box.style.display !== "block") {
+      box.style.display = "block";
+      syncNutriGoalsButtonLabel();
+      return;
+    }
+    state.nutriGoals.kcalRest = Number(document.getElementById("cfgKcalRest").value) || 0;
+    state.nutriGoals.kcalTrain = Number(document.getElementById("cfgKcalTrain").value) || 0;
+    state.nutriGoals.protein = Number(document.getElementById("cfgProtGoal").value) || 0;
+    state.nutriGoals.carbs = Number(document.getElementById("cfgCarbGoal").value) || 0;
+    state.nutriGoals.fat = Number(document.getElementById("cfgFatGoal").value) || 0;
     saveFoodState();
+    box.style.display = "none";
+    syncNutriGoalsButtonLabel();
     document.getElementById("uploadFeedback").textContent = "Voedingsdoelen opgeslagen!";
     renderNutritionTab();
   });
