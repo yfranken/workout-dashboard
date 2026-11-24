@@ -773,29 +773,27 @@
     </div>
 
     <div class="card">
-      <h2><span>Inspanning &amp; Voeding vs. Lichaamsresultaat</span></h2>
+      <h2><span>Training &amp; Voeding &gt; Metingen</span></h2>
       <div class="manual-grid" style="margin-top:0; margin-bottom:6px;">
         <div>
-          <span class="field-lbl">Linker as (Training / Voeding):</span>
           <select id="ovTrainMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
             <option value="minutes">Trainingsminuten</option>
             <option value="sessions">Aantal Workouts</option>
             <option value="burnedKcal">Verbrande Kcal (training)</option>
             <option value="avgKcal">Gem. Voeding (kcal/dag)</option>
             <option value="avgProtein">Gem. Eiwit (g/dag)</option>
-            <option value="volume">Totaal Volume (ton)</option>
-            <option value="sets">Aantal Sets</option>
-            <option value="reps">Aantal Herhalingen (reps)</option>
+            <option value="volume" data-requires-csv="1">Totaal Volume (ton)</option>
+            <option value="sets" data-requires-csv="1">Aantal Sets</option>
+            <option value="reps" data-requires-csv="1">Aantal Herhalingen (reps)</option>
           </select>
         </div>
         <div>
-          <span class="field-lbl">Rechter as (Meting):</span>
           <select id="ovBodyMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
             <option value="weight">Lichaamsgewicht (kg)</option>
-            <option value="smm">Skeletspiermassa (kg)</option>
-            <option value="fatMass">Vetmassa (kg)</option>
-            <option value="fatPct">Vetpercentage (%)</option>
-            <option value="smmPct">Spierpercentage (%)</option>
+            <option value="smm" data-requires-scan="1">Skeletspiermassa (kg)</option>
+            <option value="fatMass" data-requires-scan="1">Vetmassa (kg)</option>
+            <option value="fatPct" data-requires-scan="1">Vetpercentage (%)</option>
+            <option value="smmPct" data-requires-scan="1">Spierpercentage (%)</option>
           </select>
         </div>
       </div>
@@ -804,20 +802,19 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="ovMuscleCard">
       <h2>
-        <span>Spiergroep-belasting vs. Segmentale Spiermassa</span>
+        <span>Spiergroep Training &gt; Resultaat</span>
         <div class="pill-row" id="ovSegMetricPills" style="margin-bottom:0;">
           <span class="pill active" data-segmm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
           <span class="pill" data-segmm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
         </div>
       </h2>
       <div style="margin-bottom:6px;">
-        <span class="field-lbl">Lichaamsregio (koppelt getrainde spiergroepen aan bijpassende spiermassa uit scans):</span>
         <select id="ovSegRegionSelect" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
-          <option value="arms">Armen &amp; Bovenlichaam (Armen + Schouders → L/R-Arm Spier kg)</option>
-          <option value="legs">Benen &amp; Onderlichaam (Benen → L/R-Been Spier kg)</option>
-          <option value="trunk">Romp / Core (Borst + Rug + Core → Romp Spier kg)</option>
+          <option value="arms">Bovenlichaam</option>
+          <option value="trunk">Core</option>
+          <option value="legs">Benen</option>
         </select>
       </div>
       <div class="chart-wrap-tall">
@@ -860,61 +857,50 @@
     <!-- Detailkaart voor geselecteerde dag in Planner -->
     <div class="card" id="plannerDayDetailCard">
       <h2>
-        <span id="plannerSelectedDateLabel">Geselecteerde dag</span>
+        <span>Dagoverzicht · <span id="plannerSelectedDateLabel" style="color:var(--accent);">Geselecteerde dag</span></span>
         <button type="button" class="btn-sm btn-accent" id="btnGoToDayFood" style="color:#0f172a;">Open Voeding &rarr;</button>
       </h2>
-      <div id="plannerDaySummary" style="font-size:0.82rem; color:var(--muted); margin-bottom:10px;"></div>
 
-      <!-- Optie 3: Snelle voedingsstatus / grove dag-schatting of vrije dag in Planner -->
-      <div style="border-top:1px solid var(--card-border); padding-top:9px; margin-bottom:10px;">
-        <span class="field-lbl" style="font-weight:700; color:var(--text); margin-bottom:5px;">Snelle dag-status voeding (bijv. uit eten / weekend weg):</span>
-        <div class="pill-row" id="plannerFoodModePills" style="margin-bottom:6px;">
-          <span class="pill" data-pfmode="normal" style="padding:4px 9px; font-size:0.73rem;">📋 Normaal loggen</span>
-          <span class="pill" data-pfmode="est_normal" style="padding:4px 9px; font-size:0.73rem;">≈ Normaal (~2300)</span>
-          <span class="pill" data-pfmode="est_rich" style="padding:4px 9px; font-size:0.73rem;">≈ Rijk (~3000)</span>
-          <span class="pill" data-pfmode="est_feast" style="padding:4px 9px; font-size:0.73rem;">≈ Feest (~3600)</span>
-          <span class="pill" data-pfmode="free" style="padding:4px 9px; font-size:0.73rem;">🌴 Vrije dag</span>
-        </div>
-        <div id="plannerCustomEstRow" style="display:none; gap:6px; align-items:center; margin-top:4px;">
-          <input type="number" id="plannerEstKcal" value="2800" step="50" min="500" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem;" placeholder="Kcal" />
-          <input type="number" id="plannerEstProt" value="135" step="5" min="0" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem;" placeholder="Eiwit (g)" />
-          <button type="button" class="btn-sm btn-hevy" id="btnSavePlannerCustomEst" style="color:#0f172a; white-space:nowrap; height:33px;">Opslaan</button>
-        </div>
+      <!-- 1. Dagoverzicht: Voeding (zonder macro's) + Training blokjes & Samen-voorstellen -->
+      <div id="plannerDaySummary" style="font-size:0.82rem; color:var(--muted); margin-bottom:8px;"></div>
+      <div id="plannedWorkoutsList" style="margin-bottom:6px;"></div>
+      <div id="sharedBuddyWorkoutsBox" style="margin-bottom:10px;"></div>
+
+      <!-- 2. Twee knoppen voor Workout toevoegen (uitgevoerd) & Workout plannen (ingepland) -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:6px;">
+        <button type="button" class="btn btn-hevy" id="btnOpenWorkoutAdd" style="margin-top:0; padding:9px; font-size:0.82rem;">Workout toevoegen</button>
+        <button type="button" class="btn btn-accent" id="btnOpenWorkoutPlan" style="margin-top:0; padding:9px; font-size:0.82rem; color:#0f172a;">Workout plannen</button>
       </div>
 
-      <div style="border-top:1px solid var(--card-border); padding-top:10px;">
-        <span class="field-lbl" style="font-weight:700; color:var(--text); margin-bottom:6px;">Activiteit / Workout toevoegen op deze dag:</span>
-        <div class="manual-grid" style="margin-top:4px;">
-          <div>
-            <span class="field-lbl">Sport / Workout:</span>
-            <select id="planWorkoutSelect" style="margin-bottom:4px; font-size:0.82rem; padding:8px;">
-              <option value="BodyPump">BodyPump</option>
-              <option value="Hometrainer / Fietsen">Hometrainer / Fietsen</option>
-              <option value="Wandelen">Wandelen</option>
-              <option value="Skeeleren">Skeeleren</option>
-              <option value="Hardlopen">Hardlopen</option>
-              <option value="Zwemmen">Zwemmen</option>
-              <option value="Krachttraining">Krachttraining</option>
-              <option value="Upper Body">Upper Body</option>
-              <option value="Lower Body">Lower Body</option>
-              <option value="Push">Push</option>
-              <option value="Pull">Pull</option>
-              <option value="Full Body">Full Body</option>
-              <option value="__custom__">+ Eigen activiteit...</option>
-            </select>
-            <input type="text" id="planCustomSportName" placeholder="Naam activiteit..." style="display:none; margin-bottom:4px; padding:7px; font-size:0.8rem;" />
-          </div>
-          <div>
-            <span class="field-lbl">Status:</span>
-            <select id="planWorkoutStatus" style="margin-bottom:4px; font-size:0.82rem; padding:8px;">
-              <option value="planned">📅 Ingepland</option>
-              <option value="completed">✅ Uitgevoerd</option>
-            </select>
-          </div>
+      <!-- Uitklapbaar invoerformulier voor Workout toevoegen / plannen -->
+      <div id="plannerWorkoutFormBox" style="display:none; background:#0f172a; border:1px solid var(--card-border); border-radius:11px; padding:10px; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong id="plannerWorkoutFormTitle" style="font-size:0.82rem; color:var(--accent-hevy);">Workout toevoegen</strong>
+          <button type="button" class="btn-sm" id="btnCloseWorkoutForm" style="padding:2px 7px;">✕</button>
+        </div>
+
+        <div>
+          <span class="field-lbl">Sport / Workout:</span>
+          <select id="planWorkoutSelect" style="margin-bottom:4px; font-size:0.82rem; padding:8px;">
+            <option value="BodyPump">BodyPump</option>
+            <option value="Hometrainer / Fietsen">Hometrainer / Fietsen</option>
+            <option value="Wandelen">Wandelen</option>
+            <option value="Skeeleren">Skeeleren</option>
+            <option value="Hardlopen">Hardlopen</option>
+            <option value="Zwemmen">Zwemmen</option>
+            <option value="Krachttraining">Krachttraining</option>
+            <option value="Upper Body">Upper Body</option>
+            <option value="Lower Body">Lower Body</option>
+            <option value="Push">Push</option>
+            <option value="Pull">Pull</option>
+            <option value="Full Body">Full Body</option>
+            <option value="__custom__">+ Eigen activiteit...</option>
+          </select>
+          <input type="text" id="planCustomSportName" placeholder="Naam activiteit..." style="display:none; margin-bottom:4px; padding:7px; font-size:0.8rem;" />
         </div>
 
         <div style="margin-top:6px;">
-          <span class="field-lbl">Duur (kies snel of pas minuten aan):</span>
+          <span class="field-lbl">Duur:</span>
           <div class="pill-row" id="planDurationPills" style="margin-bottom:6px;">
             <span class="pill" data-dur="10" style="padding:4px 8px; font-size:0.72rem;">10m</span>
             <span class="pill" data-dur="15" style="padding:4px 8px; font-size:0.72rem;">15m</span>
@@ -930,7 +916,7 @@
               <input type="number" id="planDurationInput" value="60" min="1" step="5" style="margin-bottom:4px; padding:7px; font-size:0.82rem;" />
             </div>
             <div>
-              <span class="field-lbl">Verbrande kcal (schatting):</span>
+              <span class="field-lbl">Verbrande kcal:</span>
               <input type="number" id="planKcalInput" value="450" min="0" step="10" style="margin-bottom:4px; padding:7px; font-size:0.82rem;" />
             </div>
           </div>
@@ -938,11 +924,36 @@
 
         <label class="toggle-label" style="color:var(--text); margin-top:6px; margin-bottom:4px; font-weight:600; font-size:0.78rem;">
           <input type="checkbox" id="planWorkoutSharedChk" />
-          <span>🤝 Markeer als "Samen" (alleen zichtbaar voor directe Family/Sportbuddies waarbij delen aanstaat)</span>
+          <span>🤝 Samen-workout</span>
         </label>
-        <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:4px; padding:9px;">Toevoegen aan agenda</button>
-        <div id="plannedWorkoutsList" style="margin-top:10px;"></div>
-        <div id="sharedBuddyWorkoutsBox"></div>
+        <div id="planSharedPartnerRow" style="display:none; margin-top:4px; margin-bottom:6px;">
+          <span class="field-lbl">Met wie wil je de workout doen?*</span>
+          <input type="text" id="planSharedWithInput" list="connectedUsersDatalist" placeholder="Typ gebruikersnaam..." style="margin-bottom:0; padding:7px; font-size:0.8rem;" />
+          <datalist id="connectedUsersDatalist"></datalist>
+        </div>
+
+        <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:6px; padding:9px;">Opslaan</button>
+      </div>
+
+      <!-- 3. Voeding snelinvoer (zonder titel, verborgen onder knop) -->
+      <div style="border-top:1px solid var(--card-border); padding-top:10px; margin-top:10px;">
+        <button type="button" class="btn btn-sm" id="btnTogglePlannerQuickFood" style="width:100%; padding:9px; font-size:0.8rem;">
+          Snel voeding invoeren i.p.v. loggen
+        </button>
+        <div id="plannerQuickFoodBox" style="display:none; margin-top:8px;">
+          <div class="pill-row" id="plannerFoodModePills" style="margin-bottom:6px;">
+            <span class="pill" data-pfmode="normal" style="padding:4px 9px; font-size:0.73rem;">📋 Normaal loggen</span>
+            <span class="pill" data-pfmode="est_normal" style="padding:4px 9px; font-size:0.73rem;">Normale Dag (2300 kcal)</span>
+            <span class="pill" data-pfmode="est_rich" style="padding:4px 9px; font-size:0.73rem;">Meer gegeten (3000 kcal)</span>
+            <span class="pill" data-pfmode="est_feast" style="padding:4px 9px; font-size:0.73rem;">Feestdag (3600 kcal)</span>
+            <span class="pill" data-pfmode="free" style="padding:4px 9px; font-size:0.73rem;">🌴 Logging overslaan</span>
+          </div>
+          <div id="plannerCustomEstRow" style="display:none; gap:6px; align-items:center; margin-top:4px;">
+            <input type="number" id="plannerEstKcal" value="2800" step="50" min="500" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem;" placeholder="Kcal" />
+            <input type="number" id="plannerEstProt" value="135" step="5" min="0" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem;" placeholder="Eiwit (g)" />
+            <button type="button" class="btn-sm btn-hevy" id="btnSavePlannerCustomEst" style="color:#0f172a; white-space:nowrap; height:33px;">Opslaan</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1348,7 +1359,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <!-- Getrainde Spiergroepen onder Training (gekoppeld aan centrale datumpicker van Training) -->
-    <div class="card">
+    <div class="card" id="trMuscleCard">
       <details id="trMuscleDetails">
         <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
           <span>Spiergroepen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
@@ -1372,7 +1383,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <!-- Inklapbaar onderdeel: Oefening Progressie (alleen actief bij Hevy/Garmin CSV) -->
-    <div class="card">
+    <div class="card" id="trExerciseCard">
       <details id="trExerciseDetails">
         <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
           <span>Oefeningen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
@@ -2612,6 +2623,7 @@ function normalizePlannedEntry(entry) {
     completed: Boolean(entry.completed),
     isStrength: isStr,
     sharedWithConnections: Boolean(entry.sharedWithConnections),
+    sharedWithPartner: entry.sharedWithPartner || "",
     sourceSharedActivityId: entry.sourceSharedActivityId || null,
     fromConnectionUserId: entry.fromConnectionUserId || null,
     fromConnectionUsername: entry.fromConnectionUsername || null
@@ -2686,9 +2698,9 @@ function computeBasisItemMacros(bItem, qty) {
 }
 
 const DAY_ESTIMATE_PRESETS = {
-  est_normal: { label: "Normale dag", kcal: 2300, p: 145, c: 235, f: 75 },
-  est_rich:   { label: "Rijke dag / uit eten", kcal: 3000, p: 130, c: 310, f: 120 },
-  est_feast:  { label: "Feestdag / weekend", kcal: 3600, p: 125, c: 375, f: 155 }
+  est_normal: { label: "Normale Dag", kcal: 2300, p: 145, c: 235, f: 75 },
+  est_rich:   { label: "Meer gegeten", kcal: 3000, p: 130, c: 310, f: 120 },
+  est_feast:  { label: "Feestdag", kcal: 3600, p: 125, c: 375, f: 155 }
 };
 
 function setFoodDayMode(ymd, modeKey, customKcal = null, customProt = null) {
@@ -3540,42 +3552,52 @@ function renderPlannerTab() {
   const totalBurnedDay = completedPlans.reduce((acc, w) => acc + (w.burnedKcal || 0), 0);
 
   const statusTxt = fTotals.isFreeDay
-    ? "🌴 Vrije dag (bewust niet geteld)"
+    ? "🌴 Logging overgeslagen"
     : (fTotals.isEstimate
-        ? `≈ Grove schatting (${escapeHtml(fTotals.estimateLabel)})`
+        ? `≈ ${escapeHtml(fTotals.estimateLabel)}`
         : (fTotals.completed ? "✅ Voeding afgerond" : (fTotals.touched ? "🟠 Voeding deels gelogd" : "⚪ Nog geen voeding gelogd")));
   const curDayLog = state.foodLogs[selYmd];
   const activePfMode = fTotals.isFreeDay ? "free" : (fTotals.isEstimate ? (curDayLog?.estimateData?.presetKey || "est_rich") : "normal");
   document.querySelectorAll("#plannerFoodModePills .pill").forEach(p => {
     p.classList.toggle("active", p.getAttribute("data-pfmode") === activePfMode);
   });
-  let woSummaryLine = "Geen geregistreerde activiteit op deze dag";
-  if (hasCsv || completedPlans.length > 0) {
-    const parts = [];
-    if (hasCsv) parts.push("Krachttraining (CSV)");
-    if (completedPlans.length > 0) parts.push(`${completedPlans.length} activiteit(en) voltooid (${totalBurnedDay} kcal)`);
-    woSummaryLine = `🏋️ <strong>${parts.join(" + ")}</strong>`;
-  } else if (pList.length > 0) {
-    woSummaryLine = `📅 <strong>${pList.length} geplande activiteit(en)</strong>`;
+
+  // Vul datalist met gekoppelde Family & Sportbuddies voor het "Met wie" veld
+  const connDl = document.getElementById("connectedUsersDatalist");
+  if (connDl) {
+    const activePeers = (myConnections || []).filter(c => c.status === "active").map(c => c.peerUsername);
+    connDl.innerHTML = [...new Set(activePeers)].map(u => `<option value="${escapeHtml(u)}">`).join("");
   }
 
-  document.getElementById("plannerDaySummary").innerHTML = `
-    <div>${statusTxt} · <strong>${fTotals.kcal} kcal</strong> (${fTotals.p}g E · ${fTotals.c}g KH · ${fTotals.f}g V)</div>
-    <div style="margin-top:4px;">${woSummaryLine}</div>
-  `;
+  document.getElementById("plannerDaySummary").innerHTML = fTotals.isFreeDay
+    ? `<div>${statusTxt}</div>`
+    : `<div>${statusTxt} · <strong>${fTotals.kcal} kcal</strong></div>`;
 
-  const pEl = document.getElementById("plannedWorkoutsList");
-  if (pList.length === 0) {
-    pEl.innerHTML = "";
-  } else {
-    pEl.innerHTML = pList.map((w, idx) => {
+  // Bouw Training-blokjes direct onder Voeding (inclusief eventuele CSV-workout + handmatige/geplande workouts)
+  let blocksHtml = "";
+  if (hasCsv) {
+    const dayCsvSets = [...state.garminSets, ...state.hevySets].filter(s => s.dateDay === selYmd);
+    const csvTitle = (dayCsvSets[0] && dayCsvSets[0].workoutTitle) || "Krachttraining (CSV)";
+    blocksHtml += `
+      <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:rgba(16,185,129,0.4);">
+        <div class="meal-info">
+          <div class="meal-title" style="color:var(--accent-hevy);">✅ ${escapeHtml(csvTitle)}</div>
+          <div class="meal-macros">${dayCsvSets.length} sets · Uitgevoerd</div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (pList.length > 0) {
+    blocksHtml += pList.map((w, idx) => {
       const badgeColor = w.completed ? "var(--accent-hevy)" : "var(--accent)";
       const statusIcon = w.completed ? "✅" : "📅";
       const toggleLabel = w.completed ? "↩ Gepland" : "✓ Afronden";
       const toggleCls = w.completed ? "btn-sm" : "btn-sm btn-hevy";
       const toggleStyle = w.completed ? "padding:4px 7px; font-size:0.72rem;" : "color:#0f172a; padding:4px 8px; font-size:0.72rem;";
-      const sharedTag = w.fromConnectionUsername
-        ? `<span style="font-size:0.68rem; color:var(--accent); margin-left:5px;">(via @${escapeHtml(w.fromConnectionUsername)})</span>`
+      const partnerName = w.fromConnectionUsername || w.sharedWithPartner;
+      const sharedTag = partnerName
+        ? `<span style="font-size:0.68rem; color:var(--accent); margin-left:5px;">🤝 Samen met ${escapeHtml(partnerName)}</span>`
         : (w.sharedWithConnections ? `<span style="font-size:0.68rem; color:var(--accent-hevy); margin-left:5px;">🤝 Samen</span>` : "");
       return `
         <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:${w.completed ? "rgba(16,185,129,0.4)" : "rgba(56,189,248,0.35)"};">
@@ -3588,6 +3610,13 @@ function renderPlannerTab() {
         </div>
       `;
     }).join("");
+  }
+
+  const pEl = document.getElementById("plannedWorkoutsList");
+  if (blocksHtml) {
+    pEl.innerHTML = blocksHtml;
+  } else {
+    pEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:2px 0;">🏋️ Geen trainingen op deze dag</div>`;
   }
 
   // Helper om openstaande voorstellen voor een datum op te halen (niet al toegevoegd én niet geweigerd)
@@ -4092,12 +4121,26 @@ function renderOverviewDashboard(sets) {
 
   const trainSel = document.getElementById("ovTrainMetric");
   const bodySel = document.getElementById("ovBodyMetric");
+  Array.from(trainSel.options).forEach(opt => {
+    const reqCsv = opt.getAttribute("data-requires-csv") === "1";
+    opt.hidden = reqCsv && !hasCsv;
+    opt.disabled = reqCsv && !hasCsv;
+  });
   if (!hasCsv && ["volume", "sets", "reps"].includes(trainSel.value)) {
     trainSel.value = "minutes";
   }
   const hasScans = state.bodyMeasurements.some(m => m.smm !== null && m.smm !== undefined);
+  Array.from(bodySel.options).forEach(opt => {
+    const reqScan = opt.getAttribute("data-requires-scan") === "1";
+    opt.hidden = reqScan && !hasScans;
+    opt.disabled = reqScan && !hasScans;
+  });
   if (!hasScans && ["smm", "fatMass", "fatPct", "smmPct"].includes(bodySel.value)) {
     bodySel.value = "weight";
+  }
+  const ovMuscleCardEl = document.getElementById("ovMuscleCard");
+  if (ovMuscleCardEl) {
+    ovMuscleCardEl.style.display = hasCsv ? "block" : "none";
   }
 
   const bucketMap = {};
@@ -4759,7 +4802,12 @@ function computeContinuousPeriodWindow(gran, offset, earliestYmd, latestYmd, exi
 function renderTrainingProgressSection(sets) {
   const hasCsv = hasStrengthCsvData();
 
-  // Beheer inklapbare Oefening Progressie
+  // Verberg Spiergroepen & Oefeningen kaarten volledig als er geen Hevy/Garmin CSV data is
+  const trMuscleCardEl = document.getElementById("trMuscleCard");
+  const trExerciseCardEl = document.getElementById("trExerciseCard");
+  if (trMuscleCardEl) trMuscleCardEl.style.display = hasCsv ? "block" : "none";
+  if (trExerciseCardEl) trExerciseCardEl.style.display = hasCsv ? "block" : "none";
+
   const exDetails = document.getElementById("trExerciseDetails");
   const exContent = document.getElementById("trExerciseContent");
   const exEmptyMsg = document.getElementById("trExerciseEmptyMsg");
@@ -4773,7 +4821,7 @@ function renderTrainingProgressSection(sets) {
       exDetails.removeAttribute("open");
       exDetails.open = false;
       exContent.style.display = "none";
-      exEmptyMsg.style.display = "block";
+      exEmptyMsg.style.display = "none";
     }
   }
 
@@ -5442,6 +5490,10 @@ function bindEvents() {
     if (!cell) return;
     state.selectedPlannerDate = cell.getAttribute("data-cal-day");
     renderPlannerTab();
+    const detailCard = document.getElementById("plannerDayDetailCard");
+    if (detailCard) {
+      detailCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   });
   document.getElementById("btnGoToDayFood").addEventListener("click", () => {
     state.selectedNutriDate = state.selectedPlannerDate;
@@ -5493,21 +5545,85 @@ function bindEvents() {
     syncPlannerKcalPreview();
   });
 
+  let plannerWorkoutFormMode = "completed"; // "completed" (toevoegen) of "planned" (plannen)
+
+  function openPlannerWorkoutForm(mode) {
+    plannerWorkoutFormMode = mode;
+    const box = document.getElementById("plannerWorkoutFormBox");
+    const titleEl = document.getElementById("plannerWorkoutFormTitle");
+    const saveBtn = document.getElementById("btnAddPlannedWorkout");
+    if (box) box.style.display = "block";
+    if (mode === "completed") {
+      if (titleEl) { titleEl.textContent = "Workout toevoegen (uitgevoerd)"; titleEl.style.color = "var(--accent-hevy)"; }
+      if (saveBtn) { saveBtn.textContent = "Workout toevoegen"; saveBtn.className = "btn btn-hevy"; saveBtn.style.color = "#0f172a"; }
+    } else {
+      if (titleEl) { titleEl.textContent = "Workout plannen"; titleEl.style.color = "var(--accent)"; }
+      if (saveBtn) { saveBtn.textContent = "Workout plannen"; saveBtn.className = "btn btn-accent"; saveBtn.style.color = "#0f172a"; }
+    }
+    syncPlannerKcalPreview();
+  }
+
+  document.getElementById("btnOpenWorkoutAdd")?.addEventListener("click", () => openPlannerWorkoutForm("completed"));
+  document.getElementById("btnOpenWorkoutPlan")?.addEventListener("click", () => openPlannerWorkoutForm("planned"));
+  document.getElementById("btnCloseWorkoutForm")?.addEventListener("click", () => {
+    const box = document.getElementById("plannerWorkoutFormBox");
+    if (box) box.style.display = "none";
+  });
+
+  document.getElementById("planWorkoutSharedChk")?.addEventListener("change", e => {
+    const partnerRow = document.getElementById("planSharedPartnerRow");
+    if (partnerRow) {
+      partnerRow.style.display = e.target.checked ? "block" : "none";
+      if (e.target.checked) document.getElementById("planSharedWithInput")?.focus();
+    }
+  });
+
+  document.getElementById("btnTogglePlannerQuickFood")?.addEventListener("click", () => {
+    const qBox = document.getElementById("plannerQuickFoodBox");
+    if (qBox) qBox.style.display = qBox.style.display === "none" ? "block" : "none";
+  });
+
   document.getElementById("btnAddPlannedWorkout").addEventListener("click", () => {
     const selVal = document.getElementById("planWorkoutSelect").value;
     const customVal = document.getElementById("planCustomSportName").value.trim();
     const title = selVal === "__custom__" ? customVal : selVal;
     if (!title) { alert("Vul een naam in voor de activiteit."); return; }
 
+    const sharedWithConnections = Boolean(document.getElementById("planWorkoutSharedChk")?.checked);
+    const sharedWithPartner = (document.getElementById("planSharedWithInput")?.value || "").trim();
+    if (sharedWithConnections && !sharedWithPartner) {
+      alert("Vul in met wie je de Samen-workout wilt doen.");
+      document.getElementById("planSharedWithInput")?.focus();
+      return;
+    }
+
     const durationMin = Math.max(1, Number(document.getElementById("planDurationInput").value) || 45);
     const burnedKcal = Math.max(0, Number(document.getElementById("planKcalInput").value) || estimateBurnedKcal(title, durationMin));
-    const completed = document.getElementById("planWorkoutStatus").value === "completed";
+    const completed = plannerWorkoutFormMode === "completed";
     const isStrength = Boolean((SPORT_PRESETS[title] && SPORT_PRESETS[title].isStrength) || /upper|lower|push|pull|full|kracht/i.test(title));
 
-    const sharedWithConnections = Boolean(document.getElementById("planWorkoutSharedChk")?.checked);
     const d = state.selectedPlannerDate;
     if (!state.plannedWorkouts[d]) state.plannedWorkouts[d] = [];
-    state.plannedWorkouts[d].push({ title, durationMin, burnedKcal, completed, isStrength, sharedWithConnections });
+    state.plannedWorkouts[d].push({
+      title,
+      durationMin,
+      burnedKcal,
+      completed,
+      isStrength,
+      sharedWithConnections,
+      sharedWithPartner: sharedWithConnections ? sharedWithPartner : ""
+    });
+
+    // Reset en sluit invoerblok
+    const box = document.getElementById("plannerWorkoutFormBox");
+    if (box) box.style.display = "none";
+    const chk = document.getElementById("planWorkoutSharedChk");
+    if (chk) chk.checked = false;
+    const partnerRow = document.getElementById("planSharedPartnerRow");
+    if (partnerRow) partnerRow.style.display = "none";
+    const partnerInp = document.getElementById("planSharedWithInput");
+    if (partnerInp) partnerInp.value = "";
+
     saveFoodState();
     refreshAll();
   });
