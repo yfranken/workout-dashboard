@@ -840,6 +840,7 @@
         <span><span class="cal-pill-bar cal-bar-food-free" style="display:inline-flex; padding:1px 5px;">🌴</span> Vrij</span>
         <span><span class="cal-pill-bar cal-bar-wo-blue" style="display:inline-flex; padding:1px 5px;">🏋️</span> Gepland</span>
         <span><span class="cal-pill-bar cal-bar-wo-green" style="display:inline-flex; padding:1px 5px;">🏋️</span> Voltooid</span>
+        <span><span class="cal-pill-bar cal-bar-wo-blue" style="display:inline-flex; padding:1px 5px;">🏋️🏋️</span> Samen</span>
       </div>
       <div class="cal-header">
         <div>Ma</div><div>Di</div><div>Wo</div><div>Do</div><div>Vr</div><div>Za</div><div>Zo</div>
@@ -1874,6 +1875,7 @@ let state = {
   foodLogs: safeParseJSON("food_logs_v1", {}),
   // plannedWorkouts: { "2026-11-18": ["Upper Body"] }
   plannedWorkouts: safeParseJSON("planned_workouts_v1", {}),
+  dismissedSharedIds: safeParseJSON("dismissed_shared_ids_v1", []),
   selectedNutriDate: TODAY_YMD,
   nutriCalYear: new Date().getFullYear(),
   nutriCalMonth: new Date().getMonth(),
@@ -2067,6 +2069,7 @@ function buildFullSyncPayload() {
     pointOverrides: state.pointOverrides,
     foodLogs: state.foodLogs,
     plannedWorkouts: state.plannedWorkouts,
+    dismissedSharedIds: state.dismissedSharedIds,
     nutriGoals: state.nutriGoals,
     basisItems: state.basisItems,
     drinkFavorites: state.drinkFavorites,
@@ -2092,6 +2095,7 @@ async function applySyncPayload(d, saveLocally = true) {
     if (d.pointOverrides) state.pointOverrides = d.pointOverrides;
     if (d.foodLogs) state.foodLogs = d.foodLogs;
     if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
+    if (Array.isArray(d.dismissedSharedIds)) state.dismissedSharedIds = d.dismissedSharedIds;
     if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
     if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
     if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
@@ -2106,6 +2110,8 @@ async function applySyncPayload(d, saveLocally = true) {
       await saveDataset("bodyMeasurements", state.bodyMeasurements);
       localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
       localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
+  localStorage.setItem("dismissed_shared_ids_v1", JSON.stringify(state.dismissedSharedIds));
+      localStorage.setItem("dismissed_shared_ids_v1", JSON.stringify(state.dismissedSharedIds));
       localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
       localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
       localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
@@ -2474,6 +2480,7 @@ function normalizePlannedEntry(entry) {
     completed: Boolean(entry.completed),
     isStrength: isStr,
     sharedWithConnections: Boolean(entry.sharedWithConnections),
+    sourceSharedActivityId: entry.sourceSharedActivityId || null,
     fromConnectionUserId: entry.fromConnectionUserId || null,
     fromConnectionUsername: entry.fromConnectionUsername || null
   };
@@ -3331,8 +3338,14 @@ function renderPlannerTab() {
     const foodInfo = computeDayNutrition(ymd);
     const hasCsvWo = actualCsvDays.has(ymd);
     const dayWorkouts = getNormalizedDayWorkouts(ymd);
-    const hasCompletedPlan = dayWorkouts.some(w => w.completed);
-    const hasOpenPlan = dayWorkouts.some(w => !w.completed);
+    const samenWorkouts = dayWorkouts.filter(w => w.sharedWithConnections || w.fromConnectionUserId);
+    const regularWorkouts = dayWorkouts.filter(w => !w.sharedWithConnections && !w.fromConnectionUserId);
+
+    const regularCount = (hasCsvWo ? 1 : 0) + regularWorkouts.length;
+    const regularAllDone = regularCount > 0 && regularWorkouts.every(w => w.completed);
+
+    const samenCount = samenWorkouts.length;
+    const samenAllDone = samenCount > 0 && samenWorkouts.every(w => w.completed);
 
     let pillBarsHtml = "";
     if (foodInfo.isFreeDay) {
@@ -3342,10 +3355,17 @@ function renderPlannerTab() {
     } else if (foodInfo.touched) {
       pillBarsHtml += `<div class="cal-pill-bar cal-bar-food-orange" title="Voeding deels gelogd">🍽️</div>`;
     }
-    if (hasCsvWo || hasCompletedPlan) {
-      pillBarsHtml += `<div class="cal-pill-bar cal-bar-wo-green" title="Training voltooid">🏋️</div>`;
-    } else if (hasOpenPlan) {
-      pillBarsHtml += `<div class="cal-pill-bar cal-bar-wo-blue" title="Training gepland">🏋️</div>`;
+
+    if (regularCount > 0) {
+      const regCls = regularAllDone ? "cal-bar-wo-green" : "cal-bar-wo-blue";
+      const regPrefix = regularCount > 1 ? `<span style="margin-right:3px; font-weight:800;">${regularCount}</span>` : "";
+      pillBarsHtml += `<div class="cal-pill-bar ${regCls}" title="${regularCount} reguliere workout(s)">${regPrefix}🏋️</div>`;
+    }
+
+    if (samenCount > 0) {
+      const samCls = samenAllDone ? "cal-bar-wo-green" : "cal-bar-wo-blue";
+      const samPrefix = samenCount > 1 ? `<span style="margin-right:3px; font-weight:800;">${samenCount}</span>` : "";
+      pillBarsHtml += `<div class="cal-pill-bar ${samCls}" title="${samenCount} samen-workout(s)">${samPrefix}🏋️🏋️</div>`;
     }
 
     cellsHtml += `
@@ -3417,24 +3437,40 @@ function renderPlannerTab() {
     }).join("");
   }
 
+  // Helper om openstaande voorstellen voor een datum op te halen (niet al toegevoegd én niet geweigerd)
+  function getOpenSharedProposalsForDate(dateStr) {
+    const existingDayList = getNormalizedDayWorkouts(dateStr);
+    const acceptedIds = new Set(existingDayList.map(w => w.sourceSharedActivityId).filter(Boolean));
+    const dismissedSet = new Set(state.dismissedSharedIds || []);
+    return (sharedActivitiesFeed || []).filter(a =>
+      a.activity_date === dateStr &&
+      !acceptedIds.has(a.id) &&
+      !dismissedSet.has(a.id)
+    );
+  }
+
   // Toon gedeelde 'Samen'-workouts van directe Family/Sportbuddy-connecties op deze dag (zonder transitief doorsijpelen)
   const sharedBox = document.getElementById("sharedBuddyWorkoutsBox");
   if (sharedBox) {
-    const proposals = (sharedActivitiesFeed || []).filter(a => a.activity_date === selYmd);
+    const proposals = getOpenSharedProposalsForDate(selYmd);
     if (proposals.length === 0) {
       sharedBox.innerHTML = "";
     } else {
       sharedBox.innerHTML = `
         <div class="shared-proposal-box">
-          <div style="font-weight:700; color:var(--accent); margin-bottom:5px;">🤝 Voorstel van gekoppelde ${proposals[0].connectionRole === "family" ? "Family" : "Sportbuddy"}:</div>
-          ${proposals.map((prop, pIdx) => {
+          <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">🤝 Samen-workout voorstel:</div>
+          ${proposals.map(prop => {
             const rBadge = prop.connectionRole === "family" ? `<span class="role-pill-family">Family</span>` : `<span class="role-pill-buddy">Sportbuddy</span>`;
             return `
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; padding:4px 0;">
-                <div>
-                  <strong>${escapeHtml(prop.title)}</strong> (${prop.duration_min} min) · @${escapeHtml(prop.ownerUsername)} ${rBadge}
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; padding:5px 0; border-top:1px solid rgba(51,65,85,0.45); flex-wrap:wrap;">
+                <div style="flex:1; min-width:140px;">
+                  <strong>${escapeHtml(prop.title)}</strong> (${prop.duration_min} min)
+                  <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Van @${escapeHtml(prop.ownerUsername)} ${rBadge}</div>
                 </div>
-                <button type="button" class="btn-sm btn-hevy" data-accept-shared-wo="${pIdx}" style="color:#0f172a; white-space:nowrap;">✓ Bevestig voor mij</button>
+                <div style="display:flex; gap:5px;">
+                  <button type="button" class="btn-sm btn-hevy" data-accept-shared-id="${escapeHtml(prop.id)}" style="color:#0f172a; white-space:nowrap;">Accepteren</button>
+                  <button type="button" class="btn-sm" data-reject-shared-id="${escapeHtml(prop.id)}" style="color:var(--danger); white-space:nowrap;">Weigeren</button>
+                </div>
               </div>
             `;
           }).join("")}
@@ -6963,24 +6999,41 @@ function bindEvents() {
     renderPlannerTab();
   });
 
-  // Gedeeld workout-voorstel in Planner bevestigen als eigen activiteit (blijft privé, sijpelt niet door!)
+  // Gedeeld workout-voorstel in Planner Accepteren (komt als ingepland in agenda) of Weigeren
   document.getElementById("sharedBuddyWorkoutsBox").addEventListener("click", e => {
-    const btn = e.target.closest("[data-accept-shared-wo]");
-    if (!btn) return;
     const selYmd = state.selectedPlannerDate;
-    const proposals = (sharedActivitiesFeed || []).filter(a => a.activity_date === selYmd);
-    const prop = proposals[Number(btn.getAttribute("data-accept-shared-wo"))];
+
+    const rejBtn = e.target.closest("[data-reject-shared-id]");
+    if (rejBtn) {
+      const actId = rejBtn.getAttribute("data-reject-shared-id");
+      if (actId && !state.dismissedSharedIds.includes(actId)) {
+        state.dismissedSharedIds.push(actId);
+        saveFoodState();
+        refreshAll();
+      }
+      return;
+    }
+
+    const accBtn = e.target.closest("[data-accept-shared-id]");
+    if (!accBtn) return;
+    const actId = accBtn.getAttribute("data-accept-shared-id");
+    const prop = (sharedActivitiesFeed || []).find(a => a.id === actId && a.activity_date === selYmd);
     if (!prop) return;
 
     if (!state.plannedWorkouts[selYmd]) state.plannedWorkouts[selYmd] = [];
+    const existingList = getNormalizedDayWorkouts(selYmd);
+    // Voorkom dubbele toevoeging van dezelfde voorgestelde activiteit
+    if (existingList.some(w => w.sourceSharedActivityId === prop.id)) return;
+
     const isStrength = Boolean((SPORT_PRESETS[prop.title] && SPORT_PRESETS[prop.title].isStrength) || /upper|lower|push|pull|full|kracht/i.test(prop.title));
     state.plannedWorkouts[selYmd].push({
       title: prop.title,
       durationMin: Number(prop.duration_min || 45),
       burnedKcal: Number(prop.burned_kcal || estimateBurnedKcal(prop.title, prop.duration_min || 45)),
-      completed: true,
+      completed: false, // Komt als ingepland in de agenda; gebruiker rondt deze zelf nog af
       isStrength,
       sharedWithConnections: false, // Cruciaal: overgenomen voorstel wordt NOOIT automatisch doorgedeeld naar derden
+      sourceSharedActivityId: prop.id,
       fromConnectionUserId: prop.owner_id,
       fromConnectionUsername: prop.ownerUsername
     });
