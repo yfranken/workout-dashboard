@@ -928,8 +928,9 @@
         </label>
         <div id="planSharedPartnerRow" style="display:none; margin-top:4px; margin-bottom:6px;">
           <span class="field-lbl">Met wie wil je de workout doen?*</span>
-          <input type="text" id="planSharedWithInput" list="connectedUsersDatalist" placeholder="Typ gebruikersnaam..." style="margin-bottom:0; padding:7px; font-size:0.8rem;" />
-          <datalist id="connectedUsersDatalist"></datalist>
+          <select id="planSharedWithSelect" style="margin-bottom:0; padding:7px; font-size:0.8rem;">
+            <option value="">-- Kies gekoppelde persoon --</option>
+          </select>
         </div>
 
         <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:6px; padding:9px;">Opslaan</button>
@@ -1157,28 +1158,27 @@
       <h2>
         <span>Toevoegen</span>
         <div style="display:flex; gap:5px; align-items:center;">
-          <button type="button" class="btn-sm btn-accent" id="btnToggleMealPaste" style="color:#0f172a;">+ Plak maaltijd/dag</button>
-          <button type="button" class="btn-sm" id="btnToggleQuickDayMode" title="Grove dag-schatting of vrije dag">🌴 Dag-modus</button>
+          <button type="button" class="btn-sm btn-accent" id="btnToggleMealPaste" style="color:#0f172a;">+ Plak AI-dagmenu</button>
+          <button type="button" class="btn-sm" id="btnToggleQuickDayMode" title="Dag-modus">🌴 Dag-modus</button>
         </div>
       </h2>
 
-      <!-- Optie 1: Plak maaltijd / uit eten / hele dag uit chat -->
+      <!-- Optie 1: Plak AI-dagmenu -->
       <div id="mealPasteBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <strong style="font-size:0.84rem; color:var(--accent);">📋 Plak maaltijd, drankje of hele dag</strong>
+          <strong style="font-size:0.84rem; color:var(--accent);">📋 Plak AI-dagmenu</strong>
           <button type="button" class="btn-sm" id="btnCloseMealPaste" style="padding:2px 7px;">✕</button>
         </div>
-        <span class="field-lbl" style="line-height:1.4; margin-bottom:6px;">
-          Plak hier een of meerdere regels (bijv. uit de chat na uit eten of hotelbuffet). Gebruik optioneel <strong>Ontbijt:</strong>, <strong>Lunch:</strong>, <strong>Tussendoor:</strong>, <strong>Diner:</strong>, <strong>Drank:</strong> of <strong>Extra:</strong> (zonder kopje komt het onder het gekozen pill-kopje):
-        </span>
-        <textarea id="mealPasteText" rows="5" placeholder="Bijv:
-Ontbijt: Hotelbuffet pancakes, roerei & yoghurt (850 kcal, 38g eiwit, 95g kh, 32g vet)
-Lunch: Tomatensoep met stokbrood kruidenboter (520 kcal, 14g eiwit, 62g kh, 22g vet)
-Diner: Black Angus burger met friet & mayo (1180 kcal, 48g eiwit, 98g kh, 64g vet)
-Drank: Wellness Weizen 330ml (150 kcal, 2g eiwit, 13g kh, 0g vet)"></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span class="field-lbl" style="line-height:1.4; margin-bottom:0; flex:1;">
+            Laat je eigen AI-tool op basis van een grove omschrijving een schatting maken in dit vaste format:
+          </span>
+          <button type="button" class="btn-sm btn-accent" id="btnCopyAiMealFormat" style="color:#0f172a; white-space:nowrap;">Kopieer format</button>
+        </div>
+        <textarea id="mealPasteText" rows="4" placeholder=""></textarea>
         <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-size:0.76rem;">
           <input type="checkbox" id="chkPasteReplaceBasis" />
-          Standaard basisdag op deze dag op 0 zetten (handig bij hotelontbijt / dagje weg)
+          Standaard basisdag op deze dag op 0 zetten
         </label>
         <div class="manual-grid" style="margin-top:0;">
           <button type="button" class="btn btn-hevy" id="btnParseMealPaste" style="margin-top:0; padding:8px;">Inladen op deze dag</button>
@@ -1186,24 +1186,19 @@ Drank: Wellness Weizen 330ml (150 kcal, 2g eiwit, 13g kh, 0g vet)"></textarea>
         </div>
       </div>
 
-      <!-- Optie 3: Snelle grove schatting of vrije dag vanuit Voeding -->
+      <!-- Optie 3: Dag-modus gelijkgetrokken met Planner -->
       <div id="nutriQuickModeBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--card-border); margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <strong style="font-size:0.83rem; color:var(--text);">🌴 Snelle dag-schatting of vrije dag</strong>
+          <strong style="font-size:0.83rem; color:var(--text);">🌴 Dag-modus</strong>
           <button type="button" class="btn-sm" id="btnCloseQuickDayMode" style="padding:2px 7px;">✕</button>
         </div>
-        <div class="pill-row" id="nutriQuickModePills" style="margin-bottom:8px;">
-          <span class="pill" data-nfmode="normal" style="padding:4px 9px; font-size:0.74rem;">📋 Normaal loggen</span>
-          <span class="pill" data-nfmode="est_normal" style="padding:4px 9px; font-size:0.74rem;">≈ Normale dag (~2300 kcal)</span>
-          <span class="pill" data-nfmode="est_rich" style="padding:4px 9px; font-size:0.74rem;">≈ Rijke dag (~3000 kcal)</span>
-          <span class="pill" data-nfmode="est_feast" style="padding:4px 9px; font-size:0.74rem;">≈ Feestdag (~3600 kcal)</span>
-          <span class="pill" data-nfmode="free" style="padding:4px 9px; font-size:0.74rem;">🌴 Vrije dag (niet geteld)</span>
+        <div class="pill-row" id="nutriQuickModePills" style="margin-bottom:6px;">
+          <span class="pill" data-nfmode="normal" style="padding:4px 9px; font-size:0.73rem;">📋 Normaal loggen</span>
+          <span class="pill" data-nfmode="est_normal" style="padding:4px 9px; font-size:0.73rem;">Normale Dag (2300 kcal)</span>
+          <span class="pill" data-nfmode="est_rich" style="padding:4px 9px; font-size:0.73rem;">Meer gegeten (3000 kcal)</span>
+          <span class="pill" data-nfmode="est_feast" style="padding:4px 9px; font-size:0.73rem;">Feestdag (3600 kcal)</span>
+          <span class="pill" data-nfmode="free" style="padding:4px 9px; font-size:0.73rem;">🌴 Logging overslaan</span>
         </div>
-        <div class="manual-grid" style="margin-top:0;">
-          <div><span class="field-lbl">Aangepaste schatting Kcal:</span><input type="number" id="nutriCustomEstKcal" value="2800" step="50" style="margin-bottom:4px; padding:6px; font-size:0.8rem;" /></div>
-          <div><span class="field-lbl">Schatting Eiwit (g):</span><input type="number" id="nutriCustomEstProt" value="135" step="5" style="margin-bottom:4px; padding:6px; font-size:0.8rem;" /></div>
-        </div>
-        <button type="button" class="btn btn-accent" id="btnApplyCustomNutriEst" style="margin-top:4px; padding:7px; color:#0f172a;">Grove schatting toepassen</button>
       </div>
       <div class="pill-row" id="targetSectionPills" style="margin-bottom:10px;">
         <span class="pill" data-tsec="ontbijt">🌅 Ontbijt</span>
@@ -1215,35 +1210,39 @@ Drank: Wellness Weizen 330ml (150 kcal, 2g eiwit, 13g kh, 0g vet)"></textarea>
       <!-- Gecombineerde zoekbalk (zoekt direct lokaal én live online) -->
       <div style="display:flex; gap:6px; margin-bottom:6px; align-items:center;">
         <div class="search-input-wrap">
-          <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken (bijv. Chocomel 0%, Lipton, skyr)..." />
+          <input type="text" id="unifiedSearchInput" placeholder="Zoek eten of drinken..." />
           <button type="button" class="search-clear-btn" id="btnClearUnifiedSearch" title="Zoekveld wissen">✕</button>
         </div>
         <button type="button" class="btn-sm btn-accent" id="btnUnifiedSearch" style="color:#0f172a; height:38px; white-space:nowrap;">Zoek</button>
       </div>
       <div id="unifiedSearchResults" style="max-height:240px; overflow-y:auto; margin-bottom:10px;"></div>
 
-      <!-- Op PC naast elkaar: Dranken (links) en Eten (rechts) -->
+      <!-- Op PC naast elkaar: Favoriete Dranken en Favoriet Eten pas bij klikken zichtbaar -->
       <div class="add-grid-pc">
         <div>
-          <div style="font-size:0.8rem; font-weight:700; color:var(--accent); margin-bottom:6px;">🥤 Favoriete Dranken (mL)</div>
-          <div class="pill-row" id="drinkCatPills" style="display:none;">
-            <span class="pill active" data-dcat="fav">★ Favorieten</span>
-          </div>
-          <div class="drink-grid" id="drinkGrid"></div>
+          <button type="button" class="btn btn-sm" id="btnToggleFavDrinks" style="width:100%; padding:8px; font-size:0.8rem; color:var(--accent);">🥤 Favoriete Dranken</button>
+          <div id="favDrinksPanel" style="display:none; margin-top:8px;">
+            <div class="pill-row" id="drinkCatPills" style="display:none;">
+              <span class="pill active" data-dcat="fav">★ Favorieten</span>
+            </div>
+            <div class="drink-grid" id="drinkGrid"></div>
 
-          <!-- Hoeveelheid-kiezer na selectie van drank -->
-          <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
-            <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
-            <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
+            <!-- Hoeveelheid-kiezer na selectie van drank -->
+            <div id="drinkVolumePicker" style="display:none;" class="vol-chip-row">
+              <div style="width:100%; font-size:0.78rem; font-weight:700; color:var(--text);" id="selectedDrinkTitle">Kies hoeveelheid:</div>
+              <div id="drinkVolButtons" style="display:flex; gap:6px; flex-wrap:wrap; width:100%;"></div>
+            </div>
           </div>
         </div>
 
         <div class="add-food-col">
-          <div style="font-size:0.8rem; font-weight:700; color:var(--accent-hevy); margin-bottom:6px;">🍽️ Favoriet Eten (stuk / gram)</div>
-          <div class="pill-row" id="foodCatPills" style="display:none;">
-            <span class="pill active" data-fcat="fav">★ Favorieten</span>
+          <button type="button" class="btn btn-sm" id="btnToggleFavFood" style="width:100%; padding:8px; font-size:0.8rem; color:var(--accent-hevy);">🍽️ Favoriet Eten</button>
+          <div id="favFoodPanel" style="display:none; margin-top:8px;">
+            <div class="pill-row" id="foodCatPills" style="display:none;">
+              <span class="pill active" data-fcat="fav">★ Favorieten</span>
+            </div>
+            <div class="drink-grid" id="foodQuickGrid"></div>
           </div>
-          <div class="drink-grid" id="foodQuickGrid"></div>
         </div>
       </div>
 
@@ -2242,6 +2241,15 @@ function applySharedFamilyDinnerProposals() {
 
 // Publiceert uitsluitend expliciet als 'Samen' gemarkeerde eigen activiteiten (owner_id = auth.uid())
 // Belangrijk: alleen eigen items worden hier weggeschreven, NOOIT activiteiten van anderen (geen doorsijpelen).
+function resolvePartnerUserId(partnerRaw) {
+  const clean = sanitizeUsername(String(partnerRaw || "").replace(/^@/, ""));
+  if (!clean) return null;
+  const match = (myConnections || []).find(
+    c => c.status === "active" && sanitizeUsername(c.peerUsername) === clean
+  );
+  return match ? match.peerId : null;
+}
+
 async function syncOwnSharedActivities() {
   if (!supaClient || !currentAuthUser) return;
   try {
@@ -2251,9 +2259,12 @@ async function syncOwnSharedActivities() {
       if (!Array.isArray(rawList)) continue;
       rawList.forEach((w, idx) => {
         if (w && w.sharedWithConnections && !w.fromConnectionUserId) {
+          const targetPartnerId = resolvePartnerUserId(w.sharedWithPartner);
           ownSharedRows.push({
             id: `${uid}_${dateStr}_${idx}`,
             owner_id: uid,
+            target_user_id: targetPartnerId,
+            shared_with_username: w.sharedWithPartner ? sanitizeUsername(String(w.sharedWithPartner).replace(/^@/, "")) : null,
             activity_date: dateStr,
             title: String(w.title || "Workout"),
             duration_min: Number(w.durationMin || 45),
@@ -2267,7 +2278,12 @@ async function syncOwnSharedActivities() {
     // Verwijder verouderde eigen shared_activities van deze gebruiker en plaats actuele set
     await supaClient.from("shared_activities").delete().eq("owner_id", uid);
     if (ownSharedRows.length > 0) {
-      await supaClient.from("shared_activities").insert(ownSharedRows);
+      const { error: insErr } = await supaClient.from("shared_activities").insert(ownSharedRows);
+      // Fallback als de kolom target_user_id / shared_with_username nog niet in het Supabase schema staat
+      if (insErr && /column|schema cache/i.test(insErr.message || "")) {
+        const legacyRows = ownSharedRows.map(({ target_user_id, shared_with_username, ...rest }) => rest);
+        await supaClient.from("shared_activities").insert(legacyRows);
+      }
     }
   } catch (e) {
     console.warn("Shared activities sync overgeslagen:", e.message || e);
@@ -2373,8 +2389,16 @@ async function loadConnectionsAndSharedData() {
       activePeerLookup[c.peerId] = c;
     });
 
+    const myCleanUname = sanitizeUsername(currentUserProfile?.username || (currentAuthUser.email || "").split("@")[0] || "");
     sharedActivitiesFeed = (sharedActs || [])
-      .filter(act => activePeerLookup[act.owner_id] && activePeerLookup[act.owner_id].peerSharesWorkouts)
+      .filter(act => {
+        const peer = activePeerLookup[act.owner_id];
+        if (!peer || !peer.peerSharesWorkouts) return false;
+        // Als er een specifieke ontvanger is opgegeven, toon het voorstel ALLEEN aan die gebruiker
+        if (act.target_user_id && act.target_user_id !== uid) return false;
+        if (act.shared_with_username && myCleanUname && sanitizeUsername(act.shared_with_username) !== myCleanUname) return false;
+        return true;
+      })
       .map(act => ({
         ...act,
         ownerUsername: activePeerLookup[act.owner_id].peerUsername,
@@ -3562,11 +3586,23 @@ function renderPlannerTab() {
     p.classList.toggle("active", p.getAttribute("data-pfmode") === activePfMode);
   });
 
-  // Vul datalist met gekoppelde Family & Sportbuddies voor het "Met wie" veld
-  const connDl = document.getElementById("connectedUsersDatalist");
-  if (connDl) {
-    const activePeers = (myConnections || []).filter(c => c.status === "active").map(c => c.peerUsername);
-    connDl.innerHTML = [...new Set(activePeers)].map(u => `<option value="${escapeHtml(u)}">`).join("");
+  // Vul dropdown met gekoppelde Family & Sportbuddies voor het "Met wie" veld
+  const partnerSel = document.getElementById("planSharedWithSelect");
+  if (partnerSel) {
+    const prevSel = partnerSel.value;
+    const activePeers = (myConnections || []).filter(c => c.status === "active");
+    const uniquePeers = [];
+    const seenU = new Set();
+    activePeers.forEach(c => {
+      const cleanU = sanitizeUsername(c.peerUsername);
+      if (cleanU && !seenU.has(cleanU)) {
+        seenU.add(cleanU);
+        uniquePeers.push({ username: c.peerUsername, roleLabel: c.role === "family" ? "Family" : "Sportbuddy" });
+      }
+    });
+    partnerSel.innerHTML = `<option value="">-- Kies gekoppelde persoon --</option>` +
+      uniquePeers.map(p => `<option value="${escapeHtml(p.username)}">@${escapeHtml(p.username)} (${p.roleLabel})</option>`).join("");
+    if (prevSel && seenU.has(sanitizeUsername(prevSel))) partnerSel.value = prevSel;
   }
 
   document.getElementById("plannerDaySummary").innerHTML = fTotals.isFreeDay
@@ -5574,7 +5610,7 @@ function bindEvents() {
     const partnerRow = document.getElementById("planSharedPartnerRow");
     if (partnerRow) {
       partnerRow.style.display = e.target.checked ? "block" : "none";
-      if (e.target.checked) document.getElementById("planSharedWithInput")?.focus();
+      if (e.target.checked) document.getElementById("planSharedWithSelect")?.focus();
     }
   });
 
@@ -5590,10 +5626,10 @@ function bindEvents() {
     if (!title) { alert("Vul een naam in voor de activiteit."); return; }
 
     const sharedWithConnections = Boolean(document.getElementById("planWorkoutSharedChk")?.checked);
-    const sharedWithPartner = (document.getElementById("planSharedWithInput")?.value || "").trim();
+    const sharedWithPartner = (document.getElementById("planSharedWithSelect")?.value || "").trim();
     if (sharedWithConnections && !sharedWithPartner) {
-      alert("Vul in met wie je de Samen-workout wilt doen.");
-      document.getElementById("planSharedWithInput")?.focus();
+      alert("Kies in de keuzelijst met wie je de Samen-workout wilt doen.");
+      document.getElementById("planSharedWithSelect")?.focus();
       return;
     }
 
@@ -5621,8 +5657,8 @@ function bindEvents() {
     if (chk) chk.checked = false;
     const partnerRow = document.getElementById("planSharedPartnerRow");
     if (partnerRow) partnerRow.style.display = "none";
-    const partnerInp = document.getElementById("planSharedWithInput");
-    if (partnerInp) partnerInp.value = "";
+    const partnerSelReset = document.getElementById("planSharedWithSelect");
+    if (partnerSelReset) partnerSelReset.value = "";
 
     saveFoodState();
     refreshAll();
@@ -6174,12 +6210,31 @@ function bindEvents() {
     document.getElementById("nutriQuickModeBox").style.display = "none";
     refreshAll();
   });
-  document.getElementById("btnApplyCustomNutriEst").addEventListener("click", () => {
-    const k = Number(document.getElementById("nutriCustomEstKcal").value) || 2800;
-    const p = Number(document.getElementById("nutriCustomEstProt").value) || 135;
-    setFoodDayMode(state.selectedNutriDate, "est_custom", k, p);
-    document.getElementById("nutriQuickModeBox").style.display = "none";
-    refreshAll();
+  document.getElementById("btnCopyAiMealFormat")?.addEventListener("click", () => {
+    const formatText = [
+      "Ontbijt: [omschrijving] ([kcal] kcal, [eiwit]g eiwit, [kh]g kh, [vet]g vet)",
+      "Lunch: [omschrijving] ([kcal] kcal, [eiwit]g eiwit, [kh]g kh, [vet]g vet)",
+      "Tussendoor: [omschrijving] ([kcal] kcal, [eiwit]g eiwit, [kh]g kh, [vet]g vet)",
+      "Diner: [omschrijving] ([kcal] kcal, [eiwit]g eiwit, [kh]g kh, [vet]g vet)",
+      "Drank: [omschrijving] [ml]ml ([kcal] kcal, [eiwit]g eiwit, [kh]g kh, [vet]g vet)"
+    ].join("\n");
+    navigator.clipboard?.writeText(formatText);
+    const btn = document.getElementById("btnCopyAiMealFormat");
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = "Gekopieerd ✓";
+      setTimeout(() => { btn.textContent = orig; }, 1600);
+    }
+  });
+
+  document.getElementById("btnToggleFavDrinks")?.addEventListener("click", () => {
+    const p = document.getElementById("favDrinksPanel");
+    if (p) p.style.display = p.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("btnToggleFavFood")?.addEventListener("click", () => {
+    const p = document.getElementById("favFoodPanel");
+    if (p) p.style.display = p.style.display === "none" ? "block" : "none";
   });
   document.getElementById("nutriDayModeContainer").addEventListener("click", e => {
     const btn = e.target.closest("[data-set-nutri-mode]");
