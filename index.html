@@ -1293,7 +1293,11 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
         </div>
 
         <div id="trExerciseContent" style="margin-top:10px;">
-          <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+            <div class="pill-row" id="trExViewModePills" style="margin-bottom:0;">
+              <span class="pill active" data-exview="sessions" style="padding:4px 9px; font-size:0.73rem;">Alle sessies</span>
+              <span class="pill" data-exview="period" style="padding:4px 9px; font-size:0.73rem;">Per periode</span>
+            </div>
             <div class="zoom-controls">
               <button type="button" class="btn-sm" id="btnZoomIn" title="Inzoomen">+</button>
               <button type="button" class="btn-sm" id="btnZoomOut" title="Uitzoomen">&minus;</button>
@@ -1697,6 +1701,7 @@ let state = {
   trGranularity: "week",
   trOffset: 0,
   trActivityMetric: "minutes",
+  trExerciseViewMode: "sessions",
   trWindowStart: null,
   trWindowEnd: null,
   trWindowSize: 10,
@@ -4260,60 +4265,85 @@ function renderExerciseChart() {
   }
 
   const gran = state.trGranularity || "week";
-  const bucketedTimeline = {};
-  for (let i = 0; i < fullTimeline.length; i++) {
-    const entry = fullTimeline[i];
-    const bBase = baselines[i] || { base: 0, low: 0, high: 0 };
-    const bKey = gran === "week" ? getISOWeekKey(entry.day) : getBucketKey(entry.day, gran);
-    if (!bucketedTimeline[bKey]) {
-      bucketedTimeline[bKey] = {
+  const viewMode = state.trExerciseViewMode || "sessions";
+  const winStart = state.trWindowStart || "2000-01-01";
+  const winEnd = state.trWindowEnd || TODAY_YMD;
+
+  let labels = [];
+  let timeline = [];
+  let values = [];
+  let exIsEst = [];
+
+  if (viewMode === "sessions") {
+    const enrichedSessions = fullTimeline.map((entry, idx) => {
+      const bBase = baselines[idx] || { base: 0, low: 0, high: 0 };
+      return {
         ...entry,
         baseLow: bBase.low,
-        baseHigh: bBase.high,
-        sessionDays: [entry.day]
+        baseHigh: bBase.high
       };
-    } else {
-      const cur = bucketedTimeline[bKey];
-      cur.sessionDays.push(entry.day);
-      if (state.selectedMetric === "volume") {
-        cur.volume += entry.volume;
-        cur.baseLow += bBase.low;
-        cur.baseHigh += bBase.high;
-        if (entry[state.selectedMetric] >= cur[state.selectedMetric]) {
+    });
+    const inWindowSessions = enrichedSessions.filter(e => e.day >= winStart && e.day <= winEnd);
+    timeline = inWindowSessions;
+    labels = inWindowSessions.map(e => formatShortNL(e.day));
+    values = inWindowSessions.map(e => Number(e[state.selectedMetric].toFixed(1)));
+    exIsEst = inWindowSessions.map(() => false);
+  } else {
+    const bucketedTimeline = {};
+    for (let i = 0; i < fullTimeline.length; i++) {
+      const entry = fullTimeline[i];
+      const bBase = baselines[i] || { base: 0, low: 0, high: 0 };
+      const bKey = gran === "week" ? getISOWeekKey(entry.day) : getBucketKey(entry.day, gran);
+      if (!bucketedTimeline[bKey]) {
+        bucketedTimeline[bKey] = {
+          ...entry,
+          baseLow: bBase.low,
+          baseHigh: bBase.high,
+          sessionDays: [entry.day]
+        };
+      } else {
+        const cur = bucketedTimeline[bKey];
+        cur.sessionDays.push(entry.day);
+        if (state.selectedMetric === "volume") {
+          cur.volume += entry.volume;
+          cur.baseLow += bBase.low;
+          cur.baseHigh += bBase.high;
+          if (entry[state.selectedMetric] >= cur[state.selectedMetric]) {
+            cur.day = entry.day;
+            cur.source = entry.source;
+            cur.corrected = entry.corrected;
+            cur.appliedFactor = entry.appliedFactor;
+          }
+        } else if (entry[state.selectedMetric] >= cur[state.selectedMetric]) {
           cur.day = entry.day;
           cur.source = entry.source;
           cur.corrected = entry.corrected;
           cur.appliedFactor = entry.appliedFactor;
+          cur.maxWeight = entry.maxWeight;
+          cur.e1rm = entry.e1rm;
+          cur.volume = entry.volume;
+          cur.baseLow = bBase.low;
+          cur.baseHigh = bBase.high;
         }
-      } else if (entry[state.selectedMetric] >= cur[state.selectedMetric]) {
-        cur.day = entry.day;
-        cur.source = entry.source;
-        cur.corrected = entry.corrected;
-        cur.appliedFactor = entry.appliedFactor;
-        cur.maxWeight = entry.maxWeight;
-        cur.e1rm = entry.e1rm;
-        cur.volume = entry.volume;
-        cur.baseLow = bBase.low;
-        cur.baseHigh = bBase.high;
       }
     }
+
+    const alignedKeys = (Array.isArray(state.trVisibleKeys) && state.trVisibleKeys.length > 0)
+      ? state.trVisibleKeys
+      : Object.keys(bucketedTimeline).sort();
+    labels = (Array.isArray(state.trVisibleLabels) && state.trVisibleLabels.length === alignedKeys.length)
+      ? state.trVisibleLabels
+      : alignedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
+
+    timeline = alignedKeys.map(k => bucketedTimeline[k] || null);
+    const getExBucketVal = k => {
+      const entry = bucketedTimeline[k];
+      return entry ? Number(entry[state.selectedMetric].toFixed(1)) : null;
+    };
+    const exInterp = buildInterpolatedSeries(alignedKeys, gran, getExBucketVal, Object.keys(bucketedTimeline));
+    values = exInterp.values;
+    exIsEst = exInterp.isEstimated;
   }
-
-  const alignedKeys = (Array.isArray(state.trVisibleKeys) && state.trVisibleKeys.length > 0)
-    ? state.trVisibleKeys
-    : Object.keys(bucketedTimeline).sort();
-  const labels = (Array.isArray(state.trVisibleLabels) && state.trVisibleLabels.length === alignedKeys.length)
-    ? state.trVisibleLabels
-    : alignedKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
-
-  const timeline = alignedKeys.map(k => bucketedTimeline[k] || null);
-  const getExBucketVal = k => {
-    const entry = bucketedTimeline[k];
-    return entry ? Number(entry[state.selectedMetric].toFixed(1)) : null;
-  };
-  const exInterp = buildInterpolatedSeries(alignedKeys, gran, getExBucketVal, Object.keys(bucketedTimeline));
-  const values = exInterp.values;
-  const exIsEst = exInterp.isEstimated;
   const pointColors = timeline.map((d, idx) => (!d || exIsEst[idx]) ? "transparent" : (d.corrected ? "#c084fc" : (d.source === "garmin" ? "#f59e0b" : "#10b981")));
 
   const datasets = [{
@@ -4446,7 +4476,9 @@ function renderExerciseChart() {
               if (!items || !items.length) return "";
               const idx = items[0].dataIndex;
               const entry = timeline[idx];
-              return entry ? `${labels[idx]} (${formatShortNL(entry.day)})` : labels[idx];
+              if (!entry) return labels[idx];
+              const dayStr = formatShortNL(entry.day);
+              return labels[idx] === dayStr ? dayStr : `${labels[idx]} (${dayStr})`;
             }
           }
         }
@@ -5910,6 +5942,15 @@ function bindEvents() {
   });
 
   // Bestaande training, body & backup events
+  document.getElementById("trExViewModePills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.trExerciseViewMode = pill.getAttribute("data-exview") || "sessions";
+    document.querySelectorAll("#trExViewModePills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    document.getElementById("pointInspector").classList.remove("visible");
+    renderExerciseChart();
+  });
   document.getElementById("btnZoomIn").addEventListener("click", () => { if (exerciseChartInstance?.zoom) exerciseChartInstance.zoom(1.25); });
   document.getElementById("btnZoomOut").addEventListener("click", () => { if (exerciseChartInstance?.zoom) exerciseChartInstance.zoom(0.8); });
   document.getElementById("btnZoomResetEx").addEventListener("click", () => { if (exerciseChartInstance?.resetZoom) exerciseChartInstance.resetZoom(); });
