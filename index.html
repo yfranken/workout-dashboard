@@ -745,26 +745,27 @@
     </div>
 
     <div class="card">
-      <details id="ovMuscleDetails">
-        <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
-          <span>Getrainde Spiergroepen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
-          <span class="badge" id="ovMuscleToggleBadge">▼</span>
-        </summary>
-        <div id="ovMuscleContent" style="margin-top:10px;">
-          <div style="display:flex; justify-content:flex-end; margin-bottom:6px;">
-            <div class="pill-row" id="ovMuscleMetricPills" style="margin-bottom:0;">
-              <span class="pill active" data-mm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
-              <span class="pill" data-mm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
-            </div>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="ovMuscleChart"></canvas>
-          </div>
+      <h2>
+        <span>Spiergroep-belasting vs. Segmentale Spiermassa</span>
+        <div class="pill-row" id="ovSegMetricPills" style="margin-bottom:0;">
+          <span class="pill active" data-segmm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
+          <span class="pill" data-segmm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
         </div>
-        <div id="ovMuscleEmptyMsg" style="display:none; margin-top:10px; padding:12px; background:#0f172a; border-radius:10px; border:1px dashed var(--card-border); font-size:0.8rem; color:var(--muted); text-align:center;">
-          Voeg Hevy of Garmin CSV toe onder instellingen om getrainde spiergroepen weer te geven
-        </div>
-      </details>
+      </h2>
+      <div style="margin-bottom:6px;">
+        <span class="field-lbl">Lichaamsregio (koppelt getrainde spiergroepen aan bijpassende spiermassa uit scans):</span>
+        <select id="ovSegRegionSelect" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
+          <option value="arms">Armen &amp; Bovenlichaam (Armen + Schouders → L/R-Arm Spier kg)</option>
+          <option value="legs">Benen &amp; Onderlichaam (Benen → L/R-Been Spier kg)</option>
+          <option value="trunk">Romp / Core (Borst + Rug + Core → Romp Spier kg)</option>
+        </select>
+      </div>
+      <div class="chart-wrap-tall">
+        <canvas id="ovMuscleChart"></canvas>
+      </div>
+      <div id="ovMuscleEmptyMsg" style="display:none; margin-top:8px; padding:10px; background:#0f172a; border-radius:10px; border:1px dashed var(--card-border); font-size:0.78rem; color:var(--muted); text-align:center;">
+        Laad Hevy/Garmin CSV en segmentale lichaamsscans (InBody/Evolt) in om het verband per regio te zien.
+      </div>
     </div>
   </div>
 
@@ -1280,6 +1281,30 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       <div id="recentActivitiesList" style="margin-top:10px; max-height:190px; overflow-y:auto;"></div>
     </div>
 
+    <!-- Getrainde Spiergroepen onder Training (gekoppeld aan centrale datumpicker van Training) -->
+    <div class="card">
+      <details id="trMuscleDetails">
+        <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <span>Getrainde Spiergroepen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
+          <span class="badge" id="trMuscleToggleBadge">▼</span>
+        </summary>
+        <div id="trMuscleContent" style="margin-top:10px;">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:6px;">
+            <div class="pill-row" id="trMuscleMetricPills" style="margin-bottom:0;">
+              <span class="pill active" data-mm="sets" style="padding:3px 8px; font-size:0.72rem;">Sets</span>
+              <span class="pill" data-mm="volume" style="padding:3px 8px; font-size:0.72rem;">Volume (t)</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="trMuscleChart"></canvas>
+          </div>
+        </div>
+        <div id="trMuscleEmptyMsg" style="display:none; margin-top:10px; padding:12px; background:#0f172a; border-radius:10px; border:1px dashed var(--card-border); font-size:0.8rem; color:var(--muted); text-align:center;">
+          Voeg Hevy of Garmin CSV toe onder instellingen om getrainde spiergroepen weer te geven
+        </div>
+      </details>
+    </div>
+
     <!-- Inklapbaar onderdeel: Oefening Progressie (alleen actief bij Hevy/Garmin CSV) -->
     <div class="card">
       <details id="trExerciseDetails">
@@ -1695,6 +1720,7 @@ let state = {
   ovGranularity: "quarter",
   ovOffset: 0,
   ovMuscleMetric: "sets",
+  ovSegRegion: "arms",
   bodyMainMode: "kg",
   bodyPeriod: "all",
   bodyPeriodOffset: 0,
@@ -1702,6 +1728,7 @@ let state = {
   trOffset: 0,
   trActivityMetric: "minutes",
   trExerciseViewMode: "sessions",
+  trMuscleMetric: "sets",
   trWindowStart: null,
   trWindowEnd: null,
   trWindowSize: 10,
@@ -1747,6 +1774,7 @@ let exerciseChartInstance = null;
 let trainingActivityChartInstance = null;
 let ovCorrChartInstance = null;
 let ovMuscleChartInstance = null;
+let trMuscleChartInstance = null;
 let bodyMainChartInstance = null;
 let bodyWaterChartInstance = null;
 let bodySegArmsChartInstance = null;
@@ -3427,22 +3455,7 @@ function renderOverviewDashboard(sets) {
     kpiGrid.className = hasCsv ? "kpi-grid-3" : "kpi-grid";
   }
 
-  const muscleDetails = document.getElementById("ovMuscleDetails");
-  const muscleContent = document.getElementById("ovMuscleContent");
-  const muscleEmptyMsg = document.getElementById("ovMuscleEmptyMsg");
-  if (muscleDetails && muscleContent && muscleEmptyMsg) {
-    if (hasCsv) {
-      muscleDetails.setAttribute("open", "");
-      muscleDetails.open = true;
-      muscleContent.style.display = "block";
-      muscleEmptyMsg.style.display = "none";
-    } else {
-      muscleDetails.removeAttribute("open");
-      muscleDetails.open = false;
-      muscleContent.style.display = "none";
-      muscleEmptyMsg.style.display = "block";
-    }
-  }
+
 
   const trainSel = document.getElementById("ovTrainMetric");
   const bodySel = document.getElementById("ovBodyMetric");
@@ -3638,23 +3651,103 @@ function renderOverviewDashboard(sets) {
     }
   });
 
-  if (hasCsv) {
-    const muscleGroups = ["Borst", "Rug", "Benen", "Schouders", "Armen", "Core"];
-    const muscleColors = { Borst: "#38bdf8", Rug: "#10b981", Benen: "#f59e0b", Schouders: "#c084fc", Armen: "#ec4899", Core: "#94a3b8" };
-    const muscleDatasets = muscleGroups.map(mg => ({
-      label: mg,
-      data: visibleKeys.map(k => Number((state.ovMuscleMetric === "sets" ? (bucketMap[k].musclesSets[mg] || 0) : (bucketMap[k].musclesVol[mg] || 0)).toFixed(1))),
-      backgroundColor: muscleColors[mg], borderRadius: 3
-    }));
+  const regionSel = document.getElementById("ovSegRegionSelect");
+  const region = regionSel ? regionSel.value : (state.ovSegRegion || "arms");
+  state.ovSegRegion = region;
 
-    const ctx2 = document.getElementById("ovMuscleChart").getContext("2d");
+  const regionConfigs = {
+    arms: {
+      groups: ["Armen", "Schouders"],
+      barColors: { Armen: "rgba(56, 189, 248, 0.65)", Schouders: "rgba(192, 132, 252, 0.65)" },
+      lines: [
+        { label: "L-Arm Spier (kg)", field: "lArmS", color: "#10b981", dash: [] },
+        { label: "R-Arm Spier (kg)", field: "rArmS", color: "#f59e0b", dash: [4, 3] }
+      ]
+    },
+    legs: {
+      groups: ["Benen"],
+      barColors: { Benen: "rgba(56, 189, 248, 0.65)" },
+      lines: [
+        { label: "L-Been Spier (kg)", field: "lBeenS", color: "#10b981", dash: [] },
+        { label: "R-Been Spier (kg)", field: "rBeenS", color: "#f59e0b", dash: [4, 3] }
+      ]
+    },
+    trunk: {
+      groups: ["Borst", "Rug", "Core"],
+      barColors: { Borst: "rgba(56, 189, 248, 0.65)", Rug: "rgba(16, 185, 129, 0.55)", Core: "rgba(148, 163, 184, 0.55)" },
+      lines: [
+        { label: "Romp Spier (kg)", field: "buikS", color: "#ec4899", dash: [] }
+      ]
+    }
+  };
+
+  const rCfg = regionConfigs[region] || regionConfigs.arms;
+  const segDatasets = rCfg.groups.map(mg => ({
+    type: "bar",
+    label: `${mg} (${state.ovMuscleMetric === "sets" ? "sets" : "t"})`,
+    data: visibleKeys.map(k => Number((state.ovMuscleMetric === "sets" ? (bucketMap[k].musclesSets[mg] || 0) : (bucketMap[k].musclesVol[mg] || 0)).toFixed(1))),
+    backgroundColor: rCfg.barColors[mg] || "rgba(56, 189, 248, 0.6)",
+    borderRadius: 4,
+    stack: "load",
+    yAxisID: "y"
+  }));
+
+  let hasAnySegScan = false;
+  const lineEstFlags = {};
+  rCfg.lines.forEach((ln, lIdx) => {
+    const getSegVal = k => {
+      const b = bucketMap[k];
+      if (!b || !b.bodyEntries || b.bodyEntries.length === 0) return null;
+      const vals = b.bodyEntries.map(e => e[ln.field]).filter(v => v !== null && v !== undefined && !isNaN(v));
+      return vals.length > 0 ? Number((vals.reduce((a, c) => a + c, 0) / vals.length).toFixed(2)) : null;
+    };
+    const interp = buildInterpolatedSeries(visibleKeys, gran, getSegVal, allKeys);
+    if (interp.values.some(v => v !== null)) hasAnySegScan = true;
+    const dsIndex = segDatasets.length;
+    lineEstFlags[dsIndex] = interp.isEstimated;
+    segDatasets.push({
+      type: "line",
+      label: ln.label,
+      data: interp.values,
+      borderColor: ln.color,
+      backgroundColor: ln.color,
+      borderDash: ln.dash,
+      borderWidth: 2.5,
+      pointRadius: interp.isEstimated.map(est => est ? 0 : 4.5),
+      pointHoverRadius: interp.isEstimated.map(est => est ? 0 : 6.5),
+      pointHitRadius: interp.isEstimated.map(est => est ? 0 : 8),
+      spanGaps: true,
+      tension: 0.25,
+      yAxisID: "y1"
+    });
+  });
+
+  const ovEmptyEl = document.getElementById("ovMuscleEmptyMsg");
+  if (ovEmptyEl) {
+    ovEmptyEl.style.display = (!hasCsv && !hasAnySegScan) ? "block" : "none";
+  }
+
+  const ctx2 = document.getElementById("ovMuscleChart")?.getContext("2d");
+  if (ctx2) {
     if (ovMuscleChartInstance) ovMuscleChartInstance.destroy();
     ovMuscleChartInstance = new Chart(ctx2, {
-      type: "bar", data: { labels, datasets: muscleDatasets },
+      data: { labels, datasets: segDatasets },
       options: {
-        responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-        plugins: { legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } }, tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" } },
-        scales: { x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } } }
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
+          tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.95)",
+            filter: item => !(lineEstFlags[item.datasetIndex] && lineEstFlags[item.datasetIndex][item.dataIndex])
+          }
+        },
+        scales: {
+          x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
+          y: { type: "linear", position: "left", stacked: true, ticks: { color: "#38bdf8", font: { size: 10 } }, grid: { color: "#334155" } },
+          y1: { type: "linear", position: "right", ticks: { color: "#10b981", font: { size: 10 } }, grid: { drawOnChartArea: false } }
+        }
       }
     });
   }
@@ -4209,6 +4302,70 @@ function renderTrainingProgressSection(sets) {
     });
   }
 
+  // Getrainde Spiergroepen onder Training (op exact dezelfde zichtbare periode als Training voortgang)
+  const trMuscleDetails = document.getElementById("trMuscleDetails");
+  const trMuscleContent = document.getElementById("trMuscleContent");
+  const trMuscleEmptyMsg = document.getElementById("trMuscleEmptyMsg");
+  if (trMuscleDetails && trMuscleContent && trMuscleEmptyMsg) {
+    if (hasCsv) {
+      trMuscleDetails.setAttribute("open", "");
+      trMuscleDetails.open = true;
+      trMuscleContent.style.display = "block";
+      trMuscleEmptyMsg.style.display = "none";
+
+      const trMuscleBuckets = {};
+      for (const s of sets) {
+        if (!s || !s.dateDay) continue;
+        const mKey = gran === "week" ? getISOWeekKey(s.dateDay) : getBucketKey(s.dateDay, gran);
+        if (!trMuscleBuckets[mKey]) trMuscleBuckets[mKey] = { sets: {}, vol: {} };
+        const mg = s.muscleGroup || "Overig";
+        trMuscleBuckets[mKey].sets[mg] = (trMuscleBuckets[mKey].sets[mg] || 0) + 1;
+        trMuscleBuckets[mKey].vol[mg] = (trMuscleBuckets[mKey].vol[mg] || 0) + (s.volume / 1000);
+      }
+
+      const muscleGroups = ["Borst", "Rug", "Benen", "Schouders", "Armen", "Core"];
+      const muscleColors = { Borst: "#38bdf8", Rug: "#10b981", Benen: "#f59e0b", Schouders: "#c084fc", Armen: "#ec4899", Core: "#94a3b8" };
+      const mMetric = state.trMuscleMetric || "sets";
+      const trMuscleDatasets = muscleGroups.map(mg => ({
+        label: mg,
+        data: sortedKeys.map(k => {
+          const b = trMuscleBuckets[k];
+          if (!b) return 0;
+          return Number((mMetric === "sets" ? (b.sets[mg] || 0) : (b.vol[mg] || 0)).toFixed(1));
+        }),
+        backgroundColor: muscleColors[mg],
+        borderRadius: 3
+      }));
+
+      const ctxTrM = document.getElementById("trMuscleChart")?.getContext("2d");
+      if (ctxTrM) {
+        if (trMuscleChartInstance) trMuscleChartInstance.destroy();
+        trMuscleChartInstance = new Chart(ctxTrM, {
+          type: "bar",
+          data: { labels, datasets: trMuscleDatasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { labels: { color: "#f8fafc", boxWidth: 10, font: { size: 10 } } },
+              tooltip: { backgroundColor: "rgba(15, 23, 42, 0.95)" }
+            },
+            scales: {
+              x: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { display: false } },
+              y: { stacked: true, ticks: { color: "#94a3b8", font: { size: 10 } }, grid: { color: "#334155" } }
+            }
+          }
+        });
+      }
+    } else {
+      trMuscleDetails.removeAttribute("open");
+      trMuscleDetails.open = false;
+      trMuscleContent.style.display = "none";
+      trMuscleEmptyMsg.style.display = "block";
+    }
+  }
+
   // Recente uitgevoerde activiteiten lijst binnen de geselecteerde periode
   const recentEl = document.getElementById("recentActivitiesList");
   if (recentEl) {
@@ -4572,13 +4729,25 @@ function bindEvents() {
   });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
-  document.getElementById("ovMuscleMetricPills").addEventListener("click", e => {
+  document.getElementById("ovSegMetricPills").addEventListener("click", e => {
     const pill = e.target.closest(".pill");
     if (!pill) return;
-    state.ovMuscleMetric = pill.getAttribute("data-mm");
-    document.querySelectorAll("#ovMuscleMetricPills .pill").forEach(p => p.classList.remove("active"));
+    state.ovMuscleMetric = pill.getAttribute("data-segmm");
+    document.querySelectorAll("#ovSegMetricPills .pill").forEach(p => p.classList.remove("active"));
     pill.classList.add("active");
     renderOverviewDashboard(getCombinedSets());
+  });
+  document.getElementById("ovSegRegionSelect").addEventListener("change", e => {
+    state.ovSegRegion = e.target.value;
+    renderOverviewDashboard(getCombinedSets());
+  });
+  document.getElementById("trMuscleMetricPills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    state.trMuscleMetric = pill.getAttribute("data-mm");
+    document.querySelectorAll("#trMuscleMetricPills .pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    renderTrainingProgressSection(getCombinedSets());
   });
 
   // Planner events
