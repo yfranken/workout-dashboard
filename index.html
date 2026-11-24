@@ -1655,6 +1655,8 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
 
     <div class="card">
       <h2>Onderhoud</h2>
+      <button type="button" class="btn btn-danger" id="btnClearAll">Alle opgeslagen data wissen</button>
+    </div>
   </div>
 
   <!-- ========================================================= -->
@@ -4561,28 +4563,28 @@ function getPeriodRange(allTimelineDays) {
 
 function refreshAll() {
   const sets = getCombinedSets();
-  document.getElementById("totalBadge").textContent = `${sets.length} sets`;
+  try {
+    document.getElementById("totalBadge").textContent = `${sets.length} sets`;
+    document.getElementById("garminStatus").textContent = state.garminSets.length > 0 ? `${state.garminSets.length} sets geladen` : "Nog geen Garmin-data";
+    document.getElementById("hevyStatus").textContent = state.hevySets.length > 0 ? `${state.hevySets.length} sets geladen` : "Nog geen Hevy-data";
+    document.getElementById("globalTrendToggle").checked = Boolean(state.globalTrend);
+    document.getElementById("autoFilterOutliersToggle").checked = Boolean(state.autoFilterOutliers);
+    document.getElementById("showBaselineBandToggle").checked = Boolean(state.showBaselineBand);
+    document.getElementById("smartOverloadToggle").checked = Boolean(state.smartOverload);
 
-  document.getElementById("garminStatus").textContent = state.garminSets.length > 0 ? `${state.garminSets.length} sets geladen` : "Nog geen Garmin-data";
-  document.getElementById("hevyStatus").textContent = state.hevySets.length > 0 ? `${state.hevySets.length} sets geladen` : "Nog geen Hevy-data";
-  document.getElementById("globalTrendToggle").checked = Boolean(state.globalTrend);
-  document.getElementById("autoFilterOutliersToggle").checked = Boolean(state.autoFilterOutliers);
-  document.getElementById("showBaselineBandToggle").checked = Boolean(state.showBaselineBand);
-  document.getElementById("smartOverloadToggle").checked = Boolean(state.smartOverload);
-
-  // Vul voedingsdoelen velden
-  document.getElementById("cfgKcalRest").value = state.nutriGoals.kcalRest ?? 2250;
-  document.getElementById("cfgKcalTrain").value = state.nutriGoals.kcalTrain ?? 2550;
-  document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
-  document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
-  document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
-  if (typeof syncNutriGoalsButtonLabel === "function") syncNutriGoalsButtonLabel();
-  const urlInp = document.getElementById("cfgSupaUrl");
-  const keyInp = document.getElementById("cfgSupaKey");
-  if (urlInp) urlInp.value = adminSupaOverride.url || "";
-  if (keyInp) keyInp.value = adminSupaOverride.key || "";
-  updateAuthUI();
-  renderSocialConnectionsUI();
+    document.getElementById("cfgKcalRest").value = state.nutriGoals.kcalRest ?? 2250;
+    document.getElementById("cfgKcalTrain").value = state.nutriGoals.kcalTrain ?? 2550;
+    document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
+    document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
+    document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
+    if (typeof syncNutriGoalsButtonLabel === "function") syncNutriGoalsButtonLabel();
+    const urlInp = document.getElementById("cfgSupaUrl");
+    const keyInp = document.getElementById("cfgSupaKey");
+    if (urlInp) urlInp.value = adminSupaOverride.url || "";
+    if (keyInp) keyInp.value = adminSupaOverride.key || "";
+  } catch (e) { console.error("Settings UI update:", e); }
+  try { updateAuthUI(); } catch (e) {}
+  try { renderSocialConnectionsUI(); } catch (e) {}
 
   const garminDays = new Set(state.garminSets.map(s => s.dateDay)).size;
   const hevyDays = new Set(state.hevySets.map(s => s.dateDay)).size;
@@ -5319,6 +5321,26 @@ function switchTab(tabName) {
     });
   } else if (tabName === "planner") {
     try { renderPlannerTab(); } catch (e) {}
+  } else if (tabName === "upload") {
+    try {
+      document.getElementById("garminStatus").textContent = state.garminSets.length > 0 ? `${state.garminSets.length} sets geladen` : "Nog geen Garmin-data";
+      document.getElementById("hevyStatus").textContent = state.hevySets.length > 0 ? `${state.hevySets.length} sets geladen` : "Nog geen Hevy-data";
+      document.getElementById("bodyFileStatus").textContent = state.bodyMeasurements.length > 0 ? `${state.bodyMeasurements.length} metingen opgeslagen` : "Nog geen metingen";
+      document.getElementById("cfgKcalRest").value = state.nutriGoals.kcalRest ?? 2250;
+      document.getElementById("cfgKcalTrain").value = state.nutriGoals.kcalTrain ?? 2550;
+      document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
+      document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
+      document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
+      syncNutriGoalsButtonLabel();
+      renderPrefsList();
+      renderPulleyGroupsUI();
+      renderMappingUI();
+    } catch (e) { console.error(e); }
+  } else if (tabName === "profile") {
+    try {
+      updateAuthUI();
+      renderSocialConnectionsUI();
+    } catch (e) { console.error(e); }
   }
 }
 
@@ -6941,6 +6963,15 @@ function bindEvents() {
     scheduleCloudPush();
     refreshAll();
   });
+  document.getElementById("prefsListContainer").addEventListener("change", e => {
+    const chk = e.target.closest("[data-action='toggle-trend']");
+    if (!chk) return;
+    const ex = chk.getAttribute("data-ex");
+    state.trendOverrides[ex] = chk.checked;
+    localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
+    scheduleCloudPush();
+    if (hasStrengthCsvData()) renderExerciseChart();
+  });
   document.getElementById("btnAutoDetect").addEventListener("click", autoDetectPulleyGroups);
   document.getElementById("pulleyGroupsContainer").addEventListener("click", e => {
     const del = e.target.closest("[data-action='del-grp']");
@@ -6963,7 +6994,7 @@ function bindEvents() {
   // Account Auth & Cloud Sync knoppen
   document.getElementById("cloudSyncBadge").addEventListener("click", () => {
     if (supaClient && currentAuthUser) pullFromCloud(true);
-    else switchTab("upload");
+    else switchTab("profile");
   });
 
   function setAuthUiMode(mode) {
