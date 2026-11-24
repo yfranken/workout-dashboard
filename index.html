@@ -638,6 +638,57 @@
     .btn-confirm-check:active {
       filter: brightness(0.92);
     }
+
+    /* Account, Family & Sportbuddy UI */
+    .conn-row {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 11px;
+      padding: 10px 11px;
+      margin-bottom: 8px;
+    }
+    .conn-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .role-pill-family {
+      background: rgba(16, 185, 129, 0.18);
+      color: var(--accent-hevy);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.69rem;
+      font-weight: 700;
+    }
+    .role-pill-buddy {
+      background: rgba(56, 189, 248, 0.18);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.69rem;
+      font-weight: 700;
+    }
+    .conn-perms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+      font-size: 0.75rem;
+    }
+    .shared-proposal-box {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px dashed rgba(56, 189, 248, 0.45);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-top: 8px;
+      font-size: 0.78rem;
+    }
+
   </style>
 </head>
 <body>
@@ -875,8 +926,13 @@
           </div>
         </div>
 
-        <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:6px; padding:9px;">Toevoegen aan agenda</button>
+        <label class="toggle-label" style="color:var(--text); margin-top:6px; margin-bottom:4px; font-weight:600; font-size:0.78rem;">
+          <input type="checkbox" id="planWorkoutSharedChk" />
+          <span>🤝 Markeer als "Samen" (alleen zichtbaar voor directe Family/Sportbuddies waarbij delen aanstaat)</span>
+        </label>
+        <button type="button" class="btn btn-hevy" id="btnAddPlannedWorkout" style="margin-top:4px; padding:9px;">Toevoegen aan agenda</button>
         <div id="plannedWorkoutsList" style="margin-top:10px;"></div>
+        <div id="sharedBuddyWorkoutsBox"></div>
       </div>
     </div>
   </div>
@@ -1583,37 +1639,60 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
 
     <div class="card" style="border-color: var(--accent);">
       <h2>
-        <span>7. Automatische Cloud Sync (PC ⇄ Mobiel)</span>
-        <span class="badge" id="cloudCardBadge">Niet gekoppeld</span>
+        <span>7. Account &amp; Cloud Sync (PC ⇄ Mobiel)</span>
+        <span class="badge" id="cloudCardBadge">Niet ingelogd</span>
       </h2>
       <p style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
-        Koppel een gratis <strong>Supabase</strong> project zodat jouw voeding, planner, metingen en workouts binnen 1 seconde automatisch synchroniseren tussen je PC en Android-telefoon.
+        Log eenmalig in met je <strong>gebruikersnaam</strong> (of e-mailadres) en <strong>wachtwoord</strong>. Je persoonlijke gegevens zijn afgeschermd met Row Level Security (RLS) en synchroniseren automatisch tussen al je apparaten.
       </p>
-      <div style="margin-bottom:8px;">
-        <span class="field-lbl">Supabase Project URL:</span>
-        <input type="text" id="cfgSupaUrl" placeholder="https://jouwproject.supabase.co" />
-        <span class="field-lbl">Supabase Anon Public Key:</span>
-        <input type="text" id="cfgSupaKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." />
-        <span class="field-lbl">Persoonlijke Sync-Sleutel (kies zelf een wachtwoordzin):</span>
-        <input type="text" id="cfgSupaSyncId" placeholder="bijv. mijn-leefstijl-kluis-2026" />
+
+      <!-- Formulier wanneer uitgelogd -->
+      <div id="authLoggedOutBox">
+        <div class="pill-row" id="authModePills" style="margin-bottom:8px;">
+          <span class="pill active" data-authmode="login" style="padding:4px 10px; font-size:0.76rem;">Inloggen</span>
+          <span class="pill" data-authmode="register" style="padding:4px 10px; font-size:0.76rem;">Nieuw account aanmaken</span>
+        </div>
+        <div id="authRegisterOnlyRow" style="display:none;">
+          <span class="field-lbl">Kies een unieke gebruikersnaam (voor Family &amp; Sportbuddy uitnodigingen)*:</span>
+          <input type="text" id="authUsernameInp" placeholder="bijv. jasper_fit" autocomplete="username" />
+        </div>
+        <span class="field-lbl">Gebruikersnaam of e-mailadres*:</span>
+        <input type="text" id="authLoginIdInp" placeholder="bijv. jasper_fit of naam@voorbeeld.nl" autocomplete="username" />
+        <span class="field-lbl">Wachtwoord* (min. 6 tekens):</span>
+        <input type="password" id="authPasswordInp" placeholder="••••••••" autocomplete="current-password" style="width:100%; padding:9px 11px; border-radius:10px; background:#0f172a; border:1px solid var(--card-border); color:var(--text); font-size:0.88rem; margin-bottom:9px;" />
+
+        <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 8px;">
+          <button type="button" class="btn btn-accent" id="btnAuthSubmit" style="margin-top:0; color:#0f172a;">Inloggen &amp; Syncen</button>
+          <button type="button" class="btn btn-sm" id="btnToggleAuthMode" style="margin-top:0; height:39px;">Account aanmaken</button>
+        </div>
       </div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-        <button type="button" class="btn btn-accent" id="btnSaveCloudConfig" style="margin-top:0;">Koppel &amp; Synchroniseer</button>
-        <button type="button" class="btn btn-hevy" id="btnForceCloudSync" style="margin-top:0;">Nu handmatig syncen</button>
+
+      <!-- Status wanneer ingelogd -->
+      <div id="authLoggedInBox" style="display:none; background:#0f172a; padding:10px 12px; border-radius:10px; border:1px solid rgba(16,185,129,0.45); margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div>
+            <div style="font-size:0.72rem; color:var(--accent-hevy); font-weight:700;">✓ INGELOGD &amp; GESYNCHRONISEERD</div>
+            <div style="font-size:0.92rem; font-weight:700; margin-top:2px;">@<span id="authActiveUsername">-</span></div>
+            <div style="font-size:0.72rem; color:var(--muted);" id="authActiveEmail">-</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn-sm btn-hevy" id="btnForceCloudSync" style="color:#0f172a;">Nu syncen</button>
+            <button type="button" class="btn-sm btn-danger" id="btnAuthLogout">Uitloggen</button>
+          </div>
+        </div>
       </div>
+
       <div id="cloudFeedback" class="status-msg"></div>
 
-      <details style="margin-top:10px; font-size:0.78rem; color:var(--muted);">
-        <summary style="cursor:pointer; font-weight:600; color:var(--text);">📋 Eenmalige SQL-setup voor Supabase (klik om te tonen)</summary>
+      <!-- Alleen voor beheerder indien centrale project-configuratie nog niet in de code staat -->
+      <details id="adminSupaSetupDetails" style="margin-top:10px; font-size:0.76rem; color:var(--muted); display:none;">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">🔧 Centrale Supabase-koppeling (eenmalig voor beheerder)</summary>
         <div style="margin-top:6px; background:#0f172a; padding:8px; border-radius:8px; border:1px solid var(--card-border);">
-          <div style="margin-bottom:4px;">Plak deze 4 regels in Supabase &rarr; <strong>SQL Editor</strong> en klik op <strong>Run</strong>:</div>
-          <textarea id="supaSqlSnippet" rows="5" readonly style="font-family:monospace; font-size:0.72rem; margin-bottom:4px;">create table if not exists leefstijl_sync (
-  sync_id text primary key,
-  updated_at timestamptz default now(),
-  payload jsonb not null
-);
-alter table leefstijl_sync disable row level security;</textarea>
-          <button type="button" class="btn-sm" id="btnCopySupaSql">Kopieer SQL</button>
+          <span class="field-lbl">Centrale Project URL:</span>
+          <input type="text" id="cfgSupaUrl" placeholder="https://jouwproject.supabase.co" />
+          <span class="field-lbl">Centrale Anon Public Key:</span>
+          <input type="text" id="cfgSupaKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." />
+          <button type="button" class="btn-sm btn-accent" id="btnSaveAdminSupa" style="color:#0f172a; width:100%;">Centrale koppeling opslaan</button>
         </div>
       </details>
 
@@ -1628,6 +1707,45 @@ alter table leefstijl_sync disable row level security;</textarea>
         </div>
         <div id="backupFeedback" class="status-msg"></div>
       </div>
+    </div>
+
+    <!-- 8. Family & Sportbuddy (Uitnodigen op gebruikersnaam, bevestigen & gescheiden autorisaties) -->
+    <div class="card" id="socialConnectionsCard">
+      <h2>
+        <span>8. Family &amp; Sportbuddy</span>
+        <span class="badge" id="connectionsCountBadge">0 actief</span>
+      </h2>
+      <p style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
+        Nodig gezinsleden uit voor je <strong>Family</strong> of koppel één of meerdere <strong>Sportbuddies</strong> op basis van hun gebruikersnaam. Koppelingen zijn strikt gescheiden: gedeelde activiteiten sijpelen nooit door naar derden.
+      </p>
+
+      <!-- Twee aparte knoppen: Family toevoegen & Sportbuddy toevoegen -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:10px;">
+        <button type="button" class="btn btn-hevy" id="btnOpenInviteFamily" style="margin-top:0; padding:9px; font-size:0.82rem;">+ Family toevoegen</button>
+        <button type="button" class="btn btn-accent" id="btnOpenInviteBuddy" style="margin-top:0; padding:9px; font-size:0.82rem; color:#0f172a;">+ Sportbuddy toevoegen</button>
+      </div>
+
+      <!-- Uitnodigingsformulier op gebruikersnaam -->
+      <div id="inviteConnectionBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong id="inviteBoxTitle" style="font-size:0.84rem; color:var(--accent);">Uitnodigen</strong>
+          <button type="button" class="btn-sm" id="btnCloseInviteBox" style="padding:2px 7px;">✕</button>
+        </div>
+        <span class="field-lbl">Gebruikersnaam van de andere gebruiker*:</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="inviteTargetUsernameInp" placeholder="bijv. saskia_fit" style="margin-bottom:0;" />
+          <button type="button" class="btn-sm btn-hevy" id="btnSendConnectionInvite" style="color:#0f172a; height:38px; white-space:nowrap;">Verstuur uitnodiging</button>
+        </div>
+        <div id="inviteFeedbackMsg" style="font-size:0.74rem; color:var(--muted); margin-top:5px;">
+          De ontvanger ziet je uitnodiging in zijn/haar lijst en moet deze eerst bevestigen voordat er iets gedeeld wordt.
+        </div>
+      </div>
+
+      <!-- Inkomende & uitgaande uitnodigingen -->
+      <div id="pendingInvitesContainer"></div>
+
+      <!-- Gecombineerde lijst van actieve Family-leden en Sportbuddies met label en rechten -->
+      <div id="activeConnectionsList"></div>
     </div>
 
     <div class="card">
@@ -1818,10 +1936,28 @@ async function loadDataset(key) {
   } catch (e) { return []; }
 }
 
-let cloudConfig = safeParseJSON("cloud_sync_cfg_v1", { url: "", key: "", syncId: "" });
+// === CENTRALE SUPABASE CONFIGURATIE (1 PROJECT MET ROW LEVEL SECURITY) ===
+// Vul hier als beheerder jouw centrale Supabase Project URL en Anon Public Key in:
+const CENTRAL_SUPABASE_URL = "https://nmgigamnvfsekpuseihk.supabase.co";
+const CENTRAL_SUPABASE_ANON_KEY = "sb_publishable_rwelj35-GZsSp2JjuNN0JA_-KDP6ejl";
+
+let adminSupaOverride = safeParseJSON("admin_supa_override_v1", { url: "", key: "" });
 let supaClient = null;
+let currentAuthUser = null;
+let currentUserProfile = null;
+let myConnections = []; // Alle inkomende, uitgaande en actieve Family / Sportbuddy relaties
+let sharedActivitiesFeed = []; // Directe gedeelde activiteiten van actieve connecties (1-op-1, nooit transitief)
+let sharedFamilyDinners = {}; // Gedeeld weekmenu vanuit Family-koppelingen
+let authMode = "login";
+let pendingInviteRole = "family";
 let cloudPushTimer = null;
 let isApplyingRemote = false;
+
+function getEffectiveSupabaseCreds() {
+  const url = (CENTRAL_SUPABASE_URL || adminSupaOverride.url || "").trim();
+  const key = (CENTRAL_SUPABASE_ANON_KEY || adminSupaOverride.key || "").trim();
+  return { url, key };
+}
 
 function setCloudBadge(text, color = "var(--muted)") {
   const b1 = document.getElementById("cloudSyncBadge");
@@ -1831,14 +1967,19 @@ function setCloudBadge(text, color = "var(--muted)") {
 }
 
 function initSupabaseClient() {
-  if (!cloudConfig.url || !cloudConfig.key || !cloudConfig.syncId || typeof supabase === "undefined") {
+  const creds = getEffectiveSupabaseCreds();
+  const adminDetails = document.getElementById("adminSupaSetupDetails");
+  if (adminDetails) {
+    // Toon beheerder-instelling alleen als centrale URL/Key nog niet hard in de code staan
+    adminDetails.style.display = (!CENTRAL_SUPABASE_URL || !CENTRAL_SUPABASE_ANON_KEY) ? "block" : "none";
+  }
+  if (!creds.url || !creds.key || typeof supabase === "undefined") {
     supaClient = null;
     setCloudBadge("☁️ Lokaal", "var(--muted)");
     return false;
   }
   try {
-    supaClient = supabase.createClient(cloudConfig.url.trim(), cloudConfig.key.trim());
-    setCloudBadge("☁️ Gekoppeld", "var(--accent-hevy)");
+    supaClient = supabase.createClient(creds.url, creds.key);
     return true;
   } catch (e) {
     supaClient = null;
@@ -1847,9 +1988,73 @@ function initSupabaseClient() {
   }
 }
 
+function sanitizeUsername(raw) {
+  return String(raw || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+}
+
+function loginIdentifierToEmail(identifier) {
+  const clean = String(identifier || "").trim().toLowerCase();
+  if (clean.includes("@")) return clean;
+  // Gebruikersnaam zonder domein wordt automatisch omgezet naar intern auth-adres
+  const uname = sanitizeUsername(clean);
+  return uname ? `${uname}@leefstyl.app` : "";
+}
+
+function updateAuthUI() {
+  const outBox = document.getElementById("authLoggedOutBox");
+  const inBox = document.getElementById("authLoggedInBox");
+  if (!outBox || !inBox) return;
+
+  if (currentAuthUser) {
+    outBox.style.display = "none";
+    inBox.style.display = "block";
+    const uname = currentUserProfile?.username || (currentAuthUser.email || "").split("@")[0] || "gebruiker";
+    document.getElementById("authActiveUsername").textContent = uname;
+    const isInternalMail = (currentAuthUser.email || "").endsWith("@leefstyl.app");
+    document.getElementById("authActiveEmail").textContent = isInternalMail
+      ? `Gebruikersnaam-account (@${uname})`
+      : currentAuthUser.email;
+  } else {
+    outBox.style.display = "block";
+    inBox.style.display = "none";
+    setCloudBadge("☁️ Lokaal", "var(--muted)");
+  }
+}
+
+async function ensureUserProfile(preferredUsername = "") {
+  if (!supaClient || !currentAuthUser) return null;
+  const { data: existing, error } = await supaClient
+    .from("user_profiles")
+    .select("*")
+    .eq("user_id", currentAuthUser.id)
+    .maybeSingle();
+
+  if (!error && existing) {
+    currentUserProfile = existing;
+    return existing;
+  }
+
+  const baseUname = sanitizeUsername(preferredUsername || (currentAuthUser.email || "").split("@")[0]) || ("user_" + currentAuthUser.id.slice(0, 6));
+  const { data: created, error: insErr } = await supaClient
+    .from("user_profiles")
+    .upsert({
+      user_id: currentAuthUser.id,
+      username: baseUname,
+      display_name: preferredUsername || baseUname
+    }, { onConflict: "user_id" })
+    .select("*")
+    .single();
+
+  if (!insErr && created) {
+    currentUserProfile = created;
+    return created;
+  }
+  return null;
+}
+
 function buildFullSyncPayload() {
   return {
-    version: 4,
+    version: 5,
     updatedAt: new Date().toISOString(),
     garminSets: state.garminSets,
     hevySets: state.hevySets,
@@ -1865,8 +2070,10 @@ function buildFullSyncPayload() {
     nutriGoals: state.nutriGoals,
     basisItems: state.basisItems,
     drinkFavorites: state.drinkFavorites,
+    foodFavorites: state.foodFavorites,
     customDrinks: state.customDrinks,
-    customFoods: state.customFoods
+    customFoods: state.customFoods,
+    smartOverload: state.smartOverload
   };
 }
 
@@ -1886,9 +2093,8 @@ async function applySyncPayload(d, saveLocally = true) {
     if (d.foodLogs) state.foodLogs = d.foodLogs;
     if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
     if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
-        if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
     if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
-        if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
+    if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
     if (Array.isArray(d.drinkFavorites)) state.drinkFavorites = d.drinkFavorites;
     if (Array.isArray(d.customDrinks)) state.customDrinks = d.customDrinks;
     if (Array.isArray(d.foodFavorites)) state.foodFavorites = d.foodFavorites;
@@ -1898,42 +2104,74 @@ async function applySyncPayload(d, saveLocally = true) {
       await saveDataset("garmin", state.garminSets);
       await saveDataset("hevy", state.hevySets);
       await saveDataset("bodyMeasurements", state.bodyMeasurements);
-    scheduleCloudPush();
       localStorage.setItem("food_logs_v1", JSON.stringify(state.foodLogs));
       localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
       localStorage.setItem("drink_favs_v1", JSON.stringify(state.drinkFavorites));
-  localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
+      localStorage.setItem("food_favs_v1", JSON.stringify(state.foodFavorites));
       localStorage.setItem("custom_foods_v1", JSON.stringify(state.customFoods));
-  localStorage.setItem("custom_drinks_v1", JSON.stringify(state.customDrinks));
+      localStorage.setItem("custom_drinks_v1", JSON.stringify(state.customDrinks));
       localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
-  localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
+      localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
       localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
       localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
-    scheduleCloudPush();
       localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
       localStorage.setItem("trend_overrides", JSON.stringify(state.trendOverrides));
       localStorage.setItem("pulley_groups_v5", JSON.stringify(state.pulleyGroups));
-  scheduleCloudPush();
       localStorage.setItem("point_overrides_v2", JSON.stringify(state.pointOverrides));
-    scheduleCloudPush();
     }
   } finally {
     isApplyingRemote = false;
   }
 }
 
+// Publiceert uitsluitend expliciet als 'Samen' gemarkeerde eigen activiteiten (owner_id = auth.uid())
+// Belangrijk: alleen eigen items worden hier weggeschreven, NOOIT activiteiten van anderen (geen doorsijpelen).
+async function syncOwnSharedActivities() {
+  if (!supaClient || !currentAuthUser) return;
+  try {
+    const uid = currentAuthUser.id;
+    const ownSharedRows = [];
+    for (const [dateStr, rawList] of Object.entries(state.plannedWorkouts || {})) {
+      if (!Array.isArray(rawList)) continue;
+      rawList.forEach((w, idx) => {
+        if (w && w.sharedWithConnections && !w.fromConnectionUserId) {
+          ownSharedRows.push({
+            id: `${uid}_${dateStr}_${idx}`,
+            owner_id: uid,
+            activity_date: dateStr,
+            title: String(w.title || "Workout"),
+            duration_min: Number(w.durationMin || 45),
+            burned_kcal: Number(w.burnedKcal || 0),
+            completed: Boolean(w.completed)
+          });
+        }
+      });
+    }
+
+    // Verwijder verouderde eigen shared_activities van deze gebruiker en plaats actuele set
+    await supaClient.from("shared_activities").delete().eq("owner_id", uid);
+    if (ownSharedRows.length > 0) {
+      await supaClient.from("shared_activities").insert(ownSharedRows);
+    }
+  } catch (e) {
+    console.warn("Shared activities sync overgeslagen:", e.message || e);
+  }
+}
+
 async function pushToCloudNow() {
-  if (!supaClient || !cloudConfig.syncId || isApplyingRemote) return;
+  if (!supaClient || !currentAuthUser || isApplyingRemote) return;
   setCloudBadge("☁️ Opslaan...", "var(--accent)");
   try {
     const nowIso = new Date().toISOString();
     const payload = buildFullSyncPayload();
     payload.updatedAt = nowIso;
     const { error } = await supaClient
-      .from("leefstijl_sync")
-      .upsert({ sync_id: cloudConfig.syncId.trim(), updated_at: nowIso, payload }, { onConflict: "sync_id" });
+      .from("user_data")
+      .upsert({ user_id: currentAuthUser.id, updated_at: nowIso, payload }, { onConflict: "user_id" });
     if (error) throw error;
-    localStorage.setItem("cloud_last_sync_at", nowIso);
+
+    await syncOwnSharedActivities();
+    localStorage.setItem("cloud_last_sync_at_" + currentAuthUser.id, nowIso);
     setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   } catch (err) {
     console.error("Cloud push error:", err);
@@ -1944,39 +2182,122 @@ async function pushToCloudNow() {
 }
 
 function scheduleCloudPush() {
-  if (!supaClient || !cloudConfig.syncId || isApplyingRemote) return;
+  if (!supaClient || !currentAuthUser || isApplyingRemote) return;
   setCloudBadge("☁️ Wacht...", "var(--accent-garmin)");
   if (cloudPushTimer) clearTimeout(cloudPushTimer);
   cloudPushTimer = setTimeout(() => { pushToCloudNow(); }, 1200);
 }
 
+async function loadConnectionsAndSharedData() {
+  if (!supaClient || !currentAuthUser) {
+    myConnections = [];
+    sharedActivitiesFeed = [];
+    renderSocialConnectionsUI();
+    return;
+  }
+
+  try {
+    const uid = currentAuthUser.id;
+    const { data: conns, error } = await supaClient
+      .from("connections")
+      .select("*")
+      .or(`requester_id.eq.${uid},target_id.eq.${uid}`)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    const list = conns || [];
+
+    // Haal gebruikersnamen op van alle betrokken user_ids
+    const otherIds = [...new Set(list.map(c => c.requester_id === uid ? c.target_id : c.requester_id))];
+    let profileMap = {};
+    if (otherIds.length > 0) {
+      const { data: profs } = await supaClient
+        .from("user_profiles")
+        .select("user_id, username, display_name")
+        .in("user_id", otherIds);
+      (profs || []).forEach(p => { profileMap[p.user_id] = p; });
+    }
+
+    myConnections = list.map(c => {
+      const isRequester = c.requester_id === uid;
+      const peerId = isRequester ? c.target_id : c.requester_id;
+      const peerProf = profileMap[peerId] || { username: "gebruiker", display_name: "Gebruiker" };
+      // Rechten die IK heb opengesteld richting deze persoon:
+      const myShareWorkouts = isRequester ? Boolean(c.req_share_workouts) : Boolean(c.tgt_share_workouts);
+      const myShareWeekmenu = isRequester ? Boolean(c.req_share_weekmenu) : Boolean(c.tgt_share_weekmenu);
+      const myShareCalendar = isRequester ? (c.req_share_calendar || "none") : (c.tgt_share_calendar || "none");
+      // Rechten die DE ANDER richting mij heeft opengesteld:
+      const peerSharesWorkouts = isRequester ? Boolean(c.tgt_share_workouts) : Boolean(c.req_share_workouts);
+      const peerSharesWeekmenu = isRequester ? Boolean(c.tgt_share_weekmenu) : Boolean(c.req_share_weekmenu);
+
+      return {
+        ...c,
+        isRequester,
+        peerId,
+        peerUsername: peerProf.username,
+        myShareWorkouts,
+        myShareWeekmenu,
+        myShareCalendar,
+        peerSharesWorkouts,
+        peerSharesWeekmenu
+      };
+    });
+
+    // Haal gedeelde activiteiten op — RLS in Postgres garandeert dat je ALLEEN rijen ziet van
+    // directe actieve connecties waarbij die persoon 'share_workouts' richting jou heeft aangezet.
+    // Transitief lekken (A -> B -> C) is hiermee zowel in de database als in de client onmogelijk.
+    const { data: sharedActs } = await supaClient
+      .from("shared_activities")
+      .select("*")
+      .neq("owner_id", uid);
+
+    const activePeerLookup = {};
+    myConnections.filter(c => c.status === "active").forEach(c => {
+      activePeerLookup[c.peerId] = c;
+    });
+
+    sharedActivitiesFeed = (sharedActs || [])
+      .filter(act => activePeerLookup[act.owner_id] && activePeerLookup[act.owner_id].peerSharesWorkouts)
+      .map(act => ({
+        ...act,
+        ownerUsername: activePeerLookup[act.owner_id].peerUsername,
+        connectionRole: activePeerLookup[act.owner_id].role
+      }));
+
+    renderSocialConnectionsUI();
+  } catch (err) {
+    console.warn("Connecties ophalen:", err.message || err);
+  }
+}
+
 async function pullFromCloud(forceOverwriteLocal = false) {
-  if (!supaClient || !cloudConfig.syncId) return;
+  if (!supaClient || !currentAuthUser) return;
   setCloudBadge("☁️ Ophalen...", "var(--accent)");
   try {
+    await ensureUserProfile();
+    const uid = currentAuthUser.id;
     const { data, error } = await supaClient
-      .from("leefstijl_sync")
+      .from("user_data")
       .select("updated_at, payload")
-      .eq("sync_id", cloudConfig.syncId.trim())
+      .eq("user_id", uid)
       .maybeSingle();
 
     if (error) throw error;
 
     if (!data || !data.payload) {
-      // Nog niets in de cloud -> upload huidige lokale data als eerste versie
       await pushToCloudNow();
-      return;
+    } else {
+      const remoteTs = new Date(data.updated_at).getTime() || 0;
+      const localTs = new Date(localStorage.getItem("cloud_last_sync_at_" + uid) || 0).getTime() || 0;
+      const hasAnyLocalData = state.garminSets.length > 0 || state.hevySets.length > 0 || state.bodyMeasurements.length > 0 || Object.keys(state.foodLogs).length > 0 || Object.keys(state.plannedWorkouts).length > 0;
+      if (forceOverwriteLocal || !hasAnyLocalData || remoteTs > localTs) {
+        await applySyncPayload(data.payload, true);
+        localStorage.setItem("cloud_last_sync_at_" + uid, data.updated_at);
+      }
     }
 
-    const remoteTs = new Date(data.updated_at).getTime() || 0;
-    const localTs = new Date(localStorage.getItem("cloud_last_sync_at") || 0).getTime() || 0;
-
-    const hasAnyLocalData = state.garminSets.length > 0 || state.hevySets.length > 0 || state.bodyMeasurements.length > 0 || Object.keys(state.foodLogs).length > 0 || Object.keys(state.plannedWorkouts).length > 0;
-    if (forceOverwriteLocal || !hasAnyLocalData || remoteTs > localTs) {
-      await applySyncPayload(data.payload, true);
-      localStorage.setItem("cloud_last_sync_at", data.updated_at);
-      refreshAll();
-    }
+    await loadConnectionsAndSharedData();
+    refreshAll();
     setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   } catch (err) {
     console.error("Cloud pull error:", err);
@@ -1984,6 +2305,99 @@ async function pullFromCloud(forceOverwriteLocal = false) {
     const fb = document.getElementById("cloudFeedback");
     if (fb) fb.textContent = "Cloud fout: " + (err.message || err);
   }
+}
+
+function renderSocialConnectionsUI() {
+  const pendingEl = document.getElementById("pendingInvitesContainer");
+  const activeEl = document.getElementById("activeConnectionsList");
+  const countBadge = document.getElementById("connectionsCountBadge");
+  if (!pendingEl || !activeEl) return;
+
+  if (!currentAuthUser) {
+    if (countBadge) countBadge.textContent = "Log eerst in";
+    pendingEl.innerHTML = "";
+    activeEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:6px 0;">Log hierboven in met je gebruikersnaam en wachtwoord om Family-leden of Sportbuddies toe te voegen.</div>`;
+    return;
+  }
+
+  const incoming = myConnections.filter(c => c.status === "pending" && !c.isRequester);
+  const outgoing = myConnections.filter(c => c.status === "pending" && c.isRequester);
+  const active = myConnections.filter(c => c.status === "active");
+
+  if (countBadge) countBadge.textContent = `${active.length} actief`;
+
+  let pendingHtml = "";
+  incoming.forEach(c => {
+    const roleLabel = c.role === "family" ? "Family" : "Sportbuddy";
+    const roleCls = c.role === "family" ? "role-pill-family" : "role-pill-buddy";
+    pendingHtml += `
+      <div class="conn-row" style="border-color:var(--accent-garmin);">
+        <div class="conn-top" style="margin-bottom:4px;">
+          <div>
+            <strong>@${escapeHtml(c.peerUsername)}</strong>
+            <span class="${roleCls}" style="margin-left:6px;">${roleLabel}</span>
+            <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">Wil een ${roleLabel}-connectie met je maken</div>
+          </div>
+          <div style="display:flex; gap:5px;">
+            <button type="button" class="btn-sm btn-hevy" data-accept-conn="${escapeHtml(c.id)}" style="color:#0f172a;">Bevestigen</button>
+            <button type="button" class="btn-sm" data-remove-conn="${escapeHtml(c.id)}" style="color:var(--danger);">Weiger</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  outgoing.forEach(c => {
+    const roleLabel = c.role === "family" ? "Family" : "Sportbuddy";
+    const roleCls = c.role === "family" ? "role-pill-family" : "role-pill-buddy";
+    pendingHtml += `
+      <div class="conn-row" style="opacity:0.85;">
+        <div class="conn-top" style="margin-bottom:0;">
+          <div>
+            <strong>@${escapeHtml(c.peerUsername)}</strong>
+            <span class="${roleCls}" style="margin-left:6px;">${roleLabel}</span>
+            <span style="font-size:0.72rem; color:var(--accent-garmin); margin-left:6px;">⏳ Wacht op bevestiging</span>
+          </div>
+          <button type="button" class="btn-sm" data-remove-conn="${escapeHtml(c.id)}" style="color:var(--danger); padding:3px 7px;">Intrekken</button>
+        </div>
+      </div>
+    `;
+  });
+  pendingEl.innerHTML = pendingHtml;
+
+  if (active.length === 0) {
+    activeEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:4px 0;">Nog geen bevestigde Family-leden of Sportbuddies.</div>`;
+    return;
+  }
+
+  activeEl.innerHTML = active.map(c => {
+    const isFam = c.role === "family";
+    const roleLabel = isFam ? "Family" : "Sportbuddy";
+    const roleCls = isFam ? "role-pill-family" : "role-pill-buddy";
+    return `
+      <div class="conn-row">
+        <div class="conn-top">
+          <div>
+            <strong>@${escapeHtml(c.peerUsername)}</strong>
+            <span class="${roleCls}" style="margin-left:6px;">${roleLabel}</span>
+          </div>
+          <button type="button" class="btn-sm" data-remove-conn="${escapeHtml(c.id)}" style="color:var(--danger); padding:3px 7px;" title="Koppeling verbreken">✕</button>
+        </div>
+        <div class="conn-perms">
+          <label class="toggle-label" style="color:var(--text);">
+            <input type="checkbox" data-conn-perm="workouts" data-conn-id="${escapeHtml(c.id)}" ${c.myShareWorkouts ? "checked" : ""} />
+            Deel 'Samen'-workouts
+          </label>
+          ${isFam ? `
+            <label class="toggle-label" style="color:var(--text);">
+              <input type="checkbox" data-conn-perm="weekmenu" data-conn-id="${escapeHtml(c.id)}" ${c.myShareWeekmenu ? "checked" : ""} />
+              Deel Weekmenu
+            </label>
+          ` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function saveFoodState() {
@@ -1997,8 +2411,6 @@ function saveFoodState() {
   localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
   scheduleCloudPush();
 }
-
-
 // === SPORT MET-WAARDEN & PLANNER WORKOUT HELPERS ===
 const SPORT_PRESETS = {
   "BodyPump":             { met: 6.0, defaultMin: 60, isStrength: false, color: "#ec4899" },
@@ -2060,7 +2472,10 @@ function normalizePlannedEntry(entry) {
     durationMin: dur,
     burnedKcal: entry.burnedKcal !== undefined && entry.burnedKcal !== null ? Number(entry.burnedKcal) : estimateBurnedKcal(title, dur),
     completed: Boolean(entry.completed),
-    isStrength: isStr
+    isStrength: isStr,
+    sharedWithConnections: Boolean(entry.sharedWithConnections),
+    fromConnectionUserId: entry.fromConnectionUserId || null,
+    fromConnectionUsername: entry.fromConnectionUsername || null
   };
 }
 
@@ -2986,10 +3401,13 @@ function renderPlannerTab() {
       const toggleLabel = w.completed ? "↩ Gepland" : "✓ Afronden";
       const toggleCls = w.completed ? "btn-sm" : "btn-sm btn-hevy";
       const toggleStyle = w.completed ? "padding:4px 7px; font-size:0.72rem;" : "color:#0f172a; padding:4px 8px; font-size:0.72rem;";
+      const sharedTag = w.fromConnectionUsername
+        ? `<span style="font-size:0.68rem; color:var(--accent); margin-left:5px;">(via @${escapeHtml(w.fromConnectionUsername)})</span>`
+        : (w.sharedWithConnections ? `<span style="font-size:0.68rem; color:var(--accent-hevy); margin-left:5px;">🤝 Samen</span>` : "");
       return `
         <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:${w.completed ? "rgba(16,185,129,0.4)" : "rgba(56,189,248,0.35)"};">
           <div class="meal-info">
-            <div class="meal-title" style="color:${badgeColor};">${statusIcon} ${escapeHtml(w.title)}</div>
+            <div class="meal-title" style="color:${badgeColor};">${statusIcon} ${escapeHtml(w.title)}${sharedTag}</div>
             <div class="meal-macros">${w.durationMin} min · ~${w.burnedKcal} kcal · ${w.completed ? "Uitgevoerd" : "Ingepland"}</div>
           </div>
           <button type="button" class="${toggleCls}" data-toggle-plan="${idx}" style="${toggleStyle}">${toggleLabel}</button>
@@ -2997,6 +3415,32 @@ function renderPlannerTab() {
         </div>
       `;
     }).join("");
+  }
+
+  // Toon gedeelde 'Samen'-workouts van directe Family/Sportbuddy-connecties op deze dag (zonder transitief doorsijpelen)
+  const sharedBox = document.getElementById("sharedBuddyWorkoutsBox");
+  if (sharedBox) {
+    const proposals = (sharedActivitiesFeed || []).filter(a => a.activity_date === selYmd);
+    if (proposals.length === 0) {
+      sharedBox.innerHTML = "";
+    } else {
+      sharedBox.innerHTML = `
+        <div class="shared-proposal-box">
+          <div style="font-weight:700; color:var(--accent); margin-bottom:5px;">🤝 Voorstel van gekoppelde ${proposals[0].connectionRole === "family" ? "Family" : "Sportbuddy"}:</div>
+          ${proposals.map((prop, pIdx) => {
+            const rBadge = prop.connectionRole === "family" ? `<span class="role-pill-family">Family</span>` : `<span class="role-pill-buddy">Sportbuddy</span>`;
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; padding:4px 0;">
+                <div>
+                  <strong>${escapeHtml(prop.title)}</strong> (${prop.duration_min} min) · @${escapeHtml(prop.ownerUsername)} ${rBadge}
+                </div>
+                <button type="button" class="btn-sm btn-hevy" data-accept-shared-wo="${pIdx}" style="color:#0f172a; white-space:nowrap;">✓ Bevestig voor mij</button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
   }
 }
 
@@ -3958,9 +4402,12 @@ function refreshAll() {
   document.getElementById("cfgProtGoal").value = state.nutriGoals.protein ?? 155;
   document.getElementById("cfgCarbGoal").value = state.nutriGoals.carbs ?? 240;
   document.getElementById("cfgFatGoal").value = state.nutriGoals.fat ?? 75;
-  document.getElementById("cfgSupaUrl").value = cloudConfig.url || "";
-  document.getElementById("cfgSupaKey").value = cloudConfig.key || "";
-  document.getElementById("cfgSupaSyncId").value = cloudConfig.syncId || "";
+  const urlInp = document.getElementById("cfgSupaUrl");
+  const keyInp = document.getElementById("cfgSupaKey");
+  if (urlInp) urlInp.value = adminSupaOverride.url || "";
+  if (keyInp) keyInp.value = adminSupaOverride.key || "";
+  updateAuthUI();
+  renderSocialConnectionsUI();
 
   const garminDays = new Set(state.garminSets.map(s => s.dateDay)).size;
   const hevyDays = new Set(state.hevySets.map(s => s.dateDay)).size;
@@ -4834,9 +5281,10 @@ function bindEvents() {
     const completed = document.getElementById("planWorkoutStatus").value === "completed";
     const isStrength = Boolean((SPORT_PRESETS[title] && SPORT_PRESETS[title].isStrength) || /upper|lower|push|pull|full|kracht/i.test(title));
 
+    const sharedWithConnections = Boolean(document.getElementById("planWorkoutSharedChk")?.checked);
     const d = state.selectedPlannerDate;
     if (!state.plannedWorkouts[d]) state.plannedWorkouts[d] = [];
-    state.plannedWorkouts[d].push({ title, durationMin, burnedKcal, completed, isStrength });
+    state.plannedWorkouts[d].push({ title, durationMin, burnedKcal, completed, isStrength, sharedWithConnections });
     saveFoodState();
     refreshAll();
   });
@@ -6274,46 +6722,275 @@ function bindEvents() {
     scheduleCloudPush(); refreshAll();
   });
 
-  // Cloud Sync knoppen
+  // Account Auth & Cloud Sync knoppen
   document.getElementById("cloudSyncBadge").addEventListener("click", () => {
-    if (supaClient) pullFromCloud(true);
+    if (supaClient && currentAuthUser) pullFromCloud(true);
     else switchTab("upload");
   });
 
-  document.getElementById("btnCopySupaSql").addEventListener("click", () => {
-    const sql = document.getElementById("supaSqlSnippet").value;
-    navigator.clipboard?.writeText(sql);
-    document.getElementById("cloudFeedback").textContent = "SQL gekopieerd! Plak dit in Supabase SQL Editor en klik op Run.";
+  function setAuthUiMode(mode) {
+    authMode = mode;
+    document.querySelectorAll("#authModePills .pill").forEach(p => {
+      p.classList.toggle("active", p.getAttribute("data-authmode") === mode);
+    });
+    const regRow = document.getElementById("authRegisterOnlyRow");
+    const submitBtn = document.getElementById("btnAuthSubmit");
+    const toggleBtn = document.getElementById("btnToggleAuthMode");
+    if (mode === "register") {
+      regRow.style.display = "block";
+      submitBtn.textContent = "Account aanmaken";
+      toggleBtn.textContent = "Terug naar inloggen";
+    } else {
+      regRow.style.display = "none";
+      submitBtn.textContent = "Inloggen & Syncen";
+      toggleBtn.textContent = "Account aanmaken";
+    }
+  }
+
+  document.getElementById("authModePills").addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (pill) setAuthUiMode(pill.getAttribute("data-authmode") || "login");
   });
 
-  document.getElementById("btnSaveCloudConfig").addEventListener("click", async () => {
-    cloudConfig = {
+  document.getElementById("btnToggleAuthMode").addEventListener("click", () => {
+    setAuthUiMode(authMode === "login" ? "register" : "login");
+  });
+
+  document.getElementById("btnSaveAdminSupa").addEventListener("click", () => {
+    adminSupaOverride = {
       url: document.getElementById("cfgSupaUrl").value.trim(),
-      key: document.getElementById("cfgSupaKey").value.trim(),
-      syncId: document.getElementById("cfgSupaSyncId").value.trim()
+      key: document.getElementById("cfgSupaKey").value.trim()
     };
-    localStorage.setItem("cloud_sync_cfg_v1", JSON.stringify(cloudConfig));
+    localStorage.setItem("admin_supa_override_v1", JSON.stringify(adminSupaOverride));
     const fb = document.getElementById("cloudFeedback");
     if (initSupabaseClient()) {
-      fb.textContent = "Verbonden met Supabase! Data synchroniseren...";
-      await pullFromCloud(false);
-      fb.textContent = "Cloud Sync actief! Wijzigingen worden nu automatisch gedeeld tussen PC en Mobiel.";
+      fb.textContent = "Centrale Supabase-verbinding opgeslagen! Je kunt nu inloggen.";
     } else {
-      fb.textContent = "Vul zowel Project URL, Anon Key als Sync-Sleutel in.";
+      fb.textContent = "Vul zowel Project URL als Anon Key in.";
     }
+  });
+
+  document.getElementById("btnAuthSubmit").addEventListener("click", async () => {
+    const fb = document.getElementById("cloudFeedback");
+    if (!supaClient && !initSupabaseClient()) {
+      fb.textContent = "Centrale Supabase-koppeling ontbreekt nog. Vul die eerst in onder Beheerder-instellingen.";
+      return;
+    }
+
+    const loginRaw = document.getElementById("authLoginIdInp").value.trim();
+    const password = document.getElementById("authPasswordInp").value;
+    const regUsername = sanitizeUsername(document.getElementById("authUsernameInp").value);
+
+    if (!loginRaw || !password) {
+      fb.textContent = "Vul je gebruikersnaam (of e-mailadres) en wachtwoord in.";
+      return;
+    }
+    if (password.length < 6) {
+      fb.textContent = "Gebruik een wachtwoord van minimaal 6 tekens.";
+      return;
+    }
+
+    const email = loginIdentifierToEmail(loginRaw);
+    fb.textContent = authMode === "register" ? "Account aanmaken..." : "Inloggen...";
+
+    try {
+      if (authMode === "register") {
+        const chosenUname = regUsername || sanitizeUsername(loginRaw.split("@")[0]);
+        if (!chosenUname || chosenUname.length < 3) {
+          fb.textContent = "Kies een gebruikersnaam van minimaal 3 tekens (letters, cijfers, _ of -).";
+          return;
+        }
+        const { data, error } = await supaClient.auth.signUp({
+          email,
+          password,
+          options: { data: { username: chosenUname } }
+        });
+        if (error) throw error;
+        currentAuthUser = data.user;
+        if (currentAuthUser) {
+          await ensureUserProfile(chosenUname);
+          updateAuthUI();
+          await pullFromCloud(false);
+          fb.textContent = `Welkom @${chosenUname}! Je account is aangemaakt en gesynchroniseerd.`;
+        } else {
+          fb.textContent = "Registratie gestart. Controleer je e-mail indien bevestiging aanstaat.";
+        }
+      } else {
+        const { data, error } = await supaClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        currentAuthUser = data.user;
+        await ensureUserProfile(loginRaw.split("@")[0]);
+        updateAuthUI();
+        await pullFromCloud(false);
+        fb.textContent = "Ingelogd! Gegevens zijn bijgewerkt.";
+      }
+      document.getElementById("authPasswordInp").value = "";
+    } catch (err) {
+      fb.textContent = "Inloggen mislukt: " + (err.message || err);
+    }
+  });
+
+  document.getElementById("btnAuthLogout").addEventListener("click", async () => {
+    if (supaClient) await supaClient.auth.signOut();
+    currentAuthUser = null;
+    currentUserProfile = null;
+    myConnections = [];
+    sharedActivitiesFeed = [];
+    updateAuthUI();
+    renderSocialConnectionsUI();
+    renderPlannerTab();
+    document.getElementById("cloudFeedback").textContent = "Uitgelogd.";
   });
 
   document.getElementById("btnForceCloudSync").addEventListener("click", async () => {
     const fb = document.getElementById("cloudFeedback");
-    if (!supaClient) { fb.textContent = "Sla eerst je Supabase gegevens op."; return; }
+    if (!supaClient || !currentAuthUser) { fb.textContent = "Log eerst in om te synchroniseren."; return; }
     fb.textContent = "Synchroniseren...";
     await pushToCloudNow();
-    fb.textContent = "Laatste status succesvol naar de cloud gestuurd (" + new Date().toLocaleTimeString("nl-NL") + ").";
+    await loadConnectionsAndSharedData();
+    renderPlannerTab();
+    fb.textContent = "Laatste status succesvol gesynct (" + new Date().toLocaleTimeString("nl-NL") + ").";
+  });
+
+  // Family & Sportbuddy uitnodigingen en rechtenbeheer
+  function openInviteBox(role) {
+    if (!currentAuthUser) {
+      alert("Log eerst in onder stap 7 om Family-leden of Sportbuddies uit te nodigen.");
+      return;
+    }
+    pendingInviteRole = role;
+    const box = document.getElementById("inviteConnectionBox");
+    const title = document.getElementById("inviteBoxTitle");
+    box.style.display = "block";
+    title.textContent = role === "family" ? "🏡 Family-lid uitnodigen op gebruikersnaam" : "🏃 Sportbuddy uitnodigen op gebruikersnaam";
+    title.style.color = role === "family" ? "var(--accent-hevy)" : "var(--accent)";
+    document.getElementById("inviteTargetUsernameInp").focus();
+  }
+
+  document.getElementById("btnOpenInviteFamily").addEventListener("click", () => openInviteBox("family"));
+  document.getElementById("btnOpenInviteBuddy").addEventListener("click", () => openInviteBox("buddy"));
+  document.getElementById("btnCloseInviteBox").addEventListener("click", () => {
+    document.getElementById("inviteConnectionBox").style.display = "none";
+  });
+
+  document.getElementById("btnSendConnectionInvite").addEventListener("click", async () => {
+    const msgEl = document.getElementById("inviteFeedbackMsg");
+    if (!supaClient || !currentAuthUser) return;
+    const targetUname = sanitizeUsername(document.getElementById("inviteTargetUsernameInp").value);
+    if (!targetUname) {
+      msgEl.textContent = "Vul een geldige gebruikersnaam in.";
+      return;
+    }
+    if (currentUserProfile && targetUname === currentUserProfile.username) {
+      msgEl.textContent = "Je kunt jezelf niet uitnodigen.";
+      return;
+    }
+
+    msgEl.textContent = "Gebruiker zoeken...";
+    try {
+      const { data: targetProf, error: findErr } = await supaClient
+        .from("user_profiles")
+        .select("user_id, username")
+        .eq("username", targetUname)
+        .maybeSingle();
+
+      if (findErr) throw findErr;
+      if (!targetProf) {
+        msgEl.textContent = `Geen gebruiker gevonden met gebruikersnaam "@${targetUname}".`;
+        return;
+      }
+
+      // Check of er al een connectie bestaat tussen jullie twee
+      const existing = myConnections.find(c => c.peerId === targetProf.user_id);
+      if (existing) {
+        msgEl.textContent = `Er bestaat al een ${existing.role === "family" ? "Family" : "Sportbuddy"}-koppeling of openstaande uitnodiging met @${targetUname}.`;
+        return;
+      }
+
+      const isFam = pendingInviteRole === "family";
+      const { error: insErr } = await supaClient.from("connections").insert({
+        requester_id: currentAuthUser.id,
+        target_id: targetProf.user_id,
+        role: pendingInviteRole,
+        status: "pending",
+        req_share_workouts: true,
+        tgt_share_workouts: true,
+        req_share_weekmenu: isFam,
+        tgt_share_weekmenu: isFam
+      });
+      if (insErr) throw insErr;
+
+      document.getElementById("inviteTargetUsernameInp").value = "";
+      document.getElementById("inviteConnectionBox").style.display = "none";
+      await loadConnectionsAndSharedData();
+    } catch (err) {
+      msgEl.textContent = "Fout bij uitnodigen: " + (err.message || err);
+    }
+  });
+
+  document.getElementById("socialConnectionsCard").addEventListener("click", async e => {
+    const accBtn = e.target.closest("[data-accept-conn]");
+    if (accBtn && supaClient) {
+      const cid = accBtn.getAttribute("data-accept-conn");
+      await supaClient.from("connections").update({ status: "active" }).eq("id", cid);
+      await loadConnectionsAndSharedData();
+      renderPlannerTab();
+      return;
+    }
+    const remBtn = e.target.closest("[data-remove-conn]");
+    if (remBtn && supaClient) {
+      const cid = remBtn.getAttribute("data-remove-conn");
+      await supaClient.from("connections").delete().eq("id", cid);
+      await loadConnectionsAndSharedData();
+      renderPlannerTab();
+    }
+  });
+
+  document.getElementById("socialConnectionsCard").addEventListener("change", async e => {
+    const permChk = e.target.closest("[data-conn-perm]");
+    if (!permChk || !supaClient) return;
+    const cid = permChk.getAttribute("data-conn-id");
+    const permType = permChk.getAttribute("data-conn-perm");
+    const conn = myConnections.find(c => String(c.id) === String(cid));
+    if (!conn) return;
+
+    const field = permType === "workouts"
+      ? (conn.isRequester ? "req_share_workouts" : "tgt_share_workouts")
+      : (conn.isRequester ? "req_share_weekmenu" : "tgt_share_weekmenu");
+
+    await supaClient.from("connections").update({ [field]: permChk.checked }).eq("id", cid);
+    await loadConnectionsAndSharedData();
+    renderPlannerTab();
+  });
+
+  // Gedeeld workout-voorstel in Planner bevestigen als eigen activiteit (blijft privé, sijpelt niet door!)
+  document.getElementById("sharedBuddyWorkoutsBox").addEventListener("click", e => {
+    const btn = e.target.closest("[data-accept-shared-wo]");
+    if (!btn) return;
+    const selYmd = state.selectedPlannerDate;
+    const proposals = (sharedActivitiesFeed || []).filter(a => a.activity_date === selYmd);
+    const prop = proposals[Number(btn.getAttribute("data-accept-shared-wo"))];
+    if (!prop) return;
+
+    if (!state.plannedWorkouts[selYmd]) state.plannedWorkouts[selYmd] = [];
+    const isStrength = Boolean((SPORT_PRESETS[prop.title] && SPORT_PRESETS[prop.title].isStrength) || /upper|lower|push|pull|full|kracht/i.test(prop.title));
+    state.plannedWorkouts[selYmd].push({
+      title: prop.title,
+      durationMin: Number(prop.duration_min || 45),
+      burnedKcal: Number(prop.burned_kcal || estimateBurnedKcal(prop.title, prop.duration_min || 45)),
+      completed: true,
+      isStrength,
+      sharedWithConnections: false, // Cruciaal: overgenomen voorstel wordt NOOIT automatisch doorgedeeld naar derden
+      fromConnectionUserId: prop.owner_id,
+      fromConnectionUsername: prop.ownerUsername
+    });
+    saveFoodState();
+    refreshAll();
   });
 
   // Auto-pull wanneer je terugkeert naar het tabblad (bijv. van PC naar Mobiel wisselt)
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && supaClient) {
+    if (document.visibilityState === "visible" && supaClient && currentAuthUser) {
       pullFromCloud(false);
     }
   });
@@ -6397,7 +7074,12 @@ function bindEvents() {
   state.bodyMeasurements = loadedBody.filter(m => m && m.date >= "2010-01-01" && m.weight >= 40);
   refreshAll();
   if (initSupabaseClient()) {
-    await pullFromCloud(false);
+    const { data } = await supaClient.auth.getSession();
+    if (data && data.session && data.session.user) {
+      currentAuthUser = data.session.user;
+      updateAuthUI();
+      await pullFromCloud(false);
+    }
   }
 })();
 </script>
