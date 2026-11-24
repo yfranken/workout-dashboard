@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
   <title>Leefstyl App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Momo+Signature&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -45,8 +48,15 @@
     }
     .icon-btn {
       background: var(--card); border: 1px solid var(--card-border);
-      color: var(--text); border-radius: 10px; padding: 6px 10px;
+      color: var(--text); border-radius: 10px;
+      width: 36px; height: 36px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
       font-size: 1rem; cursor: pointer; font-weight: 700;
+      transition: 0.15s;
+    }
+    .icon-btn svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
     .icon-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
 
@@ -695,18 +705,16 @@
 
   <header>
     <div>
-      <h1>Leefstyl App</h1>
-      <div style="font-size: 0.68rem; color: var(--muted); margin-top: 2px;">
-        <span class="legend-dot" style="background:var(--accent-garmin)"></span>Garmin &nbsp;
-        <span class="legend-dot" style="background:var(--accent-hevy)"></span>Hevy &nbsp;
-        <span class="legend-dot" style="background:var(--accent-body)"></span>Metingen
-      </div>
+      <h1 style="font-size:1.3rem; letter-spacing:0.2px;"><span style="font-family:'Momo Signature', cursive; font-weight:400; font-size:1.55rem; color:var(--accent);">Leefstyl</span> App</h1>
     </div>
     <div class="header-actions">
       <span class="badge" id="cloudSyncBadge" title="Cloud Sync Status" style="cursor:pointer;">☁️ Lokaal</span>
-      <span class="badge" id="totalBadge">0 sets</span>
-      <button type="button" class="icon-btn" id="btnOpenSettings" data-tab="upload" title="Data &amp; Instellingen">⚙</button>
-      <button type="button" class="icon-btn" id="btnOpenProfile" data-tab="profile" title="Account, Family &amp; Sportbuddy">👤</button>
+      <button type="button" class="icon-btn" id="btnOpenSettings" data-tab="upload" title="Data &amp; Instellingen" aria-label="Instellingen">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+      <button type="button" class="icon-btn" id="btnOpenProfile" data-tab="profile" title="Account, Family &amp; Sportbuddy" aria-label="Profiel">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </button>
     </div>
   </header>
 
@@ -735,13 +743,13 @@
       </div>
       <div class="period-nav" id="ovNavBar">
         <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="ovPrevPageBtn" title="Vorige reeks" disabled>&#9194;</button>
+          <button type="button" class="nav-arrow" id="ovPrevPageBtn" title="Vorige reeks" disabled>&#9664;&#9664;</button>
           <button type="button" class="nav-arrow" id="ovPrevBtn" title="1 periode terug">&#9664;</button>
         </div>
         <span class="nav-label" id="ovRangeLabel">Alle jaren</span>
         <div style="display:flex; gap:4px;">
           <button type="button" class="nav-arrow" id="ovNextBtn" title="1 periode vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="ovNextPageBtn" title="Volgende reeks" disabled>&#9193;</button>
+          <button type="button" class="nav-arrow" id="ovNextPageBtn" title="Volgende reeks" disabled>&#9654;&#9654;</button>
         </div>
       </div>
     </div>
@@ -1298,13 +1306,13 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </div>
       <div class="period-nav" id="trNavBar">
         <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="trPrevPageBtn" title="Vorige reeks" disabled>&#9194;</button>
+          <button type="button" class="nav-arrow" id="trPrevPageBtn" title="Vorige reeks" disabled>&#9664;&#9664;</button>
           <button type="button" class="nav-arrow" id="trPrevBtn" title="1 periode terug">&#9664;</button>
         </div>
         <span class="nav-label" id="trRangeLabel">-</span>
         <div style="display:flex; gap:4px;">
           <button type="button" class="nav-arrow" id="trNextBtn" title="1 periode vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="trNextPageBtn" title="Volgende reeks" disabled>&#9193;</button>
+          <button type="button" class="nav-arrow" id="trNextPageBtn" title="Volgende reeks" disabled>&#9654;&#9654;</button>
         </div>
       </div>
     </div>
@@ -1322,9 +1330,9 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </div>
     </div>
 
-    <!-- Training voortgang (linker as selectie zoals bij Totaal) -->
+    <!-- Workouts (linker as selectie zoals bij Totaal) -->
     <div class="card">
-      <h2><span>Training voortgang</span></h2>
+      <h2><span>Workouts</span></h2>
       <div style="margin-bottom:6px;">
         <span class="field-lbl">Linker as (Activiteit):</span>
         <select id="trActivityMetric" style="margin-bottom:0; font-size:0.8rem; padding:7px;">
@@ -1343,7 +1351,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <div class="card">
       <details id="trMuscleDetails">
         <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
-          <span>Getrainde Spiergroepen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
+          <span>Spiergroepen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
           <span class="badge" id="trMuscleToggleBadge">▼</span>
         </summary>
         <div id="trMuscleContent" style="margin-top:10px;">
@@ -1367,7 +1375,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <div class="card">
       <details id="trExerciseDetails">
         <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none; display:flex; justify-content:space-between; align-items:center;">
-          <span>Oefening Progressie <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
+          <span>Oefeningen <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span></span>
           <span class="badge" id="trExerciseToggleBadge">▼</span>
         </summary>
 
@@ -1402,6 +1410,10 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
             <span class="pill active" data-metric="e1rm">Geschatte 1RM (kg)</span>
             <span class="pill" data-metric="maxWeight">Max Gewicht (kg)</span>
             <span class="pill" data-metric="volume">Sessie Volume (kg)</span>
+          </div>
+          <div id="exSourceLegend" style="display:none; font-size:0.72rem; color:var(--muted); margin-bottom:8px; align-items:center; gap:10px;">
+            <span><span class="legend-dot" style="background:var(--accent-garmin)"></span>Garmin</span>
+            <span><span class="legend-dot" style="background:var(--accent-hevy)"></span>Hevy</span>
           </div>
           <div class="chart-wrap">
             <canvas id="exerciseChart"></canvas>
@@ -1471,13 +1483,13 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
         </div>
         <div class="period-nav" id="bodyPeriodNavBar" style="display:none;">
           <div style="display:flex; gap:4px;">
-            <button type="button" class="nav-arrow" id="bodyPrevPagePeriodBtn" title="Vorige reeks" disabled>&#9194;</button>
+            <button type="button" class="nav-arrow" id="bodyPrevPagePeriodBtn" title="Vorige reeks" disabled>&#9664;&#9664;</button>
             <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="1 periode terug">&#9664;</button>
           </div>
           <span class="nav-label" id="bodyPeriodLabel">-</span>
           <div style="display:flex; gap:4px;">
             <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="1 periode vooruit" disabled>&#9654;</button>
-            <button type="button" class="nav-arrow" id="bodyNextPagePeriodBtn" title="Volgende reeks" disabled>&#9193;</button>
+            <button type="button" class="nav-arrow" id="bodyNextPagePeriodBtn" title="Volgende reeks" disabled>&#9654;&#9654;</button>
           </div>
         </div>
       </div>
@@ -1553,7 +1565,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <!-- ========================================================= -->
   <div id="tab-upload" class="panel">
     <div class="card">
-      <h2>1. Voedingsdoelen</h2>
+      <h2>Voedingsdoelen</h2>
       <p style="font-size:0.78rem; color:var(--muted); margin-top:0;">
         Stel je dagelijkse macro-doelen in (rustdag vs. trainingsdag). Je standaard basismaaltijden stel je direct in op het tabblad <strong>Voeding</strong> via <strong>⚙ Basisdag</strong>.
       </p>
@@ -1570,7 +1582,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <div class="card">
-      <h2>2. Lichaamsmetingen Excel Importeren</h2>
+      <h2>Lichaamsmetingen Excel Importeren</h2>
       <div class="file-box">
         <div id="bodyFileStatus" style="font-size:0.84rem; margin-bottom:8px;">Nog geen lichaamsmetingen geladen</div>
         <label class="btn btn-body">
@@ -1584,7 +1596,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <div class="card">
-      <h2>3. Garmin &amp; Hevy CSV Upload</h2>
+      <h2>Garmin &amp; Hevy CSV Upload</h2>
       <div class="file-box">
         <div id="garminStatus" style="font-size:0.82rem; margin-bottom:6px;">Nog geen Garmin-data</div>
         <label class="btn btn-garmin">Kies Garmin CSV<input type="file" id="inputGarminFile" accept=".csv,text/csv" /></label>
@@ -1614,7 +1626,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <div class="card">
       <details>
         <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none;">
-          5. Baseline &amp; Katrolcorrectie <span style="font-size:0.74rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span>
+          Baseline &amp; Katrolcorrectie <span style="font-size:0.74rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span>
         </summary>
         <div style="margin-top:10px;">
           <div class="setting-box">
@@ -1643,7 +1655,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <div class="card">
       <details>
         <summary style="cursor:pointer; font-weight:700; font-size:0.94rem; color:var(--text); list-style:none;">
-          6. Garmin &rarr; Hevy Namen Koppelen <span style="font-size:0.74rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span>
+          Garmin &rarr; Hevy Namen Koppelen <span style="font-size:0.74rem; color:var(--muted); font-weight:400;">(klik om in/uit te klappen)</span>
         </summary>
         <div style="margin-top:10px;">
           <datalist id="hevyNamesList"></datalist>
@@ -1665,7 +1677,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <div id="tab-profile" class="panel">
     <div class="card" style="border-color: var(--accent);">
       <h2>
-        <span>7. Account &amp; Cloud Sync (PC ⇄ Mobiel)</span>
+        <span>Account &amp; Backup</span>
         <span class="badge" id="cloudCardBadge">Niet ingelogd</span>
       </h2>
       <p id="authIntroText" style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
@@ -1678,12 +1690,18 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
           <span class="pill active" data-authmode="login" style="padding:4px 10px; font-size:0.76rem;">Inloggen</span>
           <span class="pill" data-authmode="register" style="padding:4px 10px; font-size:0.76rem;">Nieuw account aanmaken</span>
         </div>
-        <div id="authRegisterOnlyRow" style="display:none;">
-          <span class="field-lbl">Kies een unieke gebruikersnaam (voor Family &amp; Sportbuddy uitnodigingen)*:</span>
-          <input type="text" id="authUsernameInp" placeholder="bijv. jasper_fit" autocomplete="username" />
+        <span class="field-lbl" id="authLoginIdLabel">Gebruikersnaam of e-mailadres*:</span>
+        <input type="text" id="authLoginIdInp" placeholder="bijv. jasper_fit" autocomplete="username" />
+        <div id="authRegisterOnlyRow" style="display:none; margin-bottom:6px;">
+          <label class="toggle-label" style="color:var(--muted); font-size:0.74rem; margin-bottom:6px;">
+            <input type="checkbox" id="chkSeparatePublicUsername" />
+            Andere publieke gebruikersnaam gebruiken dan accountnaam
+          </label>
+          <div id="authPublicUsernameWrap" style="display:none;">
+            <span class="field-lbl">Publieke gebruikersnaam (voor Family &amp; Sportbuddy uitnodigingen):</span>
+            <input type="text" id="authUsernameInp" placeholder="bijv. jasper_fit" />
+          </div>
         </div>
-        <span class="field-lbl">Gebruikersnaam of e-mailadres*:</span>
-        <input type="text" id="authLoginIdInp" placeholder="bijv. jasper_fit of naam@voorbeeld.nl" autocomplete="username" />
         <span class="field-lbl">Wachtwoord* (min. 6 tekens):</span>
         <input type="password" id="authPasswordInp" placeholder="••••••••" autocomplete="current-password" style="width:100%; padding:9px 11px; border-radius:10px; background:#0f172a; border:1px solid var(--card-border); color:var(--text); font-size:0.88rem; margin-bottom:9px;" />
 
@@ -1698,8 +1716,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
           <div>
             <div style="font-size:0.72rem; color:var(--accent-hevy); font-weight:700;">✓ INGELOGD &amp; GESYNCHRONISEERD</div>
-            <div style="font-size:0.92rem; font-weight:700; margin-top:2px;">@<span id="authActiveUsername">-</span></div>
-            <div style="font-size:0.72rem; color:var(--muted);" id="authActiveEmail">-</div>
+            <div style="font-size:0.95rem; font-weight:700; margin-top:3px;"><span id="authActiveUsername">-</span></div>
           </div>
           <div style="display:flex; gap:6px;">
             <button type="button" class="btn-sm btn-hevy" id="btnForceCloudSync" style="color:#0f172a;">Nu syncen</button>
@@ -1723,11 +1740,11 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       </details>
 
       <div style="border-top:1px solid var(--card-border); margin-top:12px; padding-top:10px;">
-        <span class="field-lbl" style="margin-bottom:6px;">Lokale JSON Backup (Optioneel):</span>
+        <span class="field-lbl" style="margin-bottom:6px;">Backup bestand downloaden</span>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-          <button type="button" class="btn btn-sm" id="btnExportBackup" style="padding:9px;">Backup Exporteren</button>
+          <button type="button" class="btn btn-sm" id="btnExportBackup" style="padding:9px;">Backup downloaden</button>
           <label class="btn btn-sm" style="cursor:pointer; display:inline-block; text-align:center; padding:9px;">
-            Backup Importeren
+            Backup uploaden
             <input type="file" id="inputImportBackup" accept=".json" style="display:none;" />
           </label>
         </div>
@@ -1738,7 +1755,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <!-- 8. Family & Sportbuddy (Uitnodigen op gebruikersnaam, bevestigen & gescheiden autorisaties) -->
     <div class="card" id="socialConnectionsCard">
       <h2>
-        <span>8. Family &amp; Sportbuddy</span>
+        <span>Family &amp; Sportbuddy</span>
         <span class="badge" id="connectionsCountBadge">0 actief</span>
       </h2>
       <p style="font-size:0.78rem; color:var(--muted); margin-top:0; line-height:1.45;">
@@ -2036,10 +2053,6 @@ function updateAuthUI() {
     inBox.style.display = "block";
     const uname = currentUserProfile?.username || (currentAuthUser.email || "").split("@")[0] || "gebruiker";
     document.getElementById("authActiveUsername").textContent = uname;
-    const isInternalMail = (currentAuthUser.email || "").endsWith("@leefstyl.app");
-    document.getElementById("authActiveEmail").textContent = isInternalMail
-      ? `Gebruikersnaam-account (@${uname})`
-      : currentAuthUser.email;
   } else {
     outBox.style.display = "block";
     inBox.style.display = "none";
@@ -4564,7 +4577,7 @@ function getPeriodRange(allTimelineDays) {
 function refreshAll() {
   const sets = getCombinedSets();
   try {
-    document.getElementById("totalBadge").textContent = `${sets.length} sets`;
+    const tb = document.getElementById("totalBadge"); if (tb) tb.textContent = `${sets.length} sets`;
     document.getElementById("garminStatus").textContent = state.garminSets.length > 0 ? `${state.garminSets.length} sets geladen` : "Nog geen Garmin-data";
     document.getElementById("hevyStatus").textContent = state.hevySets.length > 0 ? `${state.hevySets.length} sets geladen` : "Nog geen Hevy-data";
     document.getElementById("globalTrendToggle").checked = Boolean(state.globalTrend);
@@ -5012,6 +5025,11 @@ function renderTrainingProgressSection(sets) {
 
 function renderExerciseChart() {
   if (typeof Chart === "undefined") return;
+  const exLeg = document.getElementById("exSourceLegend");
+  if (exLeg) {
+    const hasBothSources = Array.isArray(state.garminSets) && state.garminSets.length > 0 && Array.isArray(state.hevySets) && state.hevySets.length > 0;
+    exLeg.style.display = hasBothSources ? "flex" : "none";
+  }
   const chosen = document.getElementById("exerciseSelect").value;
   const sets = getCombinedSets().filter(s => s.exercise === chosen);
   computeOverloadAdvice(chosen, sets);
@@ -5304,6 +5322,8 @@ function renderMappingUI() {
 }
 
 function switchTab(tabName) {
+  if (!tabName) tabName = "overview";
+  try { localStorage.setItem("active_tab_v1", tabName); } catch (e) {}
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName));
   document.getElementById("btnOpenSettings").classList.toggle("active", tabName === "upload");
   const profBtn = document.getElementById("btnOpenProfile");
@@ -7005,16 +7025,24 @@ function bindEvents() {
     const regRow = document.getElementById("authRegisterOnlyRow");
     const submitBtn = document.getElementById("btnAuthSubmit");
     const toggleBtn = document.getElementById("btnToggleAuthMode");
+    const loginLbl = document.getElementById("authLoginIdLabel");
     if (mode === "register") {
       regRow.style.display = "block";
+      if (loginLbl) loginLbl.textContent = "Accountnaam (of e-mailadres)*:";
       submitBtn.textContent = "Account aanmaken";
       toggleBtn.textContent = "Terug naar inloggen";
     } else {
       regRow.style.display = "none";
+      if (loginLbl) loginLbl.textContent = "Gebruikersnaam of e-mailadres*:";
       submitBtn.textContent = "Inloggen & Syncen";
       toggleBtn.textContent = "Account aanmaken";
     }
   }
+
+  document.getElementById("chkSeparatePublicUsername")?.addEventListener("change", e => {
+    const wrap = document.getElementById("authPublicUsernameWrap");
+    if (wrap) wrap.style.display = e.target.checked ? "block" : "none";
+  });
 
   document.getElementById("authModePills").addEventListener("click", e => {
     const pill = e.target.closest(".pill");
@@ -7048,7 +7076,8 @@ function bindEvents() {
 
     const loginRaw = document.getElementById("authLoginIdInp").value.trim();
     const password = document.getElementById("authPasswordInp").value;
-    const regUsername = sanitizeUsername(document.getElementById("authUsernameInp").value);
+    const useDiffPublic = Boolean(document.getElementById("chkSeparatePublicUsername")?.checked);
+    const regUsername = useDiffPublic ? sanitizeUsername(document.getElementById("authUsernameInp").value) : "";
 
     if (!loginRaw || !password) {
       fb.textContent = "Vul je gebruikersnaam (of e-mailadres) en wachtwoord in.";
@@ -7359,12 +7388,20 @@ function bindEvents() {
   const loadedBody = await loadDataset("bodyMeasurements");
   state.bodyMeasurements = loadedBody.filter(m => m && m.date >= "2010-01-01" && m.weight >= 40);
   refreshAll();
+  const savedTab = localStorage.getItem("active_tab_v1");
+  if (savedTab && document.getElementById(`tab-${savedTab}`)) {
+    switchTab(savedTab);
+  }
   if (initSupabaseClient()) {
     const { data } = await supaClient.auth.getSession();
     if (data && data.session && data.session.user) {
       currentAuthUser = data.session.user;
       updateAuthUI();
       await pullFromCloud(false);
+      const curTab = localStorage.getItem("active_tab_v1");
+      if (curTab && document.getElementById(`tab-${curTab}`)) {
+        switchTab(curTab);
+      }
     }
   }
 })();
