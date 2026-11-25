@@ -699,9 +699,79 @@
       font-size: 0.78rem;
     }
 
+    /* Full-screen login / account aanmaak poort wanneer niet ingelogd */
+    body.auth-gate-active {
+      overflow: hidden;
+      padding-bottom: 14px;
+    }
+    body.auth-gate-active > :not(#authGateScreen) {
+      display: none !important;
+    }
+    #authGateScreen {
+      display: none;
+      min-height: calc(100vh - 28px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px 4px;
+    }
+    body.auth-gate-active #authGateScreen {
+      display: flex;
+    }
+    .auth-gate-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 24px 20px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    }
+    .auth-gate-logo {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    .auth-gate-logo span {
+      font-family: 'Momo Signature', cursive;
+      font-weight: 400;
+      font-size: 2.35rem;
+      color: var(--accent);
+      letter-spacing: 0.3px;
+    }
   </style>
 </head>
 <body>
+  <div id="authGateScreen">
+    <div class="auth-gate-card">
+      <div class="auth-gate-logo">
+        <span>Leefstyl</span>
+      </div>
+
+      <div class="pill-row" id="gateModePills" style="justify-content:center; margin-bottom:14px;">
+        <span class="pill active" data-gatemode="login" style="padding:6px 14px; font-size:0.8rem;">Inloggen</span>
+        <span class="pill" data-gatemode="register" style="padding:6px 14px; font-size:0.8rem;">Account aanmaken</span>
+      </div>
+
+      <span class="field-lbl" id="gateLoginIdLabel">Gebruikersnaam of e-mailadres*:</span>
+      <input type="text" id="gateLoginIdInp" placeholder="bijv. jasper_fit" autocomplete="username" />
+
+      <div id="gateRegisterOnlyRow" style="display:none; margin-bottom:6px;">
+        <label class="toggle-label" style="color:var(--muted); font-size:0.76rem; margin-bottom:6px;">
+          <input type="checkbox" id="gateChkSeparatePublicUsername" />
+          Andere publieke gebruikersnaam gebruiken
+        </label>
+        <div id="gatePublicUsernameWrap" style="display:none;">
+          <span class="field-lbl">Publieke gebruikersnaam:</span>
+          <input type="text" id="gateUsernameInp" placeholder="bijv. jasper_fit" />
+        </div>
+      </div>
+
+      <span class="field-lbl">Wachtwoord* (min. 6 tekens):</span>
+      <input type="password" id="gatePasswordInp" placeholder="••••••••" autocomplete="current-password" style="width:100%; padding:9px 11px; border-radius:10px; background:#0f172a; border:1px solid var(--card-border); color:var(--text); font-size:0.88rem; margin-bottom:10px;" />
+
+      <button type="button" class="btn btn-accent" id="btnGateSubmit" style="margin-top:2px; padding:11px; color:#0f172a;">Inloggen</button>
+      <div id="gateFeedback" class="status-msg" style="min-height:18px;"></div>
+    </div>
+  </div>
 
   <header>
     <div>
@@ -2051,6 +2121,8 @@ function loginIdentifierToEmail(identifier) {
 }
 
 function updateAuthUI() {
+  document.body.classList.toggle("auth-gate-active", !currentAuthUser);
+
   const outBox = document.getElementById("authLoggedOutBox");
   const inBox = document.getElementById("authLoggedInBox");
   if (!outBox || !inBox) return;
@@ -7472,6 +7544,98 @@ function bindEvents() {
     });
     saveFoodState();
     refreshAll();
+  });
+
+  // Full-screen inlog / account aanmaak scherm wanneer niet ingelogd
+  let gateMode = "login";
+  function setGateUiMode(mode) {
+    gateMode = mode;
+    document.querySelectorAll("#gateModePills .pill").forEach(p => {
+      p.classList.toggle("active", p.getAttribute("data-gatemode") === mode);
+    });
+    const regRow = document.getElementById("gateRegisterOnlyRow");
+    const submitBtn = document.getElementById("btnGateSubmit");
+    const idLbl = document.getElementById("gateLoginIdLabel");
+    if (mode === "register") {
+      if (regRow) regRow.style.display = "block";
+      if (idLbl) idLbl.textContent = "Accountnaam (of e-mailadres)*:";
+      if (submitBtn) submitBtn.textContent = "Account aanmaken";
+    } else {
+      if (regRow) regRow.style.display = "none";
+      if (idLbl) idLbl.textContent = "Gebruikersnaam of e-mailadres*:";
+      if (submitBtn) submitBtn.textContent = "Inloggen";
+    }
+  }
+
+  document.getElementById("gateModePills")?.addEventListener("click", e => {
+    const pill = e.target.closest(".pill");
+    if (pill) setGateUiMode(pill.getAttribute("data-gatemode") || "login");
+  });
+
+  document.getElementById("gateChkSeparatePublicUsername")?.addEventListener("change", e => {
+    const wrap = document.getElementById("gatePublicUsernameWrap");
+    if (wrap) wrap.style.display = e.target.checked ? "block" : "none";
+  });
+
+  document.getElementById("btnGateSubmit")?.addEventListener("click", async () => {
+    const fb = document.getElementById("gateFeedback");
+    if (!supaClient && !initSupabaseClient()) {
+      if (fb) fb.textContent = "Verbinding met database niet beschikbaar.";
+      return;
+    }
+
+    const loginRaw = (document.getElementById("gateLoginIdInp")?.value || "").trim();
+    const password = document.getElementById("gatePasswordInp")?.value || "";
+    const useDiffPublic = Boolean(document.getElementById("gateChkSeparatePublicUsername")?.checked);
+    const regUsername = useDiffPublic ? sanitizeUsername(document.getElementById("gateUsernameInp")?.value || "") : "";
+
+    if (!loginRaw || !password) {
+      if (fb) fb.textContent = "Vul je gebruikersnaam en wachtwoord in.";
+      return;
+    }
+    if (password.length < 6) {
+      if (fb) fb.textContent = "Gebruik een wachtwoord van minimaal 6 tekens.";
+      return;
+    }
+
+    const email = loginIdentifierToEmail(loginRaw);
+    if (fb) fb.textContent = gateMode === "register" ? "Account aanmaken..." : "Inloggen...";
+
+    try {
+      if (gateMode === "register") {
+        const chosenUname = regUsername || sanitizeUsername(loginRaw.split("@")[0]);
+        if (!chosenUname || chosenUname.length < 3) {
+          if (fb) fb.textContent = "Kies een gebruikersnaam van minimaal 3 tekens.";
+          return;
+        }
+        const { data, error } = await supaClient.auth.signUp({
+          email,
+          password,
+          options: { data: { username: chosenUname } }
+        });
+        if (error) throw error;
+        currentAuthUser = data.user;
+        if (currentAuthUser) {
+          await ensureUserProfile(chosenUname);
+          updateAuthUI();
+          await pullFromCloud(false);
+        } else if (fb) {
+          fb.textContent = "Account aangemaakt. Controleer je e-mail indien bevestiging aanstaat.";
+        }
+      } else {
+        const { data, error } = await supaClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        currentAuthUser = data.user;
+        await ensureUserProfile(loginRaw.split("@")[0]);
+        updateAuthUI();
+        await pullFromCloud(false);
+      }
+      const pwEl = document.getElementById("gatePasswordInp");
+      if (pwEl) pwEl.value = "";
+      if (fb) fb.textContent = "";
+    } catch (err) {
+      if (fb) fb.textContent = err.message || "Inloggen mislukt.";
+    }
   });
 
   // Auto-pull wanneer je terugkeert naar het tabblad (bijv. van PC naar Mobiel wisselt)
