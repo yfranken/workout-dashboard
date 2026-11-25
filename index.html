@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTYiIGZpbGw9IiMwZjE3MmEiLz4KICA8cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iNTgiIGhlaWdodD0iNTgiIHJ4PSIxNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzhiZGY4IiBzdHJva2Utb3BhY2l0eT0iMC4zNSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTIyIDE1IEMyNCAxNSAyNSAxNi41IDI1IDE5IEwyNCA0MyBMNDQgNDMgQzQ2LjUgNDMgNDggNDQuNSA0OCA0Ni41IEM0OCA0OC41IDQ2LjUgNTAgNDQgNTAgTDE5IDUwIEMxNi41IDUwIDE1IDQ4LjUgMTUgNDYuMiBMMTcuNSAxOSBDMTcuNyAxNi41IDE5LjUgMTUgMjIgMTUgWiIgZmlsbD0iIzM4YmRmOCIvPgo8L3N2Zz4=" />
   <title>Leefstyl App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -138,8 +139,17 @@
     .m3-cycle-tile:active {
       transform: scale(0.98);
     }
+    @keyframes m3TileSwap {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      28% { transform: translateX(var(--swipe-dir, 10px)) scale(0.97); opacity: 0.45; }
+      55% { transform: translateX(calc(var(--swipe-dir, 10px) * -0.65)) scale(0.985); opacity: 0.75; }
+      100% { transform: translateX(0) scale(1); opacity: 1; }
+    }
     .m3-cycle-tile {
       touch-action: pan-y;
+    }
+    .m3-cycle-tile.is-swapping {
+      animation: m3TileSwap 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .m3-dots-row {
       display: flex;
@@ -2816,17 +2826,19 @@ async function pullFromCloud(forceOverwriteLocal = false) {
         didApplyRemote = true;
       }
       await loadConnectionsAndSharedData();
-      if (didApplyRemote) {
-        const prevAnim = nextChartAnimation;
-        nextChartAnimation = false;
-        refreshAll();
-        nextChartAnimation = prevAnim;
-      }
+      const prevAnim = nextChartAnimation;
+      nextChartAnimation = false;
+      refreshAll();
+      nextChartAnimation = prevAnim;
       setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
       return;
     }
 
     await loadConnectionsAndSharedData();
+    const prevAnim2 = nextChartAnimation;
+    nextChartAnimation = false;
+    refreshAll();
+    nextChartAnimation = prevAnim2;
     setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   } catch (err) {
     console.error("Cloud pull error:", err);
@@ -5335,13 +5347,16 @@ function refreshAll() {
   const otherList = allExercises.filter(ex => !state.favorites.includes(ex)).sort((a, b) => counts[b] - counts[a]);
 
   const select = document.getElementById("exerciseSelect");
-  const prevVal = select.value;
-  let optionsHtml = "";
-  if (favList.length > 0) optionsHtml += `<optgroup label="★ Favorieten">` + favList.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
-  optionsHtml += `<optgroup label="Alle oefeningen">` + otherList.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
-  select.innerHTML = optionsHtml;
-  if (allExercises.includes(prevVal)) select.value = prevVal;
-  else if (favList.length > 0) select.value = favList[0];
+  if (select) {
+    const prevVal = select.value;
+    let optionsHtml = "";
+    if (favList.length > 0) optionsHtml += `<optgroup label="★ Favorieten">` + favList.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
+    optionsHtml += `<optgroup label="Alle oefeningen">` + otherList.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
+    select.innerHTML = optionsHtml;
+    if (allExercises.includes(prevVal)) select.value = prevVal;
+    else if (favList.length > 0) select.value = favList[0];
+    else if (allExercises.length > 0) select.value = allExercises[0];
+  }
 
   try { renderOverviewDashboard(sets); } catch (e) {}
   try { renderPlannerTab(); } catch (e) {}
@@ -5709,8 +5724,15 @@ function renderExerciseChart() {
     const hasBothSources = Array.isArray(state.garminSets) && state.garminSets.length > 0 && Array.isArray(state.hevySets) && state.hevySets.length > 0;
     exLeg.style.display = hasBothSources ? "flex" : "none";
   }
-  const chosen = document.getElementById("exerciseSelect").value;
-  const sets = getCombinedSets().filter(s => s.exercise === chosen);
+  const exSel = document.getElementById("exerciseSelect");
+  if (!exSel) return;
+  let chosen = exSel.value;
+  const allCombSets = getCombinedSets();
+  if (!chosen && allCombSets.length > 0) {
+    chosen = allCombSets[0].exercise;
+  }
+  if (!chosen) return;
+  const sets = allCombSets.filter(s => s.exercise === chosen);
   computeOverloadAdvice(chosen, sets);
 
   const byDay = {};
@@ -6132,18 +6154,29 @@ function bindEvents() {
       }
     }, { passive: true });
 
+    function triggerTileVisualSwap(dir) {
+      el.style.setProperty("--swipe-dir", dir < 0 ? "-12px" : "12px");
+      el.classList.remove("is-swapping");
+      void el.offsetWidth;
+      el.classList.add("is-swapping");
+      setTimeout(() => el.classList.remove("is-swapping"), 300);
+    }
+
     el.addEventListener("touchend", e => {
       if (!didSwipe) return;
       const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
       const dx = endX - startX;
       if (Math.abs(dx) > 24) {
-        onStep(dx < 0 ? 1 : -1);
+        const stepDir = dx < 0 ? 1 : -1;
+        triggerTileVisualSwap(stepDir);
+        onStep(stepDir);
       }
       setTimeout(() => { didSwipe = false; }, 120);
     });
 
     el.addEventListener("click", () => {
       if (didSwipe) return;
+      triggerTileVisualSwap(1);
       onStep(1);
     });
   }
@@ -8332,6 +8365,23 @@ function bindEvents() {
 
   let hasActiveSession = false;
   if (initSupabaseClient()) {
+    supaClient.auth.onAuthStateChange(async (event, session) => {
+      if (session && session.user) {
+        const isNewUser = !currentAuthUser || currentAuthUser.id !== session.user.id;
+        currentAuthUser = session.user;
+        updateAuthUI();
+        if (isNewUser || event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          await pullFromCloud(false);
+          refreshAll();
+        }
+      } else if (event === "SIGNED_OUT") {
+        currentAuthUser = null;
+        currentUserProfile = null;
+        updateAuthUI();
+        renderSocialConnectionsUI();
+      }
+    });
+
     const { data } = await supaClient.auth.getSession();
     if (data && data.session && data.session.user) {
       currentAuthUser = data.session.user;
