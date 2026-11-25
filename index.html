@@ -1569,7 +1569,29 @@
  </div>
  </div>
 
- <details style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
+ <details id="smartMealComposerDetails" style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
+ <summary style="cursor:pointer; font-weight:600; color:var(--accent);">🧩 Slimme samenstelling (bouw gerecht uit ingrediënten)</summary>
+ <div style="margin-top:8px; background:#0f172a; border:1px solid var(--card-border); border-radius:10px; padding:10px;">
+ <div style="font-size:0.74rem; color:var(--muted); margin-bottom:6px;">
+ Combineer losse ingrediënten (bijv. <em>2× Gekookt Ei + 10g Roomboter</em> = <strong>Roerei</strong>) zonder zelf macro's te rekenen:
+ </div>
+ <input type="text" id="compMealName" placeholder="Naam gerecht (bijv. Roerei met kaas)" style="margin-bottom:6px; padding:7px; font-size:0.8rem;" />
+ <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+ <select id="compIngSelect" style="flex:1; margin-bottom:0; padding:7px; font-size:0.78rem;"></select>
+ <input type="number" id="compIngQty" value="1" min="0.5" step="0.5" style="width:66px; margin-bottom:0; padding:7px; font-size:0.78rem; text-align:center;" />
+ <button type="button" class="btn-sm btn-accent" id="btnAddCompIng" style="color:#0f172a; height:34px; white-space:nowrap;">+ Voeg toe</button>
+ </div>
+ <div id="compIngList" style="margin-bottom:6px;"></div>
+ <div id="compTotalsBar" style="font-size:0.76rem; font-weight:700; color:var(--accent-hevy); margin-bottom:8px;">Totaal: 0 kcal · 0g E · 0g KH · 0g V</div>
+ <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-size:0.75rem;">
+ <input type="checkbox" id="chkSaveCompAsFav" checked />
+ Ook bewaren onder ★ Favoriet Eten
+ </label>
+ <button type="button" class="btn btn-hevy" id="btnSaveCompMeal" style="margin-top:0; padding:8px;">Gerecht toevoegen aan dagmenu</button>
+ </div>
+ </details>
+
+ <details style="margin-top:8px; font-size:0.8rem; color:var(--muted);">
  <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
  <div style="margin-top:8px;">
  <input type="text" id="customFoodName" placeholder="Naam product of drank" />
@@ -2191,18 +2213,71 @@ const DEFAULT_DRINKS = [
 ];
 
 const LOCAL_FOOD_DB = [
- { id: "banaan", name: "Banaan", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 108, pUnit: 1.3, cUnit: 24.0, fUnit: 0.4 },
- { id: "appel", name: "Appel", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 72, pUnit: 0.4, cUnit: 16.2, fUnit: 0.3 },
- { id: "ei_gekookt", name: "Gekookt Ei", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 78, pUnit: 6.5, cUnit: 0.6, fUnit: 5.5 },
- { id: "rijstwafel", name: "Rijstwafel", cat: "snack", unitType: "stuk", defaultQty: 2, kcalUnit: 28, pUnit: 0.6, cUnit: 6.0, fUnit: 0.2 },
- { id: "eiwitreep", name: "Eiwitreep", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 210, pUnit: 20.0, cUnit: 18.0, fUnit: 6.5 },
- { id: "whey_shake", name: "Whey Protein Scoop", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 120, pUnit: 24.0, cUnit: 2.0, fUnit: 1.5 },
- { id: "noten_mix", name: "Ongezouten Noten", cat: "snack", unitType: "gram", defaultQty: 25, kcal100: 632, p100: 18.0, c100: 10.0, f100: 56.8 },
- { id: "kipfilet_plak", name: "Kipfilet vleeswaren", cat: "zuivel", unitType: "gram", defaultQty: 50, kcal100: 110, p100: 23.0, c100: 1.0, f100: 1.6 },
- { id: "kaas_30", name: "30+ Kaas", cat: "zuivel", unitType: "gram", defaultQty: 30, kcal100: 293, p100: 28.3, c100: 0, f100: 20.0 },
- { id: "pure_choco", name: "Pure Chocolade", cat: "snack", unitType: "gram", defaultQty: 20, kcal100: 560, p100: 7.5, c100: 45.0, f100: 37.5 },
- { id: "griekse_yog0", name: "Griekse Yoghurt 0%", cat: "zuivel", unitType: "gram", defaultQty: 200, kcal100: 57, p100: 10.0, c100: 4.0, f100: 0.1 },
- { id: "skyr_nat", name: "Skyr Naturel", cat: "zuivel", unitType: "gram", defaultQty: 200, kcal100: 63, p100: 11.0, c100: 4.0, f100: 0.2 }
+  // Eieren & Ontbijt
+  { id: "roerei", name: "Roerei (portie 2 eieren)", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 195, pUnit: 13.5, cUnit: 1.5, fUnit: 15.0 },
+  { id: "roerei_3", name: "Roerei (portie 3 eieren)", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 290, pUnit: 20.0, cUnit: 2.0, fUnit: 22.5 },
+  { id: "gebakken_ei", name: "Gebakken Ei / Spiegelei", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 110, pUnit: 6.5, cUnit: 0.6, fUnit: 9.0 },
+  { id: "ei_gekookt", name: "Gekookt Ei", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 78, pUnit: 6.5, cUnit: 0.6, fUnit: 5.5 },
+  { id: "omelet_naturel", name: "Omelet (2 eieren)", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 185, pUnit: 13.0, cUnit: 1.2, fUnit: 14.2 },
+  { id: "omelet_kaas", name: "Omelet met Kaas (2 eieren)", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 275, pUnit: 21.0, cUnit: 1.2, fUnit: 20.5 },
+  { id: "havermout", name: "Havermout (droog gewicht)", cat: "brood", unitType: "gram", defaultQty: 50, kcal100: 375, p100: 13.0, c100: 60.0, f100: 7.0 },
+  { id: "cruesli_muesli", name: "Muesli / Granola", cat: "brood", unitType: "gram", defaultQty: 45, kcal100: 410, p100: 9.5, c100: 64.0, f100: 11.5 },
+  { id: "pannenkoek", name: "Pannenkoek (naturel)", cat: "brood", unitType: "stuk", defaultQty: 1, kcalUnit: 165, pUnit: 5.5, cUnit: 24.0, fUnit: 5.0 },
+  { id: "croissant", name: "Croissant", cat: "brood", unitType: "stuk", defaultQty: 1, kcalUnit: 235, pUnit: 4.8, cUnit: 25.0, fUnit: 12.5 },
+
+  // Gebak, Cake & Zoete snacks
+  { id: "plak_cake", name: "Cake (plak roombotercake)", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 145, pUnit: 2.0, cUnit: 17.5, fUnit: 7.5 },
+  { id: "cake_gram", name: "Cake (per 100g)", cat: "snack", unitType: "gram", defaultQty: 35, kcal100: 420, p100: 5.8, c100: 50.0, f100: 21.5 },
+  { id: "appelgebak", name: "Appeltaart / Appelgebak (punt)", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 320, pUnit: 3.5, cUnit: 44.0, fUnit: 14.0 },
+  { id: "stroopwafel", name: "Stroopwafel", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 175, pUnit: 1.5, cUnit: 25.0, fUnit: 7.5 },
+  { id: "ontbijtkoek", name: "Ontbijtkoek (plak)", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 95, pUnit: 1.0, cUnit: 21.5, fUnit: 0.3 },
+  { id: "krentenbol", name: "Krentenbol", cat: "brood", unitType: "stuk", defaultQty: 1, kcalUnit: 185, pUnit: 5.5, cUnit: 35.0, fUnit: 1.8 },
+  { id: "eierkoek", name: "Eierkoek", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 140, pUnit: 3.5, cUnit: 28.0, fUnit: 1.2 },
+  { id: "pure_choco", name: "Pure Chocolade", cat: "snack", unitType: "gram", defaultQty: 20, kcal100: 560, p100: 7.5, c100: 45.0, f100: 37.5 },
+  { id: "melk_choco", name: "Melkchocolade", cat: "snack", unitType: "gram", defaultQty: 20, kcal100: 545, p100: 7.0, c100: 56.0, f100: 32.0 },
+  { id: "rijstwafel", name: "Rijstwafel", cat: "snack", unitType: "stuk", defaultQty: 2, kcalUnit: 28, pUnit: 0.6, cUnit: 6.0, fUnit: 0.2 },
+  { id: "eiwitreep", name: "Eiwitreep", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 210, pUnit: 20.0, cUnit: 18.0, fUnit: 6.5 },
+  { id: "noten_mix", name: "Ongezouten Noten", cat: "snack", unitType: "gram", defaultQty: 25, kcal100: 632, p100: 18.0, c100: 10.0, f100: 56.8 },
+  { id: "chips_naturel", name: "Chips (handje / 30g)", cat: "snack", unitType: "gram", defaultQty: 30, kcal100: 535, p100: 6.0, c100: 52.0, f100: 33.0 },
+
+  // Fruit
+  { id: "banaan", name: "Banaan", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 108, pUnit: 1.3, cUnit: 24.0, fUnit: 0.4 },
+  { id: "appel", name: "Appel", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 72, pUnit: 0.4, cUnit: 16.2, fUnit: 0.3 },
+  { id: "peer", name: "Peer", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 82, pUnit: 0.5, cUnit: 18.5, fUnit: 0.2 },
+  { id: "mandarijn", name: "Mandarijn", cat: "fruit", unitType: "stuk", defaultQty: 2, kcalUnit: 26, pUnit: 0.4, cUnit: 5.5, fUnit: 0.1 },
+  { id: "sinaasappel", name: "Sinaasappel", cat: "fruit", unitType: "stuk", defaultQty: 1, kcalUnit: 65, pUnit: 1.2, cUnit: 14.0, fUnit: 0.2 },
+  { id: "blauwe_bessen", name: "Blauwe Bessen / Aardbeien", cat: "fruit", unitType: "gram", defaultQty: 100, kcal100: 45, p100: 0.8, c100: 9.5, f100: 0.3 },
+
+  // Zuivel & Eiwitten
+  { id: "griekse_yog0", name: "Griekse Yoghurt 0%", cat: "zuivel", unitType: "gram", defaultQty: 200, kcal100: 57, p100: 10.0, c100: 4.0, f100: 0.1 },
+  { id: "skyr_nat", name: "Skyr Naturel", cat: "zuivel", unitType: "gram", defaultQty: 200, kcal100: 63, p100: 11.0, c100: 4.0, f100: 0.2 },
+  { id: "magere_kwark", name: "Magere Kwark", cat: "zuivel", unitType: "gram", defaultQty: 250, kcal100: 52, p100: 8.8, c100: 4.0, f100: 0.1 },
+  { id: "whey_shake", name: "Whey Protein Scoop", cat: "zuivel", unitType: "stuk", defaultQty: 1, kcalUnit: 120, pUnit: 24.0, cUnit: 2.0, fUnit: 1.5 },
+  { id: "huttenkase", name: "Hüttenkäse (Cottage Cheese)", cat: "zuivel", unitType: "gram", defaultQty: 100, kcal100: 92, p100: 12.5, c100: 2.5, f100: 3.5 },
+
+  // Brood, Crackers & Beleg
+  { id: "volkoren_boterham", name: "Volkoren Boterham (snede)", cat: "brood", unitType: "stuk", defaultQty: 2, kcalUnit: 82, pUnit: 3.5, cUnit: 14.5, fUnit: 0.8 },
+  { id: "pistolet_broodje", name: "Broodje / Pistolet (wit/bruin)", cat: "brood", unitType: "stuk", defaultQty: 1, kcalUnit: 165, pUnit: 5.5, cUnit: 32.0, fUnit: 1.2 },
+  { id: "cracker_volkoren", name: "Volkoren Cracker / Knäckebröd", cat: "brood", unitType: "stuk", defaultQty: 2, kcalUnit: 45, pUnit: 1.5, cUnit: 7.5, fUnit: 0.7 },
+  { id: "wrap_tortilla", name: "Tortilla Wrap (groot)", cat: "brood", unitType: "stuk", defaultQty: 1, kcalUnit: 185, pUnit: 5.0, cUnit: 31.0, fUnit: 4.2 },
+  { id: "kipfilet_plak", name: "Kipfilet vleeswaren", cat: "zuivel", unitType: "gram", defaultQty: 50, kcal100: 110, p100: 23.0, c100: 1.0, f100: 1.6 },
+  { id: "kaas_30", name: "30+ Kaas", cat: "zuivel", unitType: "gram", defaultQty: 30, kcal100: 293, p100: 28.3, c100: 0, f100: 20.0 },
+  { id: "kaas_48", name: "48+ Goudse Kaas", cat: "zuivel", unitType: "gram", defaultQty: 30, kcal100: 365, p100: 24.5, c100: 0, f100: 30.0 },
+  { id: "pindakaas", name: "Pindakaas (100% pinda)", cat: "brood", unitType: "gram", defaultQty: 20, kcal100: 645, p100: 26.0, c100: 11.0, f100: 54.0 },
+  { id: "hummus", name: "Hummus Naturel", cat: "brood", unitType: "gram", defaultQty: 30, kcal100: 250, p100: 7.0, c100: 14.0, f100: 18.0 },
+  { id: "roomboter", name: "Roomboter / Bakboter", cat: "brood", unitType: "gram", defaultQty: 10, kcal100: 735, p100: 0.7, c100: 0.7, f100: 82.0 },
+  { id: "olijfolie", name: "Olijfolie (1 eetlepel = 10g)", cat: "brood", unitType: "gram", defaultQty: 10, kcal100: 884, p100: 0, c100: 0, f100: 100.0 },
+
+  // Warme maaltijd / Basiscomponenten
+  { id: "kipfilet_bereid", name: "Kipfilet (gebakken/gegrild)", cat: "maaltijd", unitType: "gram", defaultQty: 150, kcal100: 155, p100: 30.0, c100: 0, f100: 3.5 },
+  { id: "zalmfilet", name: "Zalmfilet", cat: "maaltijd", unitType: "gram", defaultQty: 125, kcal100: 208, p100: 20.0, c100: 0, f100: 13.5 },
+  { id: "rundergehakt_mager", name: "Mager Rundergehakt", cat: "maaltijd", unitType: "gram", defaultQty: 125, kcal100: 195, p100: 26.0, c100: 0, f100: 10.0 },
+  { id: "rijst_gekookt", name: "Rijst (gekookt)", cat: "maaltijd", unitType: "gram", defaultQty: 150, kcal100: 130, p100: 2.7, c100: 28.0, f100: 0.3 },
+  { id: "pasta_gekookt", name: "Pasta / Volkoren Pasta (gekookt)", cat: "maaltijd", unitType: "gram", defaultQty: 150, kcal100: 145, p100: 5.2, c100: 28.5, f100: 0.9 },
+  { id: "aardappelen_gekookt", name: "Aardappelen / Krieltjes", cat: "maaltijd", unitType: "gram", defaultQty: 200, kcal100: 88, p100: 2.0, c100: 19.0, f100: 0.2 },
+  { id: "groenten_mix", name: "Groenten (gemengd / roerbak)", cat: "maaltijd", unitType: "gram", defaultQty: 200, kcal100: 35, p100: 2.0, c100: 5.5, f100: 0.3 },
+  { id: "broodje_kroket", name: "Broodje Kroket", cat: "snack", unitType: "stuk", defaultQty: 1, kcalUnit: 335, pUnit: 11.5, cUnit: 39.0, fUnit: 14.5 },
+  { id: "tosti_ham_kaas", name: "Tosti Ham & Kaas", cat: "brood", unitType: "stuk", defaultQty: 1, kcalUnit: 320, pUnit: 18.0, cUnit: 29.0, fUnit: 14.0 }
 ];
 
 // === CONFIGURATIE & STATE ===
@@ -7623,6 +7698,138 @@ function bindEvents() {
  syncUnifiedClearBtn();
  document.getElementById("unifiedSearchResults").innerHTML = "";
  }
+ });
+
+ // Slimme samenstelling (gerecht bouwen uit ingrediënten)
+ let composerIngredients = [];
+
+ function populateComposerSelect() {
+ const sel = document.getElementById("compIngSelect");
+ if (!sel) return;
+ const pool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
+ sel.innerHTML = pool.map(item => {
+ const fKey = item.id || item.name;
+ const uTxt = item.unitType === "stuk" ? `per ${item.defaultQty || 1} st` : "per 100g";
+ return `<option value="${escapeHtml(fKey)}">${escapeHtml(item.name)} (${uTxt})</option>`;
+ }).join("");
+ syncComposerDefaultQty();
+ }
+
+ function syncComposerDefaultQty() {
+ const sel = document.getElementById("compIngSelect");
+ const qtyInp = document.getElementById("compIngQty");
+ if (!sel || !qtyInp) return;
+ const pool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
+ const item = pool.find(x => (x.id || x.name) === sel.value);
+ if (item) {
+ qtyInp.value = item.unitType === "stuk" ? (item.defaultQty || 1) : (item.defaultQty || 50);
+ qtyInp.step = item.unitType === "stuk" ? "0.5" : "5";
+ }
+ }
+
+ function renderComposerList() {
+ const listEl = document.getElementById("compIngList");
+ const totEl = document.getElementById("compTotalsBar");
+ if (!listEl || !totEl) return;
+
+ let tKcal = 0, tP = 0, tC = 0, tF = 0;
+ listEl.innerHTML = composerIngredients.map((ing, idx) => {
+ tKcal += ing.kcal; tP += ing.p; tC += ing.c; tF += ing.f;
+ const qtyLbl = ing.unitType === "stuk" ? `${ing.qty}×` : `${ing.qty}g`;
+ return `
+ <div class="pref-row" style="padding:4px 2px; font-size:0.75rem;">
+ <span><strong>${qtyLbl}</strong> ${escapeHtml(ing.name)} <span style="color:var(--muted);">(${Math.round(ing.kcal)} kcal · ${ing.p.toFixed(1)}g E)</span></span>
+ <button type="button" class="btn-sm" data-del-comp-ing="${idx}" style="color:var(--danger); padding:2px 6px;">✕</button>
+ </div>
+ `;
+ }).join("");
+
+ totEl.textContent = `Totaal: ${Math.round(tKcal)} kcal · ${tP.toFixed(1)}g E · ${Math.round(tC)}g KH · ${tF.toFixed(1)}g V`;
+ }
+
+ document.getElementById("smartMealComposerDetails")?.addEventListener("toggle", e => {
+ if (e.target.open) populateComposerSelect();
+ });
+ document.getElementById("compIngSelect")?.addEventListener("change", syncComposerDefaultQty);
+
+ document.getElementById("btnAddCompIng")?.addEventListener("click", () => {
+ const sel = document.getElementById("compIngSelect");
+ const qty = Math.max(0.1, Number(document.getElementById("compIngQty")?.value) || 1);
+ const pool = [...state.customFoods.filter(x => x.unitType !== "ml"), ...LOCAL_FOOD_DB];
+ const item = pool.find(x => (x.id || x.name) === sel?.value);
+ if (!item) return;
+
+ if (item.unitType === "stuk") {
+ composerIngredients.push({
+ name: item.name,
+ unitType: "stuk",
+ qty,
+ kcal: (item.kcalUnit ?? item.kcal ?? 0) * qty,
+ p: (item.pUnit ?? item.p ?? 0) * qty,
+ c: (item.cUnit ?? item.c ?? 0) * qty,
+ f: (item.fUnit ?? item.f ?? 0) * qty
+ });
+ } else {
+ const factor = qty / 100;
+ composerIngredients.push({
+ name: item.baseName || item.name,
+ unitType: "gram",
+ qty,
+ kcal: (item.kcal100 ?? item.kcal ?? 0) * factor,
+ p: (item.p100 ?? item.p ?? 0) * factor,
+ c: (item.c100 ?? item.c ?? 0) * factor,
+ f: (item.f100 ?? item.f ?? 0) * factor
+ });
+ }
+ renderComposerList();
+ });
+
+ document.getElementById("compIngList")?.addEventListener("click", e => {
+ const del = e.target.closest("[data-del-comp-ing]");
+ if (!del) return;
+ composerIngredients.splice(Number(del.getAttribute("data-del-comp-ing")), 1);
+ renderComposerList();
+ });
+
+ document.getElementById("btnSaveCompMeal")?.addEventListener("click", () => {
+ if (composerIngredients.length === 0) {
+ alert("Voeg eerst één of meer ingrediënten toe.");
+ return;
+ }
+ let name = (document.getElementById("compMealName")?.value || "").trim();
+ if (!name) {
+ name = composerIngredients.map(i => `${i.unitType === "stuk" ? i.qty + "× " : i.qty + "g "}${i.name}`).join(" + ");
+ }
+ const totKcal = Math.round(composerIngredients.reduce((a, b) => a + b.kcal, 0));
+ const totP = Number(composerIngredients.reduce((a, b) => a + b.p, 0).toFixed(1));
+ const totC = Number(composerIngredients.reduce((a, b) => a + b.c, 0).toFixed(1));
+ const totF = Number(composerIngredients.reduce((a, b) => a + b.f, 0).toFixed(1));
+
+ const newId = "comp_" + Date.now();
+ const composedItem = {
+ id: newId,
+ name,
+ cat: "maaltijd",
+ unitType: "stuk",
+ defaultQty: 1,
+ kcalUnit: totKcal,
+ pUnit: totP,
+ cUnit: totC,
+ fUnit: totF
+ };
+
+ if (document.getElementById("chkSaveCompAsFav")?.checked) {
+ state.customFoods.unshift(composedItem);
+ state.foodFavorites.push(newId);
+ }
+
+ addFoodItemToLog(composedItem, 1);
+
+ composerIngredients = [];
+ document.getElementById("compMealName").value = "";
+ renderComposerList();
+ const det = document.getElementById("smartMealComposerDetails");
+ if (det) det.open = false;
  });
 
  document.getElementById("btnAddCustomFood").addEventListener("click", () => {
