@@ -19,6 +19,8 @@
   <script type="module">
     import '@material/web/labs/navigationbar/navigation-bar.js';
     import '@material/web/labs/navigationtab/navigation-tab.js';
+    import '@material/web/chips/chip-set.js';
+    import '@material/web/chips/filter-chip.js';
     import '@material/web/icon/icon.js';
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -811,6 +813,43 @@
     md-navigation-tab[active] md-icon {
       font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
     }
+    /* Material 3 Filter Chips & Unified Periode-Selector */
+    :root {
+      --md-filter-chip-container-shape: 999px;
+      --md-filter-chip-container-height: 30px;
+      --md-filter-chip-label-text-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --md-filter-chip-label-text-size: 0.74rem;
+      --md-filter-chip-label-text-weight: 600;
+      --md-filter-chip-label-text-color: #94a3b8;
+      --md-filter-chip-selected-label-text-color: #38bdf8;
+      --md-filter-chip-selected-container-color: rgba(56, 189, 248, 0.22);
+      --md-filter-chip-selected-leading-icon-color: #38bdf8;
+      --md-filter-chip-outline-color: #334155;
+      --md-filter-chip-selected-outline-color: #38bdf8;
+      --md-filter-chip-hover-state-layer-color: #38bdf8;
+      --md-filter-chip-pressed-state-layer-color: #38bdf8;
+    }
+    .m3-filter-block {
+      margin-bottom: 8px;
+    }
+    .m3-filter-row-lbl {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+    md-chip-set.m3-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    md-filter-chip {
+      --md-filter-chip-container-height: 30px;
+    }
   </style>
 </head>
 <body>
@@ -895,22 +934,33 @@
     <div class="card" style="padding-bottom:10px;">
       <h2>
         <span>Totaalbeeld &amp; Verband</span>
-        <span class="badge" id="ovPeriodBadge">Per Kwartaal</span>
+        <span class="badge" id="ovPeriodBadge">2026 · Per Maand</span>
       </h2>
-      <div class="period-pills-3" id="ovGranularityPills">
-        <div class="period-pill" data-gran="month">Per Maand</div>
-        <div class="period-pill active" data-gran="quarter">Per Kwartaal</div>
-        <div class="period-pill" data-gran="year">Per Jaar</div>
+      <div class="m3-filter-block">
+        <span class="m3-filter-row-lbl">Periode</span>
+        <md-chip-set class="m3-chip-row" id="ovRangeChips">
+          <md-filter-chip label="2026" data-range="ytd" selected></md-filter-chip>
+          <md-filter-chip label="12 mnd" data-range="12m"></md-filter-chip>
+          <md-filter-chip label="6 mnd" data-range="6m"></md-filter-chip>
+          <md-filter-chip label="Alles" data-range="all"></md-filter-chip>
+        </md-chip-set>
+        <span class="m3-filter-row-lbl">Detailniveau</span>
+        <md-chip-set class="m3-chip-row" id="ovGranularityPills">
+          <md-filter-chip label="Week" data-gran="week"></md-filter-chip>
+          <md-filter-chip label="Maand" data-gran="month" selected></md-filter-chip>
+          <md-filter-chip label="Kwartaal" data-gran="quarter"></md-filter-chip>
+          <md-filter-chip label="Jaar" data-gran="year"></md-filter-chip>
+        </md-chip-set>
       </div>
       <div class="period-nav" id="ovNavBar">
         <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="ovPrevPageBtn" title="Vorige reeks" disabled>&#9664;&#9664;</button>
-          <button type="button" class="nav-arrow" id="ovPrevBtn" title="1 periode terug">&#9664;</button>
+          <button type="button" class="nav-arrow" id="ovPrevPageBtn" title="Vorige periode" disabled>&#9664;&#9664;</button>
+          <button type="button" class="nav-arrow" id="ovPrevBtn" title="Stap terug">&#9664;</button>
         </div>
-        <span class="nav-label" id="ovRangeLabel">Alle jaren</span>
+        <span class="nav-label" id="ovRangeLabel">-</span>
         <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="ovNextBtn" title="1 periode vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="ovNextPageBtn" title="Volgende reeks" disabled>&#9654;&#9654;</button>
+          <button type="button" class="nav-arrow" id="ovNextBtn" title="Stap vooruit" disabled>&#9654;</button>
+          <button type="button" class="nav-arrow" id="ovNextPageBtn" title="Volgende periode" disabled>&#9654;&#9654;</button>
         </div>
       </div>
     </div>
@@ -1467,23 +1517,33 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     <div class="card" style="padding-bottom:10px;">
       <h2>
         <span>Training &amp; Voortgang</span>
-        <span class="badge" id="trPeriodBadge">Per Week</span>
+        <span class="badge" id="trPeriodBadge">2026 · Per Week</span>
       </h2>
-      <div class="period-pills" id="trGranularityPills">
-        <div class="period-pill active" data-trgran="week">Per Week</div>
-        <div class="period-pill" data-trgran="month">Per Maand</div>
-        <div class="period-pill" data-trgran="quarter">Per Kwartaal</div>
-        <div class="period-pill" data-trgran="year">Per Jaar</div>
+      <div class="m3-filter-block">
+        <span class="m3-filter-row-lbl">Periode</span>
+        <md-chip-set class="m3-chip-row" id="trRangeChips">
+          <md-filter-chip label="2026" data-trrange="ytd" selected></md-filter-chip>
+          <md-filter-chip label="12 mnd" data-trrange="12m"></md-filter-chip>
+          <md-filter-chip label="3 mnd" data-trrange="3m"></md-filter-chip>
+          <md-filter-chip label="Alles" data-trrange="all"></md-filter-chip>
+        </md-chip-set>
+        <span class="m3-filter-row-lbl">Detailniveau</span>
+        <md-chip-set class="m3-chip-row" id="trGranularityPills">
+          <md-filter-chip label="Week" data-trgran="week" selected></md-filter-chip>
+          <md-filter-chip label="Maand" data-trgran="month"></md-filter-chip>
+          <md-filter-chip label="Kwartaal" data-trgran="quarter"></md-filter-chip>
+          <md-filter-chip label="Jaar" data-trgran="year"></md-filter-chip>
+        </md-chip-set>
       </div>
       <div class="period-nav" id="trNavBar">
         <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="trPrevPageBtn" title="Vorige reeks" disabled>&#9664;&#9664;</button>
-          <button type="button" class="nav-arrow" id="trPrevBtn" title="1 periode terug">&#9664;</button>
+          <button type="button" class="nav-arrow" id="trPrevPageBtn" title="Vorige periode" disabled>&#9664;&#9664;</button>
+          <button type="button" class="nav-arrow" id="trPrevBtn" title="Stap terug">&#9664;</button>
         </div>
         <span class="nav-label" id="trRangeLabel">-</span>
         <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="trNextBtn" title="1 periode vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="trNextPageBtn" title="Volgende reeks" disabled>&#9654;&#9654;</button>
+          <button type="button" class="nav-arrow" id="trNextBtn" title="Stap vooruit" disabled>&#9654;</button>
+          <button type="button" class="nav-arrow" id="trNextPageBtn" title="Volgende periode" disabled>&#9654;&#9654;</button>
         </div>
       </div>
     </div>
@@ -1616,6 +1676,40 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <!-- TAB 5: LICHAAMSMETINGEN                                   -->
   <!-- ========================================================= -->
   <div id="tab-body" class="panel">
+    <div class="card" style="padding-bottom:10px;">
+      <h2>
+        <span>Metingen Periode</span>
+        <span class="badge" id="bodyPeriodBadge">Alles · Per Meting</span>
+      </h2>
+      <div class="m3-filter-block">
+        <span class="m3-filter-row-lbl">Periode</span>
+        <md-chip-set class="m3-chip-row" id="bodyPeriodPills">
+          <md-filter-chip label="2026" data-bperiod="ytd"></md-filter-chip>
+          <md-filter-chip label="12 mnd" data-bperiod="12m"></md-filter-chip>
+          <md-filter-chip label="6 mnd" data-bperiod="6m"></md-filter-chip>
+          <md-filter-chip label="Alles" data-bperiod="all" selected></md-filter-chip>
+        </md-chip-set>
+        <span class="m3-filter-row-lbl">Detailniveau</span>
+        <md-chip-set class="m3-chip-row" id="bodyGranularityPills">
+          <md-filter-chip label="Per meting" data-bgran="raw" selected></md-filter-chip>
+          <md-filter-chip label="Maand" data-bgran="month"></md-filter-chip>
+          <md-filter-chip label="Kwartaal" data-bgran="quarter"></md-filter-chip>
+          <md-filter-chip label="Jaar" data-bgran="year"></md-filter-chip>
+        </md-chip-set>
+      </div>
+      <div class="period-nav" id="bodyPeriodNavBar">
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="nav-arrow" id="bodyPrevPagePeriodBtn" title="Vorige periode" disabled>&#9664;&#9664;</button>
+          <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="Stap terug" disabled>&#9664;</button>
+        </div>
+        <span class="nav-label" id="bodyPeriodLabel">-</span>
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="Stap vooruit" disabled>&#9654;</button>
+          <button type="button" class="nav-arrow" id="bodyNextPagePeriodBtn" title="Volgende periode" disabled>&#9654;&#9654;</button>
+        </div>
+      </div>
+    </div>
+
     <div class="kpi-grid-3">
       <div class="kpi">
         <div class="kpi-label">Gewicht</div>
@@ -1645,25 +1739,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
       <div class="chart-wrap">
         <canvas id="bodyMainChart"></canvas>
       </div>
-      <div class="period-bar">
-        <div class="period-pills" id="bodyPeriodPills">
-          <div class="period-pill" data-bperiod="6m">6 Maanden</div>
-          <div class="period-pill" data-bperiod="1y">1 Jaar</div>
-          <div class="period-pill" data-bperiod="2y">2 Jaar</div>
-          <div class="period-pill active" data-bperiod="all">Altijd</div>
-        </div>
-        <div class="period-nav" id="bodyPeriodNavBar" style="display:none;">
-          <div style="display:flex; gap:4px;">
-            <button type="button" class="nav-arrow" id="bodyPrevPagePeriodBtn" title="Vorige reeks" disabled>&#9664;&#9664;</button>
-            <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="1 periode terug">&#9664;</button>
-          </div>
-          <span class="nav-label" id="bodyPeriodLabel">-</span>
-          <div style="display:flex; gap:4px;">
-            <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="1 periode vooruit" disabled>&#9654;</button>
-            <button type="button" class="nav-arrow" id="bodyNextPagePeriodBtn" title="Volgende reeks" disabled>&#9654;&#9654;</button>
-          </div>
-        </div>
-      </div>
+
     </div>
 
     <div class="card" id="bodyWaterCard">
@@ -2045,13 +2121,17 @@ let state = {
   period: "1y",
   periodOffset: 0,
   inspectedPoint: null,
-  ovGranularity: "quarter",
+  ovRange: "ytd",
+  ovGranularity: "month",
   ovOffset: 0,
+  ovStepCount: 1,
   ovMuscleMetric: "sets",
   ovSegRegion: "arms",
   bodyMainMode: "kg",
   bodyPeriod: "all",
+  bodyGranularity: "raw",
   bodyPeriodOffset: 0,
+  trRange: "ytd",
   trGranularity: "week",
   trOffset: 0,
   trActivityMetric: "minutes",
@@ -4208,6 +4288,101 @@ function autoDetectPulleyGroups() {
   refreshAll();
 }
 
+
+function computeSmartPeriodBounds(rangeKey, offset, earliestYmd, latestYmd) {
+  const safeLatest = (latestYmd && latestYmd >= "2010-01-01") ? latestYmd : TODAY_YMD;
+  const safeEarliest = (earliestYmd && earliestYmd >= "2010-01-01" && earliestYmd <= safeLatest) ? earliestYmd : safeLatest;
+  const step = Math.max(0, Number(offset) || 0);
+
+  if (rangeKey === "all") {
+    return {
+      startYmd: safeEarliest,
+      endYmd: safeLatest,
+      hasOlder: false,
+      hasNewer: false,
+      stepCount: 1
+    };
+  }
+
+  if (rangeKey === "ytd") {
+    const anchorYear = Number(safeLatest.slice(0, 4)) - step;
+    const startYmd = `${anchorYear}-01-01`;
+    const endYmd = step === 0 ? safeLatest : `${anchorYear}-12-31`;
+    const earliestYear = Number(safeEarliest.slice(0, 4));
+    const latestYear = Number(safeLatest.slice(0, 4));
+    return {
+      startYmd,
+      endYmd,
+      hasOlder: anchorYear > earliestYear,
+      hasNewer: anchorYear < latestYear,
+      stepCount: 1
+    };
+  }
+
+  const monthsSpan = rangeKey === "3m" ? 3 : (rangeKey === "6m" ? 6 : 12);
+  const anchorDt = new Date(safeLatest + "T12:00:00");
+  const endDt = new Date(anchorDt);
+  endDt.setMonth(endDt.getMonth() - step * monthsSpan);
+  const startDt = new Date(endDt);
+  startDt.setMonth(startDt.getMonth() - monthsSpan);
+  startDt.setDate(startDt.getDate() + 1);
+
+  const startYmd = formatYMD(startDt);
+  const endYmd = formatYMD(endDt);
+  return {
+    startYmd,
+    endYmd,
+    hasOlder: startYmd > safeEarliest,
+    hasNewer: step > 0,
+    stepCount: 1
+  };
+}
+
+function buildKeysForBounds(gran, startYmd, endYmd) {
+  const keys = [];
+  if (!startYmd || !endYmd || startYmd > endYmd) return keys;
+  const startDt = new Date(startYmd + "T12:00:00");
+  const endDt = new Date(endYmd + "T12:00:00");
+
+  if (gran === "week") {
+    const cur = new Date(startDt);
+    let safety = 0;
+    while (cur <= endDt && safety < 520) {
+      const k = getISOWeekKey(formatYMD(cur));
+      if (keys[keys.length - 1] !== k) keys.push(k);
+      cur.setDate(cur.getDate() + 7);
+      safety++;
+    }
+    const endK = getISOWeekKey(endYmd);
+    if (keys[keys.length - 1] !== endK) keys.push(endK);
+  } else if (gran === "month") {
+    let cur = new Date(startDt.getFullYear(), startDt.getMonth(), 15);
+    const endFloor = new Date(endDt.getFullYear(), endDt.getMonth(), 15);
+    let safety = 0;
+    while (cur <= endFloor && safety < 240) {
+      keys.push(getBucketKey(formatYMD(cur), "month"));
+      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 15);
+      safety++;
+    }
+  } else if (gran === "quarter") {
+    let cur = new Date(startDt.getFullYear(), Math.floor(startDt.getMonth() / 3) * 3, 15);
+    const endFloor = new Date(endDt.getFullYear(), Math.floor(endDt.getMonth() / 3) * 3, 15);
+    let safety = 0;
+    while (cur <= endFloor && safety < 120) {
+      keys.push(getBucketKey(formatYMD(cur), "quarter"));
+      cur = new Date(cur.getFullYear(), cur.getMonth() + 3, 15);
+      safety++;
+    }
+  } else {
+    const startY = startDt.getFullYear();
+    const endY = endDt.getFullYear();
+    for (let y = startY; y <= endY; y++) {
+      keys.push(String(y));
+    }
+  }
+  return [...new Set(keys)];
+}
+
 function getBucketKey(ymd, gran) {
   const [y, m] = ymd.split("-");
   if (gran === "year") return y;
@@ -4305,9 +4480,29 @@ function buildInterpolatedSeries(visibleKeys, gran, getValForKey, allKnownKeys) 
 }
 
 function renderOverviewDashboard(sets) {
-  const gran = state.ovGranularity;
+  const gran = state.ovGranularity || "month";
+  const rangeKey = state.ovRange || "ytd";
   const hasCsv = hasStrengthCsvData();
-  document.getElementById("ovPeriodBadge").textContent = gran === "month" ? "Per Maand" : (gran === "quarter" ? "Per Kwartaal" : "Per Jaar");
+
+  const rangeLabelsMap = { ytd: "2026", "12m": "12 mnd", "6m": "6 mnd", all: "Alles" };
+  const granLabelsMap = { week: "Per Week", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
+  const ovBadge = document.getElementById("ovPeriodBadge");
+  if (ovBadge) {
+    const activeYr = rangeKey === "ytd" ? (new Date().getFullYear() - (state.ovOffset || 0)) : null;
+    const rTxt = rangeKey === "ytd" ? String(activeYr) : (rangeLabelsMap[rangeKey] || "2026");
+    ovBadge.textContent = `${rTxt} · ${granLabelsMap[gran] || "Per Maand"}`;
+  }
+
+  document.querySelectorAll("#ovRangeChips md-filter-chip").forEach(c => {
+    const isSel = c.getAttribute("data-range") === rangeKey;
+    c.selected = isSel;
+    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  });
+  document.querySelectorAll("#ovGranularityPills md-filter-chip").forEach(c => {
+    const isSel = c.getAttribute("data-gran") === gran;
+    c.selected = isSel;
+    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  });
 
   const volCard = document.getElementById("ovKpiVolCard");
   const kpiGrid = document.getElementById("ovKpiGrid");
@@ -4315,8 +4510,6 @@ function renderOverviewDashboard(sets) {
     volCard.style.display = hasCsv ? "block" : "none";
     kpiGrid.className = hasCsv ? "kpi-grid-3" : "kpi-grid";
   }
-
-
 
   const trainSel = document.getElementById("ovTrainMetric");
   const bodySel = document.getElementById("ovBodyMetric");
@@ -4342,6 +4535,24 @@ function renderOverviewDashboard(sets) {
     ovMuscleCardEl.style.display = hasCsv ? "block" : "none";
   }
 
+  // Bepaal echte eerste & laatste datum met data (voorkomt lege jaren zoals 2017-2021)
+  const allDatesPool = [];
+  for (const s of sets) if (s && s.dateDay) allDatesPool.push(s.dateDay);
+  for (const [pDate] of Object.entries(state.plannedWorkouts || {})) {
+    if (getNormalizedDayWorkouts(pDate).some(w => w.completed)) allDatesPool.push(pDate);
+  }
+  for (const m of state.bodyMeasurements) if (m && m.date) allDatesPool.push(m.date);
+  for (const [fDate] of Object.entries(state.foodLogs || {})) {
+    const t = computeDayNutrition(fDate);
+    if (t.touched && !t.isFreeDay) allDatesPool.push(fDate);
+  }
+  allDatesPool.sort();
+  const earliestDataYmd = allDatesPool.length > 0 ? allDatesPool[0] : TODAY_YMD;
+  const latestDataYmd = allDatesPool.length > 0 ? (allDatesPool[allDatesPool.length - 1] > TODAY_YMD ? allDatesPool[allDatesPool.length - 1] : TODAY_YMD) : TODAY_YMD;
+
+  const bounds = computeSmartPeriodBounds(rangeKey, state.ovOffset, earliestDataYmd, latestDataYmd);
+  const keyFn = d => gran === "week" ? getISOWeekKey(d) : getBucketKey(d, gran);
+
   const bucketMap = {};
   const ensureBucket = k => {
     if (!bucketMap[k]) bucketMap[k] = {
@@ -4353,7 +4564,7 @@ function renderOverviewDashboard(sets) {
   };
 
   for (const s of sets) {
-    const k = getBucketKey(s.dateDay, gran);
+    const k = keyFn(s.dateDay);
     const b = ensureBucket(k);
     b.csvDays.add(s.dateDay);
     if (s.workoutDurationMin > 0) b.dayDurations[s.dateDay] = Math.max(b.dayDurations[s.dateDay] || 0, s.workoutDurationMin);
@@ -4362,10 +4573,10 @@ function renderOverviewDashboard(sets) {
     b.musclesVol[s.muscleGroup] = (b.musclesVol[s.muscleGroup] || 0) + (s.volume / 1000);
   }
 
-  for (const [pDate, rawList] of Object.entries(state.plannedWorkouts || {})) {
+  for (const [pDate] of Object.entries(state.plannedWorkouts || {})) {
     const dayWos = getNormalizedDayWorkouts(pDate).filter(w => w.completed);
     if (dayWos.length === 0) continue;
-    const k = getBucketKey(pDate, gran);
+    const k = keyFn(pDate);
     const b = ensureBucket(k);
     const hasCsvOnDay = b.csvDays.has(pDate);
     dayWos.forEach(w => {
@@ -4376,24 +4587,23 @@ function renderOverviewDashboard(sets) {
     });
   }
 
-  for (const m of state.bodyMeasurements) ensureBucket(getBucketKey(m.date, gran)).bodyEntries.push(m);
-  for (const [fDate, fLog] of Object.entries(state.foodLogs)) {
+  for (const m of state.bodyMeasurements) ensureBucket(keyFn(m.date)).bodyEntries.push(m);
+  for (const [fDate] of Object.entries(state.foodLogs)) {
     const t = computeDayNutrition(fDate);
-    if (t.touched && !t.isFreeDay) ensureBucket(getBucketKey(fDate, gran)).foodDays.push(t);
+    if (t.touched && !t.isFreeDay) ensureBucket(keyFn(fDate)).foodDays.push(t);
   }
 
-  const allKeys = Object.keys(bucketMap).sort();
-  const windowSize = gran === "month" ? 12 : (gran === "quarter" ? 8 : 10);
-  state.ovOffset = Math.min(state.ovOffset, Math.max(0, allKeys.length - windowSize));
-  const endIdx = allKeys.length - state.ovOffset;
-  const startIdx = Math.max(0, endIdx - windowSize);
-  const visibleKeys = allKeys.slice(startIdx, endIdx);
+  const visibleKeys = buildKeysForBounds(gran, bounds.startYmd, bounds.endYmd);
+  visibleKeys.forEach(k => ensureBucket(k));
+  const allKeys = [...new Set([...Object.keys(bucketMap), ...visibleKeys])].sort();
 
-  document.getElementById("ovPrevBtn").disabled = startIdx === 0;
-  document.getElementById("ovPrevPageBtn").disabled = startIdx === 0;
-  document.getElementById("ovNextBtn").disabled = state.ovOffset === 0;
-  document.getElementById("ovNextPageBtn").disabled = state.ovOffset === 0;
-  document.getElementById("ovRangeLabel").textContent = visibleKeys.length > 0 ? `${formatBucketLabel(visibleKeys[0], gran)} – ${formatBucketLabel(visibleKeys[visibleKeys.length - 1], gran)}` : "Geen data";
+  document.getElementById("ovPrevBtn").disabled = !bounds.hasOlder;
+  document.getElementById("ovPrevPageBtn").disabled = !bounds.hasOlder;
+  document.getElementById("ovNextBtn").disabled = !bounds.hasNewer;
+  document.getElementById("ovNextPageBtn").disabled = !bounds.hasNewer;
+  document.getElementById("ovRangeLabel").textContent = allDatesPool.length > 0
+    ? `${formatShortNL(bounds.startYmd)} – ${formatShortNL(bounds.endYmd)}`
+    : "Geen data";
 
   let totalSessions = 0, totalMinutes = 0, totalVolKg = 0, totalSets = 0, totalReps = 0;
   const visibleBody = [];
@@ -4407,7 +4617,8 @@ function renderOverviewDashboard(sets) {
     visibleBody.push(...b.bodyEntries);
   });
 
-  const weeksApprox = visibleKeys.length * (gran === "month" ? 4.33 : (gran === "quarter" ? 13 : 52));
+  const spanDays = Math.max(7, Math.round((new Date(bounds.endYmd + "T12:00:00") - new Date(bounds.startYmd + "T12:00:00")) / 86400000) + 1);
+  const weeksApprox = spanDays / 7;
   document.getElementById("ovKpiSessions").textContent = `${totalSessions}×`;
   document.getElementById("ovKpiMinutes").textContent = `${Math.round(totalMinutes / 60)} uur · ${(weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0")}/wk`;
   document.getElementById("ovKpiVolume").textContent = `${(totalVolKg / 1000).toFixed(1)} t`;
@@ -4451,7 +4662,7 @@ function renderOverviewDashboard(sets) {
   };
   const bodyLabels = { smm: "Skeletspier (kg)", fatMass: "Vetmassa (kg)", fatPct: "Vetpercentage (%)", weight: "Gewicht (kg)", smmPct: "Spierpercentage (%)" };
 
-  const labels = visibleKeys.map(k => formatBucketLabel(k, gran));
+  const labels = visibleKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
   const trainData = visibleKeys.map(k => {
     const b = bucketMap[k];
     if (trainMetric === "volume") return Number((b.volumeKg / 1000).toFixed(1));
@@ -4569,7 +4780,7 @@ function renderOverviewDashboard(sets) {
 
   let hasAnySegScan = false;
   const lineEstFlags = {};
-  rCfg.lines.forEach((ln, lIdx) => {
+  rCfg.lines.forEach((ln) => {
     const getSegVal = k => {
       const b = bucketMap[k];
       if (!b || !b.bodyEntries || b.bodyEntries.length === 0) return null;
@@ -4629,18 +4840,34 @@ function renderOverviewDashboard(sets) {
 }
 
 function getBodyPeriodRange(allDates) {
-  if (state.bodyPeriod === "all" || allDates.length === 0) return { startStr: null, endStr: null, hasOlder: false };
-  const latestDay = allDates[allDates.length - 1];
+  if (allDates.length === 0) return { startStr: TODAY_YMD, endStr: TODAY_YMD, hasOlder: false, hasNewer: false };
+  const latestDay = allDates[allDates.length - 1] > TODAY_YMD ? allDates[allDates.length - 1] : TODAY_YMD;
   const earliestDay = allDates[0];
-  const anchor = new Date(latestDay + "T23:59:59");
-  const monthsStep = state.bodyPeriod === "6m" ? 6 : (state.bodyPeriod === "1y" ? 12 : 24);
-  const endDate = new Date(anchor);
-  endDate.setMonth(endDate.getMonth() - ((state.bodyPeriodOffset || 0) * monthsStep));
-  const startDate = new Date(endDate);
-  startDate.setMonth(startDate.getMonth() - monthsStep);
-  startDate.setDate(startDate.getDate() + 1);
-  const toYMD = d => d.toISOString().slice(0, 10);
-  return { startStr: toYMD(startDate), endStr: toYMD(endDate), hasOlder: earliestDay < toYMD(startDate) };
+  const b = computeSmartPeriodBounds(state.bodyPeriod || "all", state.bodyPeriodOffset || 0, earliestDay, latestDay);
+  return { startStr: b.startYmd, endStr: b.endYmd, hasOlder: b.hasOlder, hasNewer: b.hasNewer };
+}
+
+function aggregateBodyMeasurementsByGranularity(rawList, gran) {
+  if (gran === "raw" || rawList.length === 0) {
+    return rawList.map(m => ({ ...m, displayLabel: formatShortNL(m.date) }));
+  }
+  const groups = {};
+  const fields = ["weight", "smm", "smmPct", "fatMass", "fatPct", "waist", "bmi", "water", "lArmS", "rArmS", "lBeenS", "rBeenS", "buikS", "lArmV", "rArmV", "lBeenV", "rBeenV", "buikV"];
+  rawList.forEach(m => {
+    const k = getBucketKey(m.date, gran);
+    if (!groups[k]) groups[k] = { key: k, items: [] };
+    groups[k].items.push(m);
+  });
+  return Object.keys(groups).sort().map(k => {
+    const items = groups[k].items;
+    const last = items[items.length - 1];
+    const agg = { date: last.date, scanner: last.scanner, displayLabel: formatBucketLabel(k, gran) };
+    fields.forEach(f => {
+      const vals = items.map(x => x[f]).filter(v => v !== null && v !== undefined && !isNaN(v));
+      agg[f] = vals.length > 0 ? Number((vals.reduce((a, c) => a + c, 0) / vals.length).toFixed(2)) : null;
+    });
+    return agg;
+  });
 }
 
 function renderBodyMeasurementsTab() {
@@ -4650,31 +4877,59 @@ function renderBodyMeasurementsTab() {
   const clearBodyBtn = document.getElementById("btnClearBodyData");
   if (clearBodyBtn) clearBodyBtn.style.display = fullList.length > 0 ? "inline-block" : "none";
 
-  let list = fullList;
-  const bodyNavBar = document.getElementById("bodyPeriodNavBar");
-  if (state.bodyPeriod !== "all" && fullList.length > 0) {
+  const bRange = state.bodyPeriod || "all";
+  const bGran = state.bodyGranularity || "raw";
+  const rangeNames = { ytd: "2026", "12m": "12 mnd", "6m": "6 mnd", all: "Alles" };
+  const granNames = { raw: "Per Meting", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
+
+  document.querySelectorAll("#bodyPeriodPills md-filter-chip").forEach(c => {
+    const isSel = c.getAttribute("data-bperiod") === bRange;
+    c.selected = isSel;
+    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  });
+  document.querySelectorAll("#bodyGranularityPills md-filter-chip").forEach(c => {
+    const isSel = c.getAttribute("data-bgran") === bGran;
+    c.selected = isSel;
+    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  });
+
+  const badgeEl = document.getElementById("bodyPeriodBadge");
+  if (badgeEl) {
+    const activeYr = bRange === "ytd" ? (new Date().getFullYear() - (state.bodyPeriodOffset || 0)) : null;
+    const rTxt = bRange === "ytd" ? String(activeYr) : (rangeNames[bRange] || "Alles");
+    badgeEl.textContent = `${rTxt} · ${granNames[bGran] || "Per Meting"}`;
+  }
+
+  let filteredList = fullList;
+  const lbl = document.getElementById("bodyPeriodLabel");
+  const prevB = document.getElementById("bodyPrevPeriodBtn");
+  const prevPageB = document.getElementById("bodyPrevPagePeriodBtn");
+  const nextB = document.getElementById("bodyNextPeriodBtn");
+  const nextPageB = document.getElementById("bodyNextPagePeriodBtn");
+
+  if (fullList.length > 0) {
     const range = getBodyPeriodRange(fullList.map(m => m.date));
-    list = fullList.filter(m => m.date >= range.startStr && m.date <= range.endStr);
-    if (bodyNavBar) bodyNavBar.style.display = "flex";
-    const lbl = document.getElementById("bodyPeriodLabel");
+    filteredList = fullList.filter(m => m.date >= range.startStr && m.date <= range.endStr);
     if (lbl) lbl.textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
-    const prevB = document.getElementById("bodyPrevPeriodBtn");
-    const prevPageB = document.getElementById("bodyPrevPagePeriodBtn");
-    const nextB = document.getElementById("bodyNextPeriodBtn");
-    const nextPageB = document.getElementById("bodyNextPagePeriodBtn");
     if (prevB) prevB.disabled = !range.hasOlder;
     if (prevPageB) prevPageB.disabled = !range.hasOlder;
-    if (nextB) nextB.disabled = (state.bodyPeriodOffset || 0) === 0;
-    if (nextPageB) nextPageB.disabled = (state.bodyPeriodOffset || 0) === 0;
-  } else if (bodyNavBar) {
-    bodyNavBar.style.display = "none";
+    if (nextB) nextB.disabled = !range.hasNewer;
+    if (nextPageB) nextPageB.disabled = !range.hasNewer;
+  } else {
+    if (lbl) lbl.textContent = "Geen data";
+    if (prevB) prevB.disabled = true;
+    if (prevPageB) prevPageB.disabled = true;
+    if (nextB) nextB.disabled = true;
+    if (nextPageB) nextPageB.disabled = true;
   }
+
+  const list = aggregateBodyMeasurementsByGranularity(filteredList, bGran);
 
   if (list.length > 0) {
     const first = list[0], last = list[list.length - 1];
     const dW = (last.weight - first.weight).toFixed(1);
     document.getElementById("bodyKpiWeight").textContent = `${last.weight} kg`;
-    document.getElementById("bodyKpiWeightSub").textContent = list.length > 1 ? `${dW >= 0 ? "+" : ""}${dW} kg sinds start` : formatShortNL(last.date);
+    document.getElementById("bodyKpiWeightSub").textContent = list.length > 1 ? `${dW >= 0 ? "+" : ""}${dW} kg sinds start` : last.displayLabel;
     if (last.smm) {
       const dS = first.smm ? (last.smm - first.smm).toFixed(1) : null;
       document.getElementById("bodyKpiSmm").textContent = `${last.smm} kg`;
@@ -4691,7 +4946,7 @@ function renderBodyMeasurementsTab() {
     document.getElementById("bodyKpiFat").textContent = "-";
   }
 
-  const labels = list.map(m => formatShortNL(m.date));
+  const labels = list.map(m => m.displayLabel);
   const ctxMain = document.getElementById("bodyMainChart").getContext("2d");
   if (bodyMainChartInstance) bodyMainChartInstance.destroy();
   const mainDatasets = state.bodyMainMode === "kg"
@@ -4754,7 +5009,7 @@ function renderBodyMeasurementsTab() {
     { label: "Romp Vet", data: list.map(m => m.buikV), borderColor: "#ec4899", tension: 0.25, pointRadius: 3.5, yAxisID: "y1", spanGaps: true }
   ]);
 
-  document.getElementById("bmTableBody").innerHTML = [...fullList].reverse().map(m => `
+  document.getElementById("bmTableBody").innerHTML = [...filteredList].reverse().map(m => `
     <tr>
       <td>${formatShortNL(m.date)}</td>
       <td><span class="scanner-pill ${m.scanner.toLowerCase().includes("evolt") ? "scanner-evolt" : "scanner-inbody"}">${escapeHtml(m.scanner)}</span></td>
@@ -4933,68 +5188,22 @@ function getBucketDateRange(key, gran) {
   return { start: "2000-01-01", end: TODAY_YMD };
 }
 
-function computeContinuousPeriodWindow(gran, offset, earliestYmd, latestYmd, existingKeys = []) {
-  const anchorDate = new Date((latestYmd > TODAY_YMD ? latestYmd : TODAY_YMD) + "T12:00:00");
-  const startFloorDate = new Date((earliestYmd || TODAY_YMD) + "T12:00:00");
-  const windowSize = gran === "week" ? 10 : (gran === "month" ? 12 : (gran === "quarter" ? 8 : 10));
-
-  const continuousKeys = [];
-  if (gran === "week") {
-    const cur = new Date(anchorDate);
-    let safety = 0;
-    while ((cur >= startFloorDate || continuousKeys.length < windowSize) && safety < 520) {
-      continuousKeys.unshift(getISOWeekKey(formatYMD(cur)));
-      cur.setDate(cur.getDate() - 7);
-      safety++;
-    }
-  } else if (gran === "month") {
-    let cur = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 15);
-    const floorMonth = new Date(startFloorDate.getFullYear(), startFloorDate.getMonth(), 1);
-    let safety = 0;
-    while ((cur >= floorMonth || continuousKeys.length < windowSize) && safety < 240) {
-      continuousKeys.unshift(getBucketKey(formatYMD(cur), "month"));
-      cur = new Date(cur.getFullYear(), cur.getMonth() - 1, 15);
-      safety++;
-    }
-  } else if (gran === "quarter") {
-    let cur = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 15);
-    const floorQuarter = new Date(startFloorDate.getFullYear(), Math.floor(startFloorDate.getMonth() / 3) * 3, 1);
-    let safety = 0;
-    while ((cur >= floorQuarter || continuousKeys.length < windowSize) && safety < 120) {
-      continuousKeys.unshift(getBucketKey(formatYMD(cur), "quarter"));
-      cur = new Date(cur.getFullYear(), cur.getMonth() - 3, 15);
-      safety++;
-    }
-  } else {
-    let curYear = anchorDate.getFullYear();
-    const floorYear = startFloorDate.getFullYear();
-    let safety = 0;
-    while ((curYear >= floorYear || continuousKeys.length < windowSize) && safety < 50) {
-      continuousKeys.unshift(String(curYear));
-      curYear--;
-      safety++;
-    }
-  }
-
-  const allKeys = [...new Set([...continuousKeys, ...existingKeys])].sort();
-  const safeOffset = Math.min(offset || 0, Math.max(0, allKeys.length - windowSize));
-  const endIdx = allKeys.length - safeOffset;
-  const startIdx = Math.max(0, endIdx - windowSize);
-  const visibleKeys = allKeys.slice(startIdx, endIdx);
+function computeContinuousPeriodWindow(gran, offset, earliestYmd, latestYmd, existingKeys = [], rangeKey = "all") {
+  const safeLatest = (latestYmd && latestYmd >= "2010-01-01") ? latestYmd : TODAY_YMD;
+  const safeEarliest = (earliestYmd && earliestYmd >= "2010-01-01" && earliestYmd <= safeLatest) ? earliestYmd : safeLatest;
+  const bounds = computeSmartPeriodBounds(rangeKey, offset, safeEarliest, safeLatest);
+  const visibleKeys = buildKeysForBounds(gran, bounds.startYmd, bounds.endYmd);
   const labels = visibleKeys.map(k => gran === "week" ? k.replace(/^\d{4}-/, "") : formatBucketLabel(k, gran));
-
-  const firstRange = visibleKeys.length > 0 ? getBucketDateRange(visibleKeys[0], gran) : { start: TODAY_YMD, end: TODAY_YMD };
-  const lastRange = visibleKeys.length > 0 ? getBucketDateRange(visibleKeys[visibleKeys.length - 1], gran) : { start: TODAY_YMD, end: TODAY_YMD };
 
   return {
     visibleKeys,
     labels,
-    windowSize,
-    safeOffset,
-    hasOlder: startIdx > 0,
-    hasNewer: safeOffset > 0,
-    startYmd: firstRange.start,
-    endYmd: lastRange.end
+    windowSize: Math.max(1, visibleKeys.length),
+    safeOffset: Math.max(0, Number(offset) || 0),
+    hasOlder: bounds.hasOlder,
+    hasNewer: bounds.hasNewer,
+    startYmd: bounds.startYmd,
+    endYmd: bounds.endYmd
   };
 }
 
@@ -5078,13 +5287,30 @@ function renderTrainingProgressSection(sets) {
 
   // Centrale datumpicker van Training (gedeeld tussen KPI's, Training voortgang & Oefening Progressie)
   const gran = state.trGranularity || "week";
+  const trRange = state.trRange || "ytd";
   const metricSel = document.getElementById("trActivityMetric");
   const metric = metricSel ? metricSel.value : (state.trActivityMetric || "minutes");
   state.trActivityMetric = metric;
 
+  const trRangeNames = { ytd: "2026", "12m": "12 mnd", "3m": "3 mnd", all: "Alles" };
   const granBadgeNames = { week: "Per Week", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
   const badgeEl = document.getElementById("trPeriodBadge");
-  if (badgeEl) badgeEl.textContent = granBadgeNames[gran] || "Per Week";
+  if (badgeEl) {
+    const activeYr = trRange === "ytd" ? (new Date().getFullYear() - (state.trOffset || 0)) : null;
+    const rTxt = trRange === "ytd" ? String(activeYr) : (trRangeNames[trRange] || "2026");
+    badgeEl.textContent = `${rTxt} · ${granBadgeNames[gran] || "Per Week"}`;
+  }
+
+  document.querySelectorAll("#trRangeChips md-filter-chip").forEach(c => {
+    const isSel = c.getAttribute("data-trrange") === trRange;
+    c.selected = isSel;
+    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  });
+  document.querySelectorAll("#trGranularityPills md-filter-chip").forEach(c => {
+    const isSel = c.getAttribute("data-trgran") === gran;
+    c.selected = isSel;
+    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  });
 
   const buckets = {};
   const sportTotals = {};
@@ -5098,7 +5324,7 @@ function renderTrainingProgressSection(sets) {
 
   const latestActDate = allActivities.reduce((maxD, a) => (a.date > maxD ? a.date : maxD), TODAY_YMD);
   const earliestActDate = allActivities.reduce((minD, a) => (a.date < minD ? a.date : minD), TODAY_YMD);
-  const win = computeContinuousPeriodWindow(gran, state.trOffset, earliestActDate, latestActDate, Object.keys(buckets));
+  const win = computeContinuousPeriodWindow(gran, state.trOffset, earliestActDate, latestActDate, Object.keys(buckets), trRange);
   state.trOffset = win.safeOffset;
   state.trWindowSize = win.windowSize;
   state.trWindowStart = win.startYmd;
@@ -5116,7 +5342,7 @@ function renderTrainingProgressSection(sets) {
   if (trNextBtn) trNextBtn.disabled = !win.hasNewer;
   if (trNextPageBtn) trNextPageBtn.disabled = !win.hasNewer;
   if (trRangeLbl) {
-    trRangeLbl.textContent = win.labels.length > 0 ? `${win.labels[0]} – ${win.labels[win.labels.length - 1]}` : "-";
+    trRangeLbl.textContent = allActivities.length > 0 ? `${formatShortNL(win.startYmd)} – ${formatShortNL(win.endYmd)}` : "Geen data";
   }
 
   // Filter KPI's op het geselecteerde centrale tijdsvenster
@@ -5641,27 +5867,28 @@ function bindEvents() {
     switchTab("profile");
   });
 
-  // Overview events
+  // Overview events (Material 3 filter chips + slimme periode/detailniveau)
+  document.getElementById("ovRangeChips").addEventListener("click", e => {
+    const chip = e.target.closest("md-filter-chip");
+    if (!chip) return;
+    const newRange = chip.getAttribute("data-range") || "ytd";
+    state.ovRange = newRange;
+    state.ovOffset = 0;
+    // Logisch standaard detailniveau bij gekozen periode
+    if (newRange === "all" && state.ovGranularity === "week") state.ovGranularity = "quarter";
+    if ((newRange === "ytd" || newRange === "12m" || newRange === "6m") && state.ovGranularity === "year") state.ovGranularity = "month";
+    renderOverviewDashboard(getCombinedSets());
+  });
   document.getElementById("ovGranularityPills").addEventListener("click", e => {
-    const pill = e.target.closest(".period-pill");
-    if (!pill) return;
-    state.ovGranularity = pill.getAttribute("data-gran"); state.ovOffset = 0;
-    document.querySelectorAll("#ovGranularityPills .period-pill").forEach(p => p.classList.remove("active"));
-    pill.classList.add("active");
+    const chip = e.target.closest("md-filter-chip");
+    if (!chip) return;
+    state.ovGranularity = chip.getAttribute("data-gran") || "month";
     renderOverviewDashboard(getCombinedSets());
   });
   document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovPrevPageBtn").addEventListener("click", () => {
-    const step = state.ovGranularity === "month" ? 12 : (state.ovGranularity === "quarter" ? 8 : 10);
-    state.ovOffset += step;
-    renderOverviewDashboard(getCombinedSets());
-  });
+  document.getElementById("ovPrevPageBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovNextBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovNextPageBtn").addEventListener("click", () => {
-    const step = state.ovGranularity === "month" ? 12 : (state.ovGranularity === "quarter" ? 8 : 10);
-    state.ovOffset = Math.max(0, state.ovOffset - step);
-    renderOverviewDashboard(getCombinedSets());
-  });
+  document.getElementById("ovNextPageBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovSegMetricPills").addEventListener("click", e => {
@@ -5873,13 +6100,21 @@ function bindEvents() {
     if (hasStrengthCsvData()) renderExerciseChart();
   }
 
-  document.getElementById("trGranularityPills").addEventListener("click", e => {
-    const pill = e.target.closest(".period-pill");
-    if (!pill) return;
-    state.trGranularity = pill.getAttribute("data-trgran");
+  document.getElementById("trRangeChips").addEventListener("click", e => {
+    const chip = e.target.closest("md-filter-chip");
+    if (!chip) return;
+    const newRange = chip.getAttribute("data-trrange") || "ytd";
+    state.trRange = newRange;
     state.trOffset = 0;
-    document.querySelectorAll("#trGranularityPills .period-pill").forEach(p => p.classList.remove("active"));
-    pill.classList.add("active");
+    if (newRange === "all" && state.trGranularity === "week") state.trGranularity = "month";
+    if ((newRange === "ytd" || newRange === "12m" || newRange === "3m") && state.trGranularity === "year") state.trGranularity = "week";
+    refreshTrainingTabAll();
+  });
+
+  document.getElementById("trGranularityPills").addEventListener("click", e => {
+    const chip = e.target.closest("md-filter-chip");
+    if (!chip) return;
+    state.trGranularity = chip.getAttribute("data-trgran") || "week";
     refreshTrainingTabAll();
   });
 
@@ -5889,7 +6124,7 @@ function bindEvents() {
   });
 
   document.getElementById("trPrevPageBtn").addEventListener("click", () => {
-    state.trOffset = (state.trOffset || 0) + (state.trWindowSize || 10);
+    state.trOffset = (state.trOffset || 0) + 1;
     refreshTrainingTabAll();
   });
 
@@ -5899,7 +6134,7 @@ function bindEvents() {
   });
 
   document.getElementById("trNextPageBtn").addEventListener("click", () => {
-    state.trOffset = Math.max(0, (state.trOffset || 0) - (state.trWindowSize || 10));
+    state.trOffset = Math.max(0, (state.trOffset || 0) - 1);
     refreshTrainingTabAll();
   });
 
@@ -7231,12 +7466,20 @@ function bindEvents() {
     pill.classList.add("active"); renderBodyMeasurementsTab();
   });
   document.getElementById("bodyPeriodPills").addEventListener("click", e => {
-    const pill = e.target.closest(".period-pill");
-    if (!pill) return;
-    state.bodyPeriod = pill.getAttribute("data-bperiod");
+    const chip = e.target.closest("md-filter-chip");
+    if (!chip) return;
+    const newRange = chip.getAttribute("data-bperiod") || "all";
+    state.bodyPeriod = newRange;
     state.bodyPeriodOffset = 0;
-    document.querySelectorAll("#bodyPeriodPills .period-pill").forEach(p => p.classList.remove("active"));
-    pill.classList.add("active");
+    if ((newRange === "ytd" || newRange === "12m" || newRange === "6m") && state.bodyGranularity === "year") {
+      state.bodyGranularity = "raw";
+    }
+    renderBodyMeasurementsTab();
+  });
+  document.getElementById("bodyGranularityPills").addEventListener("click", e => {
+    const chip = e.target.closest("md-filter-chip");
+    if (!chip) return;
+    state.bodyGranularity = chip.getAttribute("data-bgran") || "raw";
     renderBodyMeasurementsTab();
   });
   document.getElementById("bodyPrevPeriodBtn").addEventListener("click", () => {
@@ -7244,7 +7487,7 @@ function bindEvents() {
     renderBodyMeasurementsTab();
   });
   document.getElementById("bodyPrevPagePeriodBtn").addEventListener("click", () => {
-    state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 2;
+    state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 1;
     renderBodyMeasurementsTab();
   });
   document.getElementById("bodyNextPeriodBtn").addEventListener("click", () => {
@@ -7252,7 +7495,7 @@ function bindEvents() {
     renderBodyMeasurementsTab();
   });
   document.getElementById("bodyNextPagePeriodBtn").addEventListener("click", () => {
-    state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 2);
+    state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 1);
     renderBodyMeasurementsTab();
   });
   document.getElementById("btnAddBodyMeasurement").addEventListener("click", async () => {
