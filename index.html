@@ -874,79 +874,21 @@
       color: #38bdf8;
     }
 
-    /* Unified Period Header + Material 3 Segmented Button Groups + Animated Drawer */
-    .period-top-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .period-top-bar .period-nav {
-      flex: 1;
-      min-width: 0;
-    }
-    .period-filter-chip-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 6px 11px;
-      border-radius: 999px;
-      background: rgba(56, 189, 248, 0.14);
-      border: 1px solid rgba(56, 189, 248, 0.45);
-      color: var(--accent);
-      font-size: 0.74rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.18s ease, border-color 0.18s ease;
-    }
-    .period-filter-chip-btn:hover,
-    .period-filter-chip-btn.open {
-      background: rgba(56, 189, 248, 0.26);
-      border-color: var(--accent);
-    }
-    .period-filter-chip-btn .chevron {
-      font-size: 0.65rem;
-      transition: transform 0.25s ease;
-    }
-    .period-filter-chip-btn.open .chevron {
-      transform: rotate(180deg);
-    }
-    .period-options-drawer {
-      max-height: 0;
-      opacity: 0;
-      overflow: hidden;
-      margin-top: 0;
-      padding-top: 0;
-      border-top: 0px solid rgba(51, 65, 85, 0.6);
-      transition: max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.22s ease, margin-top 0.25s ease, padding-top 0.25s ease;
-    }
-    .period-options-drawer.open {
-      max-height: 170px;
-      opacity: 1;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top-width: 1px;
+    /* Unified Period Header + Material 3 Segmented Button Groups */
+    .period-options-block {
+      margin-top: 8px;
     }
     .m3-btn-group-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
     .m3-btn-group-row:last-child {
       margin-bottom: 0;
     }
-    .m3-btn-group-lbl {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--muted);
-      white-space: nowrap;
-      min-width: 52px;
-    }
     .m3-segmented-group {
       display: inline-flex;
-      flex: 1;
+      width: 100%;
       border: 1px solid var(--card-border);
       border-radius: 999px;
       overflow: hidden;
@@ -959,13 +901,12 @@
       background: transparent;
       color: var(--muted);
       padding: 6px 8px;
-      font-size: 0.74rem;
+      font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
       transition: background 0.16s ease, color 0.16s ease;
       white-space: nowrap;
     }
@@ -980,11 +921,6 @@
       background: rgba(56, 189, 248, 0.24);
       color: var(--accent);
       font-weight: 700;
-    }
-    .m3-seg-btn.active::before {
-      content: "✓";
-      font-size: 0.72rem;
-      font-weight: 800;
     }
   </style>
 </head>
@@ -1068,32 +1004,24 @@
   <!-- ========================================================= -->
   <div id="tab-overview" class="panel active">
     <div class="card" style="padding:10px 12px;">
-      <div class="period-top-bar">
-        <div class="period-nav" id="ovNavBar">
-          <button type="button" class="nav-arrow" id="ovPrevBtn" title="Vorige periode" disabled>&#9664;</button>
-          <span class="nav-label" id="ovRangeLabel" style="cursor:pointer;" title="Klik om periode en weergave te kiezen">-</span>
-          <button type="button" class="nav-arrow" id="ovNextBtn" title="Volgende periode" disabled>&#9654;</button>
-        </div>
-        <button type="button" class="period-filter-chip-btn" id="ovPeriodBadge" title="Klik om periode-opties te tonen">
-          <span id="ovPeriodBadgeText">12 mnd · Per Maand</span>
-          <span class="chevron">▼</span>
-        </button>
+      <div class="period-nav" id="ovNavBar">
+        <button type="button" class="nav-arrow" id="ovPrevBtn" title="Vorige periode" disabled>&#9664;</button>
+        <span class="nav-label" id="ovRangeLabel">-</span>
+        <button type="button" class="nav-arrow" id="ovNextBtn" title="Volgende periode" disabled>&#9654;</button>
       </div>
-      <div class="period-options-drawer" id="ovOptionsDrawer">
+      <div class="period-options-block">
         <div class="m3-btn-group-row">
-          <span class="m3-btn-group-lbl">Periode</span>
           <div class="m3-segmented-group" id="ovRangeChips" role="group" aria-label="Periode">
-            <button type="button" class="m3-seg-btn active" data-range="12m">Afgelopen 12 mnd</button>
-            <button type="button" class="m3-seg-btn" data-range="ytd">Dit jaar</button>
-            <button type="button" class="m3-seg-btn" data-range="all">Alles</button>
+            <button type="button" class="m3-seg-btn active" data-range="12m">12 maanden</button>
+            <button type="button" class="m3-seg-btn" data-range="ytd" id="ovYtdBtn">2026</button>
+            <button type="button" class="m3-seg-btn" data-range="all">Altijd</button>
           </div>
         </div>
         <div class="m3-btn-group-row">
-          <span class="m3-btn-group-lbl">Per</span>
-          <div class="m3-segmented-group" id="ovGranularityPills" role="group" aria-label="Per">
-            <button type="button" class="m3-seg-btn" data-gran="week">Week</button>
-            <button type="button" class="m3-seg-btn active" data-gran="month">Maand</button>
-            <button type="button" class="m3-seg-btn" data-gran="year">Jaar</button>
+          <div class="m3-segmented-group" id="ovGranularityPills" role="group" aria-label="Weergave">
+            <button type="button" class="m3-seg-btn" data-gran="week">per Week</button>
+            <button type="button" class="m3-seg-btn active" data-gran="month">per Maand</button>
+            <button type="button" class="m3-seg-btn" data-gran="year">per Jaar</button>
           </div>
         </div>
       </div>
@@ -1649,32 +1577,24 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <div id="tab-charts" class="panel">
     <!-- Centrale datumpicker (hergebruikt basiscomponent van Totaal + Per Week) -->
     <div class="card" style="padding:10px 12px;">
-      <div class="period-top-bar">
-        <div class="period-nav" id="trNavBar">
-          <button type="button" class="nav-arrow" id="trPrevBtn" title="Vorige periode" disabled>&#9664;</button>
-          <span class="nav-label" id="trRangeLabel" style="cursor:pointer;" title="Klik om periode en weergave te kiezen">-</span>
-          <button type="button" class="nav-arrow" id="trNextBtn" title="Volgende periode" disabled>&#9654;</button>
-        </div>
-        <button type="button" class="period-filter-chip-btn" id="trPeriodBadge" title="Klik om periode-opties te tonen">
-          <span id="trPeriodBadgeText">12 mnd · Per Week</span>
-          <span class="chevron">▼</span>
-        </button>
+      <div class="period-nav" id="trNavBar">
+        <button type="button" class="nav-arrow" id="trPrevBtn" title="Vorige periode" disabled>&#9664;</button>
+        <span class="nav-label" id="trRangeLabel">-</span>
+        <button type="button" class="nav-arrow" id="trNextBtn" title="Volgende periode" disabled>&#9654;</button>
       </div>
-      <div class="period-options-drawer" id="trOptionsDrawer">
+      <div class="period-options-block">
         <div class="m3-btn-group-row">
-          <span class="m3-btn-group-lbl">Periode</span>
           <div class="m3-segmented-group" id="trRangeChips" role="group" aria-label="Periode">
-            <button type="button" class="m3-seg-btn active" data-trrange="12m">Afgelopen 12 mnd</button>
-            <button type="button" class="m3-seg-btn" data-trrange="ytd">Dit jaar</button>
-            <button type="button" class="m3-seg-btn" data-trrange="all">Alles</button>
+            <button type="button" class="m3-seg-btn active" data-trrange="12m">12 maanden</button>
+            <button type="button" class="m3-seg-btn" data-trrange="ytd" id="trYtdBtn">2026</button>
+            <button type="button" class="m3-seg-btn" data-trrange="all">Altijd</button>
           </div>
         </div>
         <div class="m3-btn-group-row">
-          <span class="m3-btn-group-lbl">Per</span>
-          <div class="m3-segmented-group" id="trGranularityPills" role="group" aria-label="Per">
-            <button type="button" class="m3-seg-btn active" data-trgran="week">Week</button>
-            <button type="button" class="m3-seg-btn" data-trgran="month">Maand</button>
-            <button type="button" class="m3-seg-btn" data-trgran="year">Jaar</button>
+          <div class="m3-segmented-group" id="trGranularityPills" role="group" aria-label="Weergave">
+            <button type="button" class="m3-seg-btn active" data-trgran="week">per Week</button>
+            <button type="button" class="m3-seg-btn" data-trgran="month">per Maand</button>
+            <button type="button" class="m3-seg-btn" data-trgran="year">per Jaar</button>
           </div>
         </div>
       </div>
@@ -1809,32 +1729,24 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <!-- ========================================================= -->
   <div id="tab-body" class="panel">
     <div class="card" style="padding:10px 12px;">
-      <div class="period-top-bar">
-        <div class="period-nav" id="bodyPeriodNavBar">
-          <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="Vorige periode" disabled>&#9664;</button>
-          <span class="nav-label" id="bodyPeriodLabel" style="cursor:pointer;" title="Klik om periode en weergave te kiezen">-</span>
-          <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="Volgende periode" disabled>&#9654;</button>
-        </div>
-        <button type="button" class="period-filter-chip-btn" id="bodyPeriodBadge" title="Klik om periode-opties te tonen">
-          <span id="bodyPeriodBadgeText">12 mnd · Per Meting</span>
-          <span class="chevron">▼</span>
-        </button>
+      <div class="period-nav" id="bodyPeriodNavBar">
+        <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="Vorige periode" disabled>&#9664;</button>
+        <span class="nav-label" id="bodyPeriodLabel">-</span>
+        <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="Volgende periode" disabled>&#9654;</button>
       </div>
-      <div class="period-options-drawer" id="bodyOptionsDrawer">
+      <div class="period-options-block">
         <div class="m3-btn-group-row">
-          <span class="m3-btn-group-lbl">Periode</span>
           <div class="m3-segmented-group" id="bodyPeriodPills" role="group" aria-label="Periode">
-            <button type="button" class="m3-seg-btn active" data-bperiod="12m">Afgelopen 12 mnd</button>
-            <button type="button" class="m3-seg-btn" data-bperiod="ytd">Dit jaar</button>
-            <button type="button" class="m3-seg-btn" data-bperiod="all">Alles</button>
+            <button type="button" class="m3-seg-btn active" data-bperiod="12m">12 maanden</button>
+            <button type="button" class="m3-seg-btn" data-bperiod="ytd" id="bodyYtdBtn">2026</button>
+            <button type="button" class="m3-seg-btn" data-bperiod="all">Altijd</button>
           </div>
         </div>
         <div class="m3-btn-group-row">
-          <span class="m3-btn-group-lbl">Per</span>
-          <div class="m3-segmented-group" id="bodyGranularityPills" role="group" aria-label="Per">
-            <button type="button" class="m3-seg-btn active" data-bgran="raw">Meting</button>
-            <button type="button" class="m3-seg-btn" data-bgran="month">Maand</button>
-            <button type="button" class="m3-seg-btn" data-bgran="year">Jaar</button>
+          <div class="m3-segmented-group" id="bodyGranularityPills" role="group" aria-label="Weergave">
+            <button type="button" class="m3-seg-btn active" data-bgran="raw">per Meting</button>
+            <button type="button" class="m3-seg-btn" data-bgran="month">per Maand</button>
+            <button type="button" class="m3-seg-btn" data-bgran="year">per Jaar</button>
           </div>
         </div>
       </div>
@@ -4625,14 +4537,11 @@ function renderOverviewDashboard(sets) {
   const rangeKey = state.ovRange || "ytd";
   const hasCsv = hasStrengthCsvData();
 
-  const granLabelsMap = { week: "Per Week", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
-  const ovBadgeTxt = document.getElementById("ovPeriodBadgeText");
-  if (ovBadgeTxt) {
-    const activeYr = new Date().getFullYear() - (state.ovOffset || 0);
-    const rTxt = rangeKey === "ytd"
-      ? ((state.ovOffset || 0) === 0 ? "Huidig jaar" : String(activeYr))
-      : (rangeKey === "all" ? "Alles" : "12 mnd");
-    ovBadgeTxt.textContent = `${rTxt} · ${granLabelsMap[gran] || "Per Maand"}`;
+  const ovYtdBtn = document.getElementById("ovYtdBtn");
+  if (ovYtdBtn) {
+    const currentYear = new Date().getFullYear();
+    const displayYr = rangeKey === "ytd" ? (currentYear - (state.ovOffset || 0)) : currentYear;
+    ovYtdBtn.textContent = String(displayYr);
   }
 
   document.querySelectorAll("#ovRangeChips .m3-seg-btn").forEach(b => {
@@ -5026,13 +4935,11 @@ function renderBodyMeasurementsTab() {
     b.classList.toggle("active", b.getAttribute("data-bgran") === bGran);
   });
 
-  const badgeTxtEl = document.getElementById("bodyPeriodBadgeText");
-  if (badgeTxtEl) {
-    const activeYr = new Date().getFullYear() - (state.bodyPeriodOffset || 0);
-    const rTxt = bRange === "ytd"
-      ? ((state.bodyPeriodOffset || 0) === 0 ? "Huidig jaar" : String(activeYr))
-      : (bRange === "all" ? "Alles" : "12 mnd");
-    badgeTxtEl.textContent = `${rTxt} · ${granNames[bGran] || "Per Meting"}`;
+  const bodyYtdBtn = document.getElementById("bodyYtdBtn");
+  if (bodyYtdBtn) {
+    const currentYear = new Date().getFullYear();
+    const displayYr = bRange === "ytd" ? (currentYear - (state.bodyPeriodOffset || 0)) : currentYear;
+    bodyYtdBtn.textContent = String(displayYr);
   }
 
   let filteredList = fullList;
@@ -5422,14 +5329,11 @@ function renderTrainingProgressSection(sets) {
   const metric = metricSel ? metricSel.value : (state.trActivityMetric || "minutes");
   state.trActivityMetric = metric;
 
-  const granBadgeNames = { week: "Per Week", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
-  const badgeTxtEl = document.getElementById("trPeriodBadgeText");
-  if (badgeTxtEl) {
-    const activeYr = new Date().getFullYear() - (state.trOffset || 0);
-    const rTxt = trRange === "ytd"
-      ? ((state.trOffset || 0) === 0 ? "Huidig jaar" : String(activeYr))
-      : (trRange === "all" ? "Alles" : "12 mnd");
-    badgeTxtEl.textContent = `${rTxt} · ${granBadgeNames[gran] || "Per Week"}`;
+  const trYtdBtn = document.getElementById("trYtdBtn");
+  if (trYtdBtn) {
+    const currentYear = new Date().getFullYear();
+    const displayYr = trRange === "ytd" ? (currentYear - (state.trOffset || 0)) : currentYear;
+    trYtdBtn.textContent = String(displayYr);
   }
 
   document.querySelectorAll("#trRangeChips .m3-seg-btn").forEach(b => {
@@ -6007,22 +5911,7 @@ function bindEvents() {
     });
   }
 
-  function bindPeriodDrawerToggle(badgeBtnId, labelId, drawerId) {
-    const btn = document.getElementById(badgeBtnId);
-    const lbl = document.getElementById(labelId);
-    const drawer = document.getElementById(drawerId);
-    if (!btn || !drawer) return;
-    const toggle = () => {
-      const isOpen = drawer.classList.toggle("open");
-      btn.classList.toggle("open", isOpen);
-    };
-    btn.addEventListener("click", toggle);
-    if (lbl) lbl.addEventListener("click", toggle);
-  }
 
-  bindPeriodDrawerToggle("ovPeriodBadge", "ovRangeLabel", "ovOptionsDrawer");
-  bindPeriodDrawerToggle("trPeriodBadge", "trRangeLabel", "trOptionsDrawer");
-  bindPeriodDrawerToggle("bodyPeriodBadge", "bodyPeriodLabel", "bodyOptionsDrawer");
 
   // Overview events (Material 3 Button Groups + enkele pijlnavigatie per periode)
   bindSegmentedButtonGroup("ovRangeChips", "data-range", newRange => {
