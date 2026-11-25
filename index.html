@@ -873,6 +873,119 @@
       border-color: #38bdf8;
       color: #38bdf8;
     }
+
+    /* Unified Period Header + Material 3 Segmented Button Groups + Animated Drawer */
+    .period-top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .period-top-bar .period-nav {
+      flex: 1;
+      min-width: 0;
+    }
+    .period-filter-chip-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: var(--accent);
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+    .period-filter-chip-btn:hover,
+    .period-filter-chip-btn.open {
+      background: rgba(56, 189, 248, 0.26);
+      border-color: var(--accent);
+    }
+    .period-filter-chip-btn .chevron {
+      font-size: 0.65rem;
+      transition: transform 0.25s ease;
+    }
+    .period-filter-chip-btn.open .chevron {
+      transform: rotate(180deg);
+    }
+    .period-options-drawer {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0px solid rgba(51, 65, 85, 0.6);
+      transition: max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.22s ease, margin-top 0.25s ease, padding-top 0.25s ease;
+    }
+    .period-options-drawer.open {
+      max-height: 170px;
+      opacity: 1;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top-width: 1px;
+    }
+    .m3-btn-group-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .m3-btn-group-row:last-child {
+      margin-bottom: 0;
+    }
+    .m3-btn-group-lbl {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 52px;
+    }
+    .m3-segmented-group {
+      display: inline-flex;
+      flex: 1;
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: #0f172a;
+    }
+    .m3-seg-btn {
+      flex: 1;
+      border: none;
+      border-right: 1px solid var(--card-border);
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 8px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.16s ease, color 0.16s ease;
+      white-space: nowrap;
+    }
+    .m3-seg-btn:last-child {
+      border-right: none;
+    }
+    .m3-seg-btn:hover {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--text);
+    }
+    .m3-seg-btn.active {
+      background: rgba(56, 189, 248, 0.24);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .m3-seg-btn.active::before {
+      content: "✓";
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
   </style>
 </head>
 <body>
@@ -954,36 +1067,34 @@
   <!-- TAB 1: TOTAALBEELD                                        -->
   <!-- ========================================================= -->
   <div id="tab-overview" class="panel active">
-    <div class="card" style="padding-bottom:10px;">
-      <h2>
-        <span>Totaalbeeld &amp; Verband</span>
-        <span class="badge" id="ovPeriodBadge">2026 · Per Maand</span>
-      </h2>
-      <div class="m3-filter-block">
-        <span class="m3-filter-row-lbl">Periode</span>
-        <md-chip-set class="m3-chip-row" id="ovRangeChips">
-          <md-filter-chip label="2026" data-range="ytd" selected></md-filter-chip>
-          <md-filter-chip label="12 mnd" data-range="12m"></md-filter-chip>
-          <md-filter-chip label="6 mnd" data-range="6m"></md-filter-chip>
-          <md-filter-chip label="Alles" data-range="all"></md-filter-chip>
-        </md-chip-set>
-        <span class="m3-filter-row-lbl">Detailniveau</span>
-        <md-chip-set class="m3-chip-row" id="ovGranularityPills">
-          <md-filter-chip label="Week" data-gran="week"></md-filter-chip>
-          <md-filter-chip label="Maand" data-gran="month" selected></md-filter-chip>
-          <md-filter-chip label="Kwartaal" data-gran="quarter"></md-filter-chip>
-          <md-filter-chip label="Jaar" data-gran="year"></md-filter-chip>
-        </md-chip-set>
-      </div>
-      <div class="period-nav" id="ovNavBar">
-        <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="ovPrevPageBtn" title="Vorige periode" disabled>&#9664;&#9664;</button>
-          <button type="button" class="nav-arrow" id="ovPrevBtn" title="Stap terug">&#9664;</button>
+    <div class="card" style="padding:10px 12px;">
+      <div class="period-top-bar">
+        <div class="period-nav" id="ovNavBar">
+          <button type="button" class="nav-arrow" id="ovPrevBtn" title="Vorige periode" disabled>&#9664;</button>
+          <span class="nav-label" id="ovRangeLabel" style="cursor:pointer;" title="Klik om periode en weergave te kiezen">-</span>
+          <button type="button" class="nav-arrow" id="ovNextBtn" title="Volgende periode" disabled>&#9654;</button>
         </div>
-        <span class="nav-label" id="ovRangeLabel">-</span>
-        <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="ovNextBtn" title="Stap vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="ovNextPageBtn" title="Volgende periode" disabled>&#9654;&#9654;</button>
+        <button type="button" class="period-filter-chip-btn" id="ovPeriodBadge" title="Klik om periode-opties te tonen">
+          <span id="ovPeriodBadgeText">12 mnd · Per Maand</span>
+          <span class="chevron">▼</span>
+        </button>
+      </div>
+      <div class="period-options-drawer" id="ovOptionsDrawer">
+        <div class="m3-btn-group-row">
+          <span class="m3-btn-group-lbl">Periode</span>
+          <div class="m3-segmented-group" id="ovRangeChips" role="group" aria-label="Periode">
+            <button type="button" class="m3-seg-btn active" data-range="12m">Afgelopen 12 mnd</button>
+            <button type="button" class="m3-seg-btn" data-range="ytd">Dit jaar</button>
+            <button type="button" class="m3-seg-btn" data-range="all">Alles</button>
+          </div>
+        </div>
+        <div class="m3-btn-group-row">
+          <span class="m3-btn-group-lbl">Per</span>
+          <div class="m3-segmented-group" id="ovGranularityPills" role="group" aria-label="Per">
+            <button type="button" class="m3-seg-btn" data-gran="week">Week</button>
+            <button type="button" class="m3-seg-btn active" data-gran="month">Maand</button>
+            <button type="button" class="m3-seg-btn" data-gran="year">Jaar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1537,36 +1648,34 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <!-- ========================================================= -->
   <div id="tab-charts" class="panel">
     <!-- Centrale datumpicker (hergebruikt basiscomponent van Totaal + Per Week) -->
-    <div class="card" style="padding-bottom:10px;">
-      <h2>
-        <span>Training &amp; Voortgang</span>
-        <span class="badge" id="trPeriodBadge">2026 · Per Week</span>
-      </h2>
-      <div class="m3-filter-block">
-        <span class="m3-filter-row-lbl">Periode</span>
-        <md-chip-set class="m3-chip-row" id="trRangeChips">
-          <md-filter-chip label="2026" data-trrange="ytd" selected></md-filter-chip>
-          <md-filter-chip label="12 mnd" data-trrange="12m"></md-filter-chip>
-          <md-filter-chip label="3 mnd" data-trrange="3m"></md-filter-chip>
-          <md-filter-chip label="Alles" data-trrange="all"></md-filter-chip>
-        </md-chip-set>
-        <span class="m3-filter-row-lbl">Detailniveau</span>
-        <md-chip-set class="m3-chip-row" id="trGranularityPills">
-          <md-filter-chip label="Week" data-trgran="week" selected></md-filter-chip>
-          <md-filter-chip label="Maand" data-trgran="month"></md-filter-chip>
-          <md-filter-chip label="Kwartaal" data-trgran="quarter"></md-filter-chip>
-          <md-filter-chip label="Jaar" data-trgran="year"></md-filter-chip>
-        </md-chip-set>
-      </div>
-      <div class="period-nav" id="trNavBar">
-        <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="trPrevPageBtn" title="Vorige periode" disabled>&#9664;&#9664;</button>
-          <button type="button" class="nav-arrow" id="trPrevBtn" title="Stap terug">&#9664;</button>
+    <div class="card" style="padding:10px 12px;">
+      <div class="period-top-bar">
+        <div class="period-nav" id="trNavBar">
+          <button type="button" class="nav-arrow" id="trPrevBtn" title="Vorige periode" disabled>&#9664;</button>
+          <span class="nav-label" id="trRangeLabel" style="cursor:pointer;" title="Klik om periode en weergave te kiezen">-</span>
+          <button type="button" class="nav-arrow" id="trNextBtn" title="Volgende periode" disabled>&#9654;</button>
         </div>
-        <span class="nav-label" id="trRangeLabel">-</span>
-        <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="trNextBtn" title="Stap vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="trNextPageBtn" title="Volgende periode" disabled>&#9654;&#9654;</button>
+        <button type="button" class="period-filter-chip-btn" id="trPeriodBadge" title="Klik om periode-opties te tonen">
+          <span id="trPeriodBadgeText">12 mnd · Per Week</span>
+          <span class="chevron">▼</span>
+        </button>
+      </div>
+      <div class="period-options-drawer" id="trOptionsDrawer">
+        <div class="m3-btn-group-row">
+          <span class="m3-btn-group-lbl">Periode</span>
+          <div class="m3-segmented-group" id="trRangeChips" role="group" aria-label="Periode">
+            <button type="button" class="m3-seg-btn active" data-trrange="12m">Afgelopen 12 mnd</button>
+            <button type="button" class="m3-seg-btn" data-trrange="ytd">Dit jaar</button>
+            <button type="button" class="m3-seg-btn" data-trrange="all">Alles</button>
+          </div>
+        </div>
+        <div class="m3-btn-group-row">
+          <span class="m3-btn-group-lbl">Per</span>
+          <div class="m3-segmented-group" id="trGranularityPills" role="group" aria-label="Per">
+            <button type="button" class="m3-seg-btn active" data-trgran="week">Week</button>
+            <button type="button" class="m3-seg-btn" data-trgran="month">Maand</button>
+            <button type="button" class="m3-seg-btn" data-trgran="year">Jaar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1699,36 +1808,34 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
   <!-- TAB 5: LICHAAMSMETINGEN                                   -->
   <!-- ========================================================= -->
   <div id="tab-body" class="panel">
-    <div class="card" style="padding-bottom:10px;">
-      <h2>
-        <span>Metingen Periode</span>
-        <span class="badge" id="bodyPeriodBadge">Alles · Per Meting</span>
-      </h2>
-      <div class="m3-filter-block">
-        <span class="m3-filter-row-lbl">Periode</span>
-        <md-chip-set class="m3-chip-row" id="bodyPeriodPills">
-          <md-filter-chip label="2026" data-bperiod="ytd"></md-filter-chip>
-          <md-filter-chip label="12 mnd" data-bperiod="12m"></md-filter-chip>
-          <md-filter-chip label="6 mnd" data-bperiod="6m"></md-filter-chip>
-          <md-filter-chip label="Alles" data-bperiod="all" selected></md-filter-chip>
-        </md-chip-set>
-        <span class="m3-filter-row-lbl">Detailniveau</span>
-        <md-chip-set class="m3-chip-row" id="bodyGranularityPills">
-          <md-filter-chip label="Per meting" data-bgran="raw" selected></md-filter-chip>
-          <md-filter-chip label="Maand" data-bgran="month"></md-filter-chip>
-          <md-filter-chip label="Kwartaal" data-bgran="quarter"></md-filter-chip>
-          <md-filter-chip label="Jaar" data-bgran="year"></md-filter-chip>
-        </md-chip-set>
-      </div>
-      <div class="period-nav" id="bodyPeriodNavBar">
-        <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="bodyPrevPagePeriodBtn" title="Vorige periode" disabled>&#9664;&#9664;</button>
-          <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="Stap terug" disabled>&#9664;</button>
+    <div class="card" style="padding:10px 12px;">
+      <div class="period-top-bar">
+        <div class="period-nav" id="bodyPeriodNavBar">
+          <button type="button" class="nav-arrow" id="bodyPrevPeriodBtn" title="Vorige periode" disabled>&#9664;</button>
+          <span class="nav-label" id="bodyPeriodLabel" style="cursor:pointer;" title="Klik om periode en weergave te kiezen">-</span>
+          <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="Volgende periode" disabled>&#9654;</button>
         </div>
-        <span class="nav-label" id="bodyPeriodLabel">-</span>
-        <div style="display:flex; gap:4px;">
-          <button type="button" class="nav-arrow" id="bodyNextPeriodBtn" title="Stap vooruit" disabled>&#9654;</button>
-          <button type="button" class="nav-arrow" id="bodyNextPagePeriodBtn" title="Volgende periode" disabled>&#9654;&#9654;</button>
+        <button type="button" class="period-filter-chip-btn" id="bodyPeriodBadge" title="Klik om periode-opties te tonen">
+          <span id="bodyPeriodBadgeText">12 mnd · Per Meting</span>
+          <span class="chevron">▼</span>
+        </button>
+      </div>
+      <div class="period-options-drawer" id="bodyOptionsDrawer">
+        <div class="m3-btn-group-row">
+          <span class="m3-btn-group-lbl">Periode</span>
+          <div class="m3-segmented-group" id="bodyPeriodPills" role="group" aria-label="Periode">
+            <button type="button" class="m3-seg-btn active" data-bperiod="12m">Afgelopen 12 mnd</button>
+            <button type="button" class="m3-seg-btn" data-bperiod="ytd">Dit jaar</button>
+            <button type="button" class="m3-seg-btn" data-bperiod="all">Alles</button>
+          </div>
+        </div>
+        <div class="m3-btn-group-row">
+          <span class="m3-btn-group-lbl">Per</span>
+          <div class="m3-segmented-group" id="bodyGranularityPills" role="group" aria-label="Per">
+            <button type="button" class="m3-seg-btn active" data-bgran="raw">Meting</button>
+            <button type="button" class="m3-seg-btn" data-bgran="month">Maand</button>
+            <button type="button" class="m3-seg-btn" data-bgran="year">Jaar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2144,17 +2251,17 @@ let state = {
   period: "1y",
   periodOffset: 0,
   inspectedPoint: null,
-  ovRange: "ytd",
+  ovRange: "12m",
   ovGranularity: "month",
   ovOffset: 0,
   ovStepCount: 1,
   ovMuscleMetric: "sets",
   ovSegRegion: "arms",
   bodyMainMode: "kg",
-  bodyPeriod: "all",
+  bodyPeriod: "12m",
   bodyGranularity: "raw",
   bodyPeriodOffset: 0,
-  trRange: "ytd",
+  trRange: "12m",
   trGranularity: "week",
   trOffset: 0,
   trActivityMetric: "minutes",
@@ -4339,16 +4446,16 @@ function computeSmartPeriodBounds(rangeKey, offset, earliestYmd, latestYmd) {
   }
 
   if (rangeKey === "ytd") {
-    const anchorYear = Number(safeLatest.slice(0, 4)) - step;
+    const currentYear = Number(TODAY_YMD.slice(0, 4));
+    const anchorYear = currentYear - step;
     const startYmd = `${anchorYear}-01-01`;
     const endYmd = step === 0 ? safeLatest : `${anchorYear}-12-31`;
     const earliestYear = Number(safeEarliest.slice(0, 4));
-    const latestYear = Number(safeLatest.slice(0, 4));
     return {
       startYmd,
       endYmd,
       hasOlder: anchorYear > earliestYear,
-      hasNewer: anchorYear < latestYear,
+      hasNewer: step > 0,
       stepCount: 1
     };
   }
@@ -4518,24 +4625,21 @@ function renderOverviewDashboard(sets) {
   const rangeKey = state.ovRange || "ytd";
   const hasCsv = hasStrengthCsvData();
 
-  const rangeLabelsMap = { ytd: "2026", "12m": "12 mnd", "6m": "6 mnd", all: "Alles" };
   const granLabelsMap = { week: "Per Week", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
-  const ovBadge = document.getElementById("ovPeriodBadge");
-  if (ovBadge) {
-    const activeYr = rangeKey === "ytd" ? (new Date().getFullYear() - (state.ovOffset || 0)) : null;
-    const rTxt = rangeKey === "ytd" ? String(activeYr) : (rangeLabelsMap[rangeKey] || "2026");
-    ovBadge.textContent = `${rTxt} · ${granLabelsMap[gran] || "Per Maand"}`;
+  const ovBadgeTxt = document.getElementById("ovPeriodBadgeText");
+  if (ovBadgeTxt) {
+    const activeYr = new Date().getFullYear() - (state.ovOffset || 0);
+    const rTxt = rangeKey === "ytd"
+      ? ((state.ovOffset || 0) === 0 ? "Huidig jaar" : String(activeYr))
+      : (rangeKey === "all" ? "Alles" : "12 mnd");
+    ovBadgeTxt.textContent = `${rTxt} · ${granLabelsMap[gran] || "Per Maand"}`;
   }
 
-  document.querySelectorAll("#ovRangeChips md-filter-chip").forEach(c => {
-    const isSel = c.getAttribute("data-range") === rangeKey;
-    c.selected = isSel;
-    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  document.querySelectorAll("#ovRangeChips .m3-seg-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-range") === rangeKey);
   });
-  document.querySelectorAll("#ovGranularityPills md-filter-chip").forEach(c => {
-    const isSel = c.getAttribute("data-gran") === gran;
-    c.selected = isSel;
-    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  document.querySelectorAll("#ovGranularityPills .m3-seg-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-gran") === gran);
   });
 
   const volCard = document.getElementById("ovKpiVolCard");
@@ -4632,9 +4736,7 @@ function renderOverviewDashboard(sets) {
   const allKeys = [...new Set([...Object.keys(bucketMap), ...visibleKeys])].sort();
 
   document.getElementById("ovPrevBtn").disabled = !bounds.hasOlder;
-  document.getElementById("ovPrevPageBtn").disabled = !bounds.hasOlder;
   document.getElementById("ovNextBtn").disabled = !bounds.hasNewer;
-  document.getElementById("ovNextPageBtn").disabled = !bounds.hasNewer;
   document.getElementById("ovRangeLabel").textContent = allDatesPool.length > 0
     ? `${formatShortNL(bounds.startYmd)} – ${formatShortNL(bounds.endYmd)}`
     : "Geen data";
@@ -4913,50 +5015,41 @@ function renderBodyMeasurementsTab() {
   const clearBodyBtn = document.getElementById("btnClearBodyData");
   if (clearBodyBtn) clearBodyBtn.style.display = fullList.length > 0 ? "inline-block" : "none";
 
-  const bRange = state.bodyPeriod || "all";
+  const bRange = state.bodyPeriod || "12m";
   const bGran = state.bodyGranularity || "raw";
-  const rangeNames = { ytd: "2026", "12m": "12 mnd", "6m": "6 mnd", all: "Alles" };
   const granNames = { raw: "Per Meting", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
 
-  document.querySelectorAll("#bodyPeriodPills md-filter-chip").forEach(c => {
-    const isSel = c.getAttribute("data-bperiod") === bRange;
-    c.selected = isSel;
-    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  document.querySelectorAll("#bodyPeriodPills .m3-seg-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-bperiod") === bRange);
   });
-  document.querySelectorAll("#bodyGranularityPills md-filter-chip").forEach(c => {
-    const isSel = c.getAttribute("data-bgran") === bGran;
-    c.selected = isSel;
-    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  document.querySelectorAll("#bodyGranularityPills .m3-seg-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-bgran") === bGran);
   });
 
-  const badgeEl = document.getElementById("bodyPeriodBadge");
-  if (badgeEl) {
-    const activeYr = bRange === "ytd" ? (new Date().getFullYear() - (state.bodyPeriodOffset || 0)) : null;
-    const rTxt = bRange === "ytd" ? String(activeYr) : (rangeNames[bRange] || "Alles");
-    badgeEl.textContent = `${rTxt} · ${granNames[bGran] || "Per Meting"}`;
+  const badgeTxtEl = document.getElementById("bodyPeriodBadgeText");
+  if (badgeTxtEl) {
+    const activeYr = new Date().getFullYear() - (state.bodyPeriodOffset || 0);
+    const rTxt = bRange === "ytd"
+      ? ((state.bodyPeriodOffset || 0) === 0 ? "Huidig jaar" : String(activeYr))
+      : (bRange === "all" ? "Alles" : "12 mnd");
+    badgeTxtEl.textContent = `${rTxt} · ${granNames[bGran] || "Per Meting"}`;
   }
 
   let filteredList = fullList;
   const lbl = document.getElementById("bodyPeriodLabel");
   const prevB = document.getElementById("bodyPrevPeriodBtn");
-  const prevPageB = document.getElementById("bodyPrevPagePeriodBtn");
   const nextB = document.getElementById("bodyNextPeriodBtn");
-  const nextPageB = document.getElementById("bodyNextPagePeriodBtn");
 
   if (fullList.length > 0) {
     const range = getBodyPeriodRange(fullList.map(m => m.date));
     filteredList = fullList.filter(m => m.date >= range.startStr && m.date <= range.endStr);
     if (lbl) lbl.textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
     if (prevB) prevB.disabled = !range.hasOlder;
-    if (prevPageB) prevPageB.disabled = !range.hasOlder;
     if (nextB) nextB.disabled = !range.hasNewer;
-    if (nextPageB) nextPageB.disabled = !range.hasNewer;
   } else {
     if (lbl) lbl.textContent = "Geen data";
     if (prevB) prevB.disabled = true;
-    if (prevPageB) prevPageB.disabled = true;
     if (nextB) nextB.disabled = true;
-    if (nextPageB) nextPageB.disabled = true;
   }
 
   const list = aggregateBodyMeasurementsByGranularity(filteredList, bGran);
@@ -5329,24 +5422,21 @@ function renderTrainingProgressSection(sets) {
   const metric = metricSel ? metricSel.value : (state.trActivityMetric || "minutes");
   state.trActivityMetric = metric;
 
-  const trRangeNames = { ytd: "2026", "12m": "12 mnd", "3m": "3 mnd", all: "Alles" };
   const granBadgeNames = { week: "Per Week", month: "Per Maand", quarter: "Per Kwartaal", year: "Per Jaar" };
-  const badgeEl = document.getElementById("trPeriodBadge");
-  if (badgeEl) {
-    const activeYr = trRange === "ytd" ? (new Date().getFullYear() - (state.trOffset || 0)) : null;
-    const rTxt = trRange === "ytd" ? String(activeYr) : (trRangeNames[trRange] || "2026");
-    badgeEl.textContent = `${rTxt} · ${granBadgeNames[gran] || "Per Week"}`;
+  const badgeTxtEl = document.getElementById("trPeriodBadgeText");
+  if (badgeTxtEl) {
+    const activeYr = new Date().getFullYear() - (state.trOffset || 0);
+    const rTxt = trRange === "ytd"
+      ? ((state.trOffset || 0) === 0 ? "Huidig jaar" : String(activeYr))
+      : (trRange === "all" ? "Alles" : "12 mnd");
+    badgeTxtEl.textContent = `${rTxt} · ${granBadgeNames[gran] || "Per Week"}`;
   }
 
-  document.querySelectorAll("#trRangeChips md-filter-chip").forEach(c => {
-    const isSel = c.getAttribute("data-trrange") === trRange;
-    c.selected = isSel;
-    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  document.querySelectorAll("#trRangeChips .m3-seg-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-trrange") === trRange);
   });
-  document.querySelectorAll("#trGranularityPills md-filter-chip").forEach(c => {
-    const isSel = c.getAttribute("data-trgran") === gran;
-    c.selected = isSel;
-    if (isSel) c.setAttribute("selected", ""); else c.removeAttribute("selected");
+  document.querySelectorAll("#trGranularityPills .m3-seg-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-trgran") === gran);
   });
 
   const buckets = {};
@@ -5370,14 +5460,10 @@ function renderTrainingProgressSection(sets) {
   state.trVisibleLabels = win.labels;
 
   const trPrevBtn = document.getElementById("trPrevBtn");
-  const trPrevPageBtn = document.getElementById("trPrevPageBtn");
   const trNextBtn = document.getElementById("trNextBtn");
-  const trNextPageBtn = document.getElementById("trNextPageBtn");
   const trRangeLbl = document.getElementById("trRangeLabel");
   if (trPrevBtn) trPrevBtn.disabled = !win.hasOlder;
-  if (trPrevPageBtn) trPrevPageBtn.disabled = !win.hasOlder;
   if (trNextBtn) trNextBtn.disabled = !win.hasNewer;
-  if (trNextPageBtn) trNextPageBtn.disabled = !win.hasNewer;
   if (trRangeLbl) {
     trRangeLbl.textContent = allActivities.length > 0 ? `${formatShortNL(win.startYmd)} – ${formatShortNL(win.endYmd)}` : "Geen data";
   }
@@ -5907,43 +5993,51 @@ function bindEvents() {
     switchTab("profile");
   });
 
-  // Helper voor single-select Material 3 filter chips
-  function bindSingleSelectChipSet(containerId, attrName, onSelect) {
+  // Helper voor Material 3 Segmented Button Groups & geanimeerde uitklap-drawer
+  function bindSegmentedButtonGroup(containerId, attrName, onSelect) {
     const el = document.getElementById(containerId);
     if (!el) return;
-    const handlePick = e => {
-      const chip = e.target.closest("md-filter-chip");
-      if (!chip) return;
-      e.preventDefault();
-      const val = chip.getAttribute(attrName);
+    el.addEventListener("click", e => {
+      const btn = e.target.closest(".m3-seg-btn");
+      if (!btn) return;
+      const val = btn.getAttribute(attrName);
       if (!val) return;
-      el.querySelectorAll("md-filter-chip").forEach(c => {
-        const active = c === chip;
-        c.selected = active;
-        if (active) c.setAttribute("selected", ""); else c.removeAttribute("selected");
-      });
+      el.querySelectorAll(".m3-seg-btn").forEach(b => b.classList.toggle("active", b === btn));
       onSelect(val);
-    };
-    el.addEventListener("click", handlePick);
-    el.addEventListener("selected", handlePick);
+    });
   }
 
-  // Overview events (Material 3 filter chips + slimme periode/detailniveau)
-  bindSingleSelectChipSet("ovRangeChips", "data-range", newRange => {
+  function bindPeriodDrawerToggle(badgeBtnId, labelId, drawerId) {
+    const btn = document.getElementById(badgeBtnId);
+    const lbl = document.getElementById(labelId);
+    const drawer = document.getElementById(drawerId);
+    if (!btn || !drawer) return;
+    const toggle = () => {
+      const isOpen = drawer.classList.toggle("open");
+      btn.classList.toggle("open", isOpen);
+    };
+    btn.addEventListener("click", toggle);
+    if (lbl) lbl.addEventListener("click", toggle);
+  }
+
+  bindPeriodDrawerToggle("ovPeriodBadge", "ovRangeLabel", "ovOptionsDrawer");
+  bindPeriodDrawerToggle("trPeriodBadge", "trRangeLabel", "trOptionsDrawer");
+  bindPeriodDrawerToggle("bodyPeriodBadge", "bodyPeriodLabel", "bodyOptionsDrawer");
+
+  // Overview events (Material 3 Button Groups + enkele pijlnavigatie per periode)
+  bindSegmentedButtonGroup("ovRangeChips", "data-range", newRange => {
     state.ovRange = newRange;
     state.ovOffset = 0;
-    if (newRange === "all" && state.ovGranularity === "week") state.ovGranularity = "quarter";
-    if ((newRange === "ytd" || newRange === "12m" || newRange === "6m") && state.ovGranularity === "year") state.ovGranularity = "month";
+    if (newRange === "all" && state.ovGranularity === "week") state.ovGranularity = "month";
+    if ((newRange === "ytd" || newRange === "12m") && state.ovGranularity === "year") state.ovGranularity = "month";
     renderOverviewDashboard(getCombinedSets());
   });
-  bindSingleSelectChipSet("ovGranularityPills", "data-gran", newGran => {
+  bindSegmentedButtonGroup("ovGranularityPills", "data-gran", newGran => {
     state.ovGranularity = newGran;
     renderOverviewDashboard(getCombinedSets());
   });
   document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovPrevPageBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovNextBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovNextPageBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovSegMetricPills").addEventListener("click", e => {
@@ -6155,15 +6249,15 @@ function bindEvents() {
     if (hasStrengthCsvData()) renderExerciseChart();
   }
 
-  bindSingleSelectChipSet("trRangeChips", "data-trrange", newRange => {
+  bindSegmentedButtonGroup("trRangeChips", "data-trrange", newRange => {
     state.trRange = newRange;
     state.trOffset = 0;
     if (newRange === "all" && state.trGranularity === "week") state.trGranularity = "month";
-    if ((newRange === "ytd" || newRange === "12m" || newRange === "3m") && state.trGranularity === "year") state.trGranularity = "week";
+    if ((newRange === "ytd" || newRange === "12m") && state.trGranularity === "year") state.trGranularity = "week";
     refreshTrainingTabAll();
   });
 
-  bindSingleSelectChipSet("trGranularityPills", "data-trgran", newGran => {
+  bindSegmentedButtonGroup("trGranularityPills", "data-trgran", newGran => {
     state.trGranularity = newGran;
     refreshTrainingTabAll();
   });
@@ -6173,17 +6267,7 @@ function bindEvents() {
     refreshTrainingTabAll();
   });
 
-  document.getElementById("trPrevPageBtn").addEventListener("click", () => {
-    state.trOffset = (state.trOffset || 0) + 1;
-    refreshTrainingTabAll();
-  });
-
   document.getElementById("trNextBtn").addEventListener("click", () => {
-    state.trOffset = Math.max(0, (state.trOffset || 0) - 1);
-    refreshTrainingTabAll();
-  });
-
-  document.getElementById("trNextPageBtn").addEventListener("click", () => {
     state.trOffset = Math.max(0, (state.trOffset || 0) - 1);
     refreshTrainingTabAll();
   });
@@ -7515,15 +7599,15 @@ function bindEvents() {
     document.querySelectorAll("#bodyMainModePills .pill").forEach(p => p.classList.remove("active"));
     pill.classList.add("active"); renderBodyMeasurementsTab();
   });
-  bindSingleSelectChipSet("bodyPeriodPills", "data-bperiod", newRange => {
+  bindSegmentedButtonGroup("bodyPeriodPills", "data-bperiod", newRange => {
     state.bodyPeriod = newRange;
     state.bodyPeriodOffset = 0;
-    if ((newRange === "ytd" || newRange === "12m" || newRange === "6m") && state.bodyGranularity === "year") {
+    if ((newRange === "ytd" || newRange === "12m") && state.bodyGranularity === "year") {
       state.bodyGranularity = "raw";
     }
     renderBodyMeasurementsTab();
   });
-  bindSingleSelectChipSet("bodyGranularityPills", "data-bgran", newGran => {
+  bindSegmentedButtonGroup("bodyGranularityPills", "data-bgran", newGran => {
     state.bodyGranularity = newGran;
     renderBodyMeasurementsTab();
   });
@@ -7531,15 +7615,7 @@ function bindEvents() {
     state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 1;
     renderBodyMeasurementsTab();
   });
-  document.getElementById("bodyPrevPagePeriodBtn").addEventListener("click", () => {
-    state.bodyPeriodOffset = (state.bodyPeriodOffset || 0) + 1;
-    renderBodyMeasurementsTab();
-  });
   document.getElementById("bodyNextPeriodBtn").addEventListener("click", () => {
-    state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 1);
-    renderBodyMeasurementsTab();
-  });
-  document.getElementById("bodyNextPagePeriodBtn").addEventListener("click", () => {
     state.bodyPeriodOffset = Math.max(0, (state.bodyPeriodOffset || 0) - 1);
     renderBodyMeasurementsTab();
   });
