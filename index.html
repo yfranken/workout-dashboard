@@ -138,15 +138,27 @@
     .m3-cycle-tile:active {
       transform: scale(0.98);
     }
-    .m3-cycle-hint {
-      display: inline-flex;
+    .m3-cycle-tile {
+      touch-action: pan-y;
+    }
+    .m3-dots-row {
+      display: flex;
       align-items: center;
-      gap: 3px;
-      font-size: 0.64rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-top: 4px;
-      opacity: 0.9;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 8px;
+      min-height: 8px;
+    }
+    .m3-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.35);
+      transition: background 0.16s ease, transform 0.16s ease;
+    }
+    .m3-dot.active {
+      background: var(--accent);
+      transform: scale(1.2);
     }
     .delta-pos { color: #10b981; }
     .delta-neg { color: #f43f5e; }
@@ -1056,20 +1068,20 @@
     </div>
 
     <div class="kpi-grid-3" id="ovKpiGrid">
-      <div class="kpi m3-cycle-tile" id="ovKpiTile1" title="Klik om stat te wisselen">
+      <div class="kpi m3-cycle-tile" id="ovKpiTile1" title="Swipe of klik om stat te wisselen">
         <div class="kpi-label" id="ovKpiLabel1">Sessies</div>
-        <div class="kpi-val" id="ovKpiVal1">0×</div>
-        <div class="m3-cycle-hint" id="ovKpiHint1">↻ Tijd</div>
+        <div class="kpi-val" id="ovKpiVal1">0</div>
+        <div class="m3-dots-row" id="ovKpiDots1"></div>
       </div>
-      <div class="kpi m3-cycle-tile" id="ovKpiTile2" title="Klik om stat te wisselen">
+      <div class="kpi m3-cycle-tile" id="ovKpiTile2" title="Swipe of klik om stat te wisselen">
         <div class="kpi-label" id="ovKpiLabel2">Volume</div>
-        <div class="kpi-val" id="ovKpiVal2">0 t</div>
-        <div class="m3-cycle-hint" id="ovKpiHint2">↻ Sets</div>
+        <div class="kpi-val" id="ovKpiVal2">0 ton</div>
+        <div class="m3-dots-row" id="ovKpiDots2"></div>
       </div>
-      <div class="kpi m3-cycle-tile" id="ovKpiTile3" title="Klik om stat te wisselen">
+      <div class="kpi m3-cycle-tile" id="ovKpiTile3" title="Swipe of klik om stat te wisselen">
         <div class="kpi-label" id="ovKpiLabel3">Spier / Vet</div>
         <div class="kpi-val" id="ovKpiVal3">-</div>
-        <div class="m3-cycle-hint" id="ovKpiHint3">↻ Wissel</div>
+        <div class="m3-dots-row" id="ovKpiDots3"></div>
       </div>
     </div>
 
@@ -1629,15 +1641,15 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <div class="kpi-grid">
-      <div class="kpi m3-cycle-tile" id="trKpiTile1" title="Klik om stat te wisselen">
+      <div class="kpi m3-cycle-tile" id="trKpiTile1" title="Swipe of klik om stat te wisselen">
         <div class="kpi-label" id="trKpiLabel1">Uitgevoerde Sessies</div>
         <div class="kpi-val" id="trKpiVal1">0</div>
-        <div class="m3-cycle-hint" id="trKpiHint1">↻ Tijd</div>
+        <div class="m3-dots-row" id="trKpiDots1"></div>
       </div>
-      <div class="kpi m3-cycle-tile" id="trKpiTile2" title="Klik om stat te wisselen">
+      <div class="kpi m3-cycle-tile" id="trKpiTile2" title="Swipe of klik om stat te wisselen">
         <div class="kpi-label" id="trKpiLabel2">Actieve Tijd</div>
         <div class="kpi-val" id="trKpiVal2">0 min</div>
-        <div class="m3-cycle-hint" id="trKpiHint2">↻ Kcal</div>
+        <div class="m3-dots-row" id="trKpiDots2"></div>
       </div>
     </div>
 
@@ -4580,9 +4592,135 @@ function buildInterpolatedSeries(visibleKeys, gran, getValForKey, allKnownKeys) 
   return { values, isEstimated };
 }
 
+function renderDotsHtml(count, activeIdx) {
+  if (!count || count <= 1) return "";
+  const safeIdx = ((activeIdx % count) + count) % count;
+  let out = "";
+  for (let i = 0; i < count; i++) {
+    out += `<span class="m3-dot ${i === safeIdx ? "active" : ""}"></span>`;
+  }
+  return out;
+}
+
+function getOverviewTileConfigs() {
+  const cached = state._ovTileCache || {
+    totalSessions: 0, totalMinutes: 0, weeksApprox: 1,
+    totalVolKg: 0, totalSets: 0, totalReps: 0,
+    hasCsv: hasStrengthCsvData(), bodyOpts: []
+  };
+  const t1Opts = [
+    { label: "Sessies", val: `${cached.totalSessions}` },
+    { label: "Trainingstijd", val: `${Math.round(cached.totalMinutes / 60)}` },
+    { label: "Per week", val: `${cached.weeksApprox > 0 ? (cached.totalSessions / cached.weeksApprox).toFixed(1) : "0"}` }
+  ];
+  const t2Opts = [
+    { label: "Volume", val: `${(cached.totalVolKg / 1000).toFixed(1)} ton` },
+    { label: "Sets", val: `${cached.totalSets}` },
+    { label: "Herhalingen", val: `${cached.totalReps.toLocaleString("nl-NL")}` }
+  ];
+  const t3Opts = (cached.bodyOpts && cached.bodyOpts.length > 0)
+    ? cached.bodyOpts
+    : [{ label: cached.hasCsv ? "Spier / Vet" : "Gewicht", val: "-" }];
+  return { t1Opts, t2Opts, t3Opts };
+}
+
+function updateOverviewTilesOnly() {
+  const { t1Opts, t2Opts, t3Opts } = getOverviewTileConfigs();
+  const idx1 = ((state.ovTileIdx1 || 0) % t1Opts.length + t1Opts.length) % t1Opts.length;
+  const idx2 = ((state.ovTileIdx2 || 0) % t2Opts.length + t2Opts.length) % t2Opts.length;
+  const idx3 = ((state.ovTileIdx3 || 0) % t3Opts.length + t3Opts.length) % t3Opts.length;
+
+  const l1 = document.getElementById("ovKpiLabel1");
+  const v1 = document.getElementById("ovKpiVal1");
+  const d1 = document.getElementById("ovKpiDots1");
+  if (l1 && v1) { l1.textContent = t1Opts[idx1].label; v1.textContent = t1Opts[idx1].val; }
+  if (d1) d1.innerHTML = renderDotsHtml(t1Opts.length, idx1);
+
+  const l2 = document.getElementById("ovKpiLabel2");
+  const v2 = document.getElementById("ovKpiVal2");
+  const d2 = document.getElementById("ovKpiDots2");
+  if (l2 && v2) { l2.textContent = t2Opts[idx2].label; v2.textContent = t2Opts[idx2].val; }
+  if (d2) d2.innerHTML = renderDotsHtml(t2Opts.length, idx2);
+
+  const l3 = document.getElementById("ovKpiLabel3");
+  const v3 = document.getElementById("ovKpiVal3");
+  const d3 = document.getElementById("ovKpiDots3");
+  if (l3 && v3) { l3.textContent = t3Opts[idx3].label; v3.innerHTML = t3Opts[idx3].val; }
+  if (d3) d3.innerHTML = renderDotsHtml(t3Opts.length, idx3);
+}
+
+function getTrainingTileConfigs() {
+  const cached = state._trTileCache || {
+    hasCsv: hasStrengthCsvData(), totalSessions: 0, totalMins: 0,
+    totalVolTons: 0, setsCount: 0, totalBurned: 0
+  };
+  const t1Opts = cached.hasCsv
+    ? [
+        { label: "Uitgevoerde Sessies", val: `${cached.totalSessions}` },
+        { label: "Actieve Tijd", val: `${cached.totalMins} min` }
+      ]
+    : [
+        { label: "Uitgevoerde Sessies", val: `${cached.totalSessions}` },
+        { label: "Trainingstijd", val: `${Math.round(cached.totalMins / 60)}` }
+      ];
+  const t2Opts = cached.hasCsv
+    ? [
+        { label: "Totaal Volume", val: `${cached.totalVolTons.toFixed(1)} ton` },
+        { label: "Sets", val: `${cached.setsCount}` },
+        { label: "Verbrande Kcal", val: `~${cached.totalBurned.toLocaleString("nl-NL")} kcal` }
+      ]
+    : [
+        { label: "Actieve Tijd", val: `${cached.totalMins} min` },
+        { label: "Verbrande Kcal", val: `~${cached.totalBurned.toLocaleString("nl-NL")} kcal` }
+      ];
+  return { t1Opts, t2Opts };
+}
+
+function updateTrainingTilesOnly() {
+  const { t1Opts, t2Opts } = getTrainingTileConfigs();
+  const idx1 = ((state.trTileIdx1 || 0) % t1Opts.length + t1Opts.length) % t1Opts.length;
+  const idx2 = ((state.trTileIdx2 || 0) % t2Opts.length + t2Opts.length) % t2Opts.length;
+
+  const l1 = document.getElementById("trKpiLabel1");
+  const v1 = document.getElementById("trKpiVal1");
+  const d1 = document.getElementById("trKpiDots1");
+  if (l1 && v1) { l1.textContent = t1Opts[idx1].label; v1.textContent = t1Opts[idx1].val; }
+  if (d1) d1.innerHTML = renderDotsHtml(t1Opts.length, idx1);
+
+  const l2 = document.getElementById("trKpiLabel2");
+  const v2 = document.getElementById("trKpiVal2");
+  const d2 = document.getElementById("trKpiDots2");
+  if (l2 && v2) { l2.textContent = t2Opts[idx2].label; v2.textContent = t2Opts[idx2].val; }
+  if (d2) d2.innerHTML = renderDotsHtml(t2Opts.length, idx2);
+}
+
+function applyGranularityVisibilityForRange(granGroupId, attrName, currentGran, rangeKey) {
+  const allowedByRange = {
+    "12m": ["week", "month"],
+    "ytd": ["week", "month"],
+    "all": ["month", "year"]
+  };
+  const allowed = allowedByRange[rangeKey] || ["week", "month"];
+  let effectiveGran = currentGran;
+  if (!allowed.includes(effectiveGran)) {
+    effectiveGran = allowed[0];
+  }
+  const grp = document.getElementById(granGroupId);
+  if (grp) {
+    grp.querySelectorAll(".m3-seg-btn").forEach(btn => {
+      const gVal = btn.getAttribute(attrName);
+      const isAllowed = allowed.includes(gVal);
+      btn.style.display = isAllowed ? "inline-flex" : "none";
+      btn.classList.toggle("active", isAllowed && gVal === effectiveGran);
+    });
+  }
+  return effectiveGran;
+}
+
 function renderOverviewDashboard(sets) {
-  const gran = state.ovGranularity || "month";
-  const rangeKey = state.ovRange || "ytd";
+  const rangeKey = state.ovRange || "12m";
+  const gran = applyGranularityVisibilityForRange("ovGranularityPills", "data-gran", state.ovGranularity || "month", rangeKey);
+  state.ovGranularity = gran;
   const hasCsv = hasStrengthCsvData();
 
   const ovYtdBtn = document.getElementById("ovYtdBtn");
@@ -4594,9 +4732,6 @@ function renderOverviewDashboard(sets) {
 
   document.querySelectorAll("#ovRangeChips .m3-seg-btn").forEach(b => {
     b.classList.toggle("active", b.getAttribute("data-range") === rangeKey);
-  });
-  document.querySelectorAll("#ovGranularityPills .m3-seg-btn").forEach(b => {
-    b.classList.toggle("active", b.getAttribute("data-gran") === gran);
   });
 
   const volCard = document.getElementById("ovKpiTile2");
@@ -4713,64 +4848,41 @@ function renderOverviewDashboard(sets) {
   const spanDays = Math.max(7, Math.round((new Date(bounds.endYmd + "T12:00:00") - new Date(bounds.startYmd + "T12:00:00")) / 86400000) + 1);
   const weeksApprox = spanDays / 7;
 
-  const t1Opts = [
-    { label: "Sessies", val: `${totalSessions}×`, nextLabel: "Tijd" },
-    { label: "Trainingsuren", val: `${Math.round(totalMinutes / 60)} uur`, nextLabel: "Per week" },
-    { label: "Per week", val: `${weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0"}/wk`, nextLabel: "Sessies" }
-  ];
-  const t1Cur = t1Opts[(state.ovTileIdx1 || 0) % t1Opts.length];
-  const t1Next = t1Opts[((state.ovTileIdx1 || 0) + 1) % t1Opts.length];
-  document.getElementById("ovKpiLabel1").textContent = t1Cur.label;
-  document.getElementById("ovKpiVal1").textContent = t1Cur.val;
-  document.getElementById("ovKpiHint1").textContent = `↻ ${t1Next.label}`;
-
-  const t2Opts = [
-    { label: "Volume", val: `${(totalVolKg / 1000).toFixed(1)} t`, nextLabel: "Sets" },
-    { label: "Sets", val: `${totalSets} sets`, nextLabel: "Reps" },
-    { label: "Herhalingen", val: `${totalReps.toLocaleString("nl-NL")} reps`, nextLabel: "Volume" }
-  ];
-  const t2Cur = t2Opts[(state.ovTileIdx2 || 0) % t2Opts.length];
-  const t2Next = t2Opts[((state.ovTileIdx2 || 0) + 1) % t2Opts.length];
-  document.getElementById("ovKpiLabel2").textContent = t2Cur.label;
-  document.getElementById("ovKpiVal2").textContent = t2Cur.val;
-  document.getElementById("ovKpiHint2").textContent = `↻ ${t2Next.label}`;
-
   visibleBody.sort((a, b) => a.date.localeCompare(b.date));
-  const t3Opts = [];
+  const bodyOpts = [];
   if (visibleBody.length >= 2) {
     const first = visibleBody[0], last = visibleBody[visibleBody.length - 1];
     const dSmm = (last.smm && first.smm) ? (last.smm - first.smm) : null;
     const dFat = (last.fatMass && first.fatMass) ? (last.fatMass - first.fatMass) : null;
     const dWeight = (last.weight && first.weight) ? (last.weight - first.weight) : null;
     if (dSmm !== null) {
-      t3Opts.push({
+      bodyOpts.push({
         label: "Spiermassa",
         val: `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`
       });
     }
     if (dFat !== null) {
-      t3Opts.push({
+      bodyOpts.push({
         label: "Vetmassa",
         val: `<span class="${dFat <= 0 ? "delta-pos" : "delta-neg"}">${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg</span>`
       });
     }
     if (dWeight !== null) {
-      t3Opts.push({
+      bodyOpts.push({
         label: "Gewicht",
         val: `<span style="color:var(--accent);">${dWeight >= 0 ? "+" : ""}${dWeight.toFixed(1)} kg</span>`
       });
     }
   } else if (visibleBody.length === 1) {
-    t3Opts.push({ label: "Gewicht", val: `${visibleBody[0].weight} kg` });
+    bodyOpts.push({ label: "Gewicht", val: `${visibleBody[0].weight} kg` });
   }
-  if (t3Opts.length === 0) {
-    t3Opts.push({ label: hasCsv ? "Spier / Vet" : "Gewicht", val: "-" });
-  }
-  const t3Cur = t3Opts[(state.ovTileIdx3 || 0) % t3Opts.length];
-  const t3Next = t3Opts[((state.ovTileIdx3 || 0) + 1) % t3Opts.length];
-  document.getElementById("ovKpiLabel3").textContent = t3Cur.label;
-  document.getElementById("ovKpiVal3").innerHTML = t3Cur.val;
-  document.getElementById("ovKpiHint3").textContent = t3Opts.length > 1 ? `↻ ${t3Next.label}` : "Metingen";
+
+  state._ovTileCache = {
+    totalSessions, totalMinutes, weeksApprox,
+    totalVolKg, totalSets, totalReps,
+    hasCsv, bodyOpts
+  };
+  updateOverviewTilesOnly();
 
   const trainMetric = trainSel.value;
   const bodyMetric = bodySel.value;
@@ -5398,8 +5510,9 @@ function renderTrainingProgressSection(sets) {
   }
 
   // Centrale datumpicker van Training (gedeeld tussen KPI's, Training voortgang & Oefening Progressie)
-  const gran = state.trGranularity || "week";
-  const trRange = state.trRange || "ytd";
+  const trRange = state.trRange || "12m";
+  const gran = applyGranularityVisibilityForRange("trGranularityPills", "data-trgran", state.trGranularity || "week", trRange);
+  state.trGranularity = gran;
   const metricSel = document.getElementById("trActivityMetric");
   const metric = metricSel ? metricSel.value : (state.trActivityMetric || "minutes");
   state.trActivityMetric = metric;
@@ -5413,9 +5526,6 @@ function renderTrainingProgressSection(sets) {
 
   document.querySelectorAll("#trRangeChips .m3-seg-btn").forEach(b => {
     b.classList.toggle("active", b.getAttribute("data-trrange") === trRange);
-  });
-  document.querySelectorAll("#trGranularityPills .m3-seg-btn").forEach(b => {
-    b.classList.toggle("active", b.getAttribute("data-trgran") === gran);
   });
 
   const buckets = {};
@@ -5456,34 +5566,15 @@ function renderTrainingProgressSection(sets) {
   const totalBurned = periodActivities.reduce((a, b) => a + Number(b.burnedKcal || 0), 0);
   const totalVolTons = periodSets.reduce((sum, s) => sum + s.volume, 0) / 1000;
 
-  const trTile1Opts = hasCsv
-    ? [
-        { label: "Uitgevoerde Sessies", val: `${totalSessions}`, next: "Tijd" },
-        { label: "Actieve Tijd", val: `${totalMins} min`, next: "Sessies" }
-      ]
-    : [
-        { label: "Uitgevoerde Sessies", val: `${totalSessions}`, next: "Uren" },
-        { label: "Trainingsuren", val: `${Math.round(totalMins / 60)} uur`, next: "Sessies" }
-      ];
-  const tr1Cur = trTile1Opts[(state.trTileIdx1 || 0) % trTile1Opts.length];
-  document.getElementById("trKpiLabel1").textContent = tr1Cur.label;
-  document.getElementById("trKpiVal1").textContent = tr1Cur.val;
-  document.getElementById("trKpiHint1").textContent = `↻ ${tr1Cur.next}`;
-
-  const trTile2Opts = hasCsv
-    ? [
-        { label: "Totaal Volume", val: `${totalVolTons.toFixed(1)} t`, next: "Sets" },
-        { label: "Aantal Sets", val: `${periodSets.length} sets`, next: "Kcal" },
-        { label: "Verbrande Kcal", val: `~${totalBurned.toLocaleString("nl-NL")} kcal`, next: "Volume" }
-      ]
-    : [
-        { label: "Actieve Tijd", val: `${totalMins} min`, next: "Kcal" },
-        { label: "Verbrande Kcal", val: `~${totalBurned.toLocaleString("nl-NL")} kcal`, next: "Tijd" }
-      ];
-  const tr2Cur = trTile2Opts[(state.trTileIdx2 || 0) % trTile2Opts.length];
-  document.getElementById("trKpiLabel2").textContent = tr2Cur.label;
-  document.getElementById("trKpiVal2").textContent = tr2Cur.val;
-  document.getElementById("trKpiHint2").textContent = `↻ ${tr2Cur.next}`;
+  state._trTileCache = {
+    hasCsv,
+    totalSessions,
+    totalMins,
+    totalVolTons,
+    setsCount: periodSets.length,
+    totalBurned
+  };
+  updateTrainingTilesOnly();
 
   const sortedKeys = win.visibleKeys;
   const labels = win.labels;
@@ -6018,11 +6109,50 @@ function bindEvents() {
   });
   document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovNextBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovKpiTile1")?.addEventListener("click", () => { state.ovTileIdx1 = (state.ovTileIdx1 || 0) + 1; renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovKpiTile2")?.addEventListener("click", () => { state.ovTileIdx2 = (state.ovTileIdx2 || 0) + 1; renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("ovKpiTile3")?.addEventListener("click", () => { state.ovTileIdx3 = (state.ovTileIdx3 || 0) + 1; renderOverviewDashboard(getCombinedSets()); });
-  document.getElementById("trKpiTile1")?.addEventListener("click", () => { state.trTileIdx1 = (state.trTileIdx1 || 0) + 1; renderTrainingProgressSection(getCombinedSets()); });
-  document.getElementById("trKpiTile2")?.addEventListener("click", () => { state.trTileIdx2 = (state.trTileIdx2 || 0) + 1; renderTrainingProgressSection(getCombinedSets()); });
+  function bindSwipeOrTap(elId, onStep) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    let startX = 0;
+    let startY = 0;
+    let didSwipe = false;
+
+    el.addEventListener("touchstart", e => {
+      if (!e.touches || !e.touches.length) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      didSwipe = false;
+    }, { passive: true });
+
+    el.addEventListener("touchmove", e => {
+      if (!e.touches || !e.touches.length) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > 22 && Math.abs(dx) > Math.abs(dy)) {
+        didSwipe = true;
+      }
+    }, { passive: true });
+
+    el.addEventListener("touchend", e => {
+      if (!didSwipe) return;
+      const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
+      const dx = endX - startX;
+      if (Math.abs(dx) > 24) {
+        onStep(dx < 0 ? 1 : -1);
+      }
+      setTimeout(() => { didSwipe = false; }, 120);
+    });
+
+    el.addEventListener("click", () => {
+      if (didSwipe) return;
+      onStep(1);
+    });
+  }
+
+  bindSwipeOrTap("ovKpiTile1", d => { state.ovTileIdx1 = (state.ovTileIdx1 || 0) + d; updateOverviewTilesOnly(); });
+  bindSwipeOrTap("ovKpiTile2", d => { state.ovTileIdx2 = (state.ovTileIdx2 || 0) + d; updateOverviewTilesOnly(); });
+  bindSwipeOrTap("ovKpiTile3", d => { state.ovTileIdx3 = (state.ovTileIdx3 || 0) + d; updateOverviewTilesOnly(); });
+  bindSwipeOrTap("trKpiTile1", d => { state.trTileIdx1 = (state.trTileIdx1 || 0) + d; updateTrainingTilesOnly(); });
+  bindSwipeOrTap("trKpiTile2", d => { state.trTileIdx2 = (state.trTileIdx2 || 0) + d; updateTrainingTilesOnly(); });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovSegMetricPills").addEventListener("click", e => {
@@ -8191,6 +8321,15 @@ function bindEvents() {
   const loadedBody = await loadDataset("bodyMeasurements");
   state.bodyMeasurements = loadedBody.filter(m => m && m.date >= "2010-01-01" && m.weight >= 40);
 
+  // Direct tonen van lokale & opgeslagen data bij laden
+  const savedTab = localStorage.getItem("active_tab_v1") || "overview";
+  nextChartAnimation = false;
+  refreshAll();
+  if (savedTab && document.getElementById(`tab-${savedTab}`)) {
+    switchTab(savedTab);
+  }
+  nextChartAnimation = true;
+
   let hasActiveSession = false;
   if (initSupabaseClient()) {
     const { data } = await supaClient.auth.getSession();
@@ -8200,19 +8339,13 @@ function bindEvents() {
       updateAuthUI();
       nextChartAnimation = false;
       await pullFromCloud(false);
+      refreshAll();
+      if (savedTab && document.getElementById(`tab-${savedTab}`)) {
+        switchTab(savedTab);
+      }
+      nextChartAnimation = true;
+      setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
     }
-  }
-
-  nextChartAnimation = true;
-  refreshAll();
-  const savedTab = localStorage.getItem("active_tab_v1");
-  if (savedTab && document.getElementById(`tab-${savedTab}`)) {
-    nextChartAnimation = false;
-    switchTab(savedTab);
-    nextChartAnimation = true;
-  }
-  if (hasActiveSession) {
-    setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   }
 })();
 </script>
