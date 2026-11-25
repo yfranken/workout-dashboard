@@ -2109,6 +2109,21 @@ function formatShortNL(ymd) {
   return `${Number(d)} ${months[Number(m) - 1]} '${y.slice(2)}`;
 }
 
+function formatMonthYearNL(ymd) {
+  if (!ymd) return "";
+  const [y, m] = ymd.split("-");
+  const monthsFull = ["Januari", "Februari", "Maart", "April", "Mei", "Juni", "Juli", "Augustus", "September", "Oktober", "November", "December"];
+  return `${monthsFull[Number(m) - 1]} ${y}`;
+}
+
+function formatPeriodHeaderLabel(startYmd, endYmd, rangeKey, hasData = true) {
+  if (!hasData || !startYmd || !endYmd) return "Geen data";
+  if (rangeKey === "12m" || rangeKey === "ytd" || rangeKey === "all") {
+    return `${formatMonthYearNL(startYmd)} - ${formatMonthYearNL(endYmd)}`;
+  }
+  return `${formatShortNL(startYmd)} – ${formatShortNL(endYmd)}`;
+}
+
 // === STANDAARD DRANKEN & NEDERLANDSE VOEDINGS-DATABASE ===
 const DEFAULT_DRINKS = [
   { id: "cappuccino", name: "Cappuccino", cat: "warm", kcal100: 32, p100: 1.8, c100: 2.6, f100: 1.6, vols: [150, 200, 250], fixedVol: null },
@@ -2163,18 +2178,18 @@ let state = {
   period: "1y",
   periodOffset: 0,
   inspectedPoint: null,
-  ovRange: "12m",
-  ovGranularity: "month",
+  ovRange: safeParseJSON("pref_ov_range_v1", "12m"),
+  ovGranularity: safeParseJSON("pref_ov_gran_v1", "month"),
   ovOffset: 0,
   ovStepCount: 1,
   ovMuscleMetric: "sets",
   ovSegRegion: "arms",
   bodyMainMode: "kg",
-  bodyPeriod: "12m",
-  bodyGranularity: "raw",
+  bodyPeriod: safeParseJSON("pref_body_range_v1", "12m"),
+  bodyGranularity: safeParseJSON("pref_body_gran_v1", "raw"),
   bodyPeriodOffset: 0,
-  trRange: "12m",
-  trGranularity: "week",
+  trRange: safeParseJSON("pref_tr_range_v1", "12m"),
+  trGranularity: safeParseJSON("pref_tr_gran_v1", "week"),
   trOffset: 0,
   trActivityMetric: "minutes",
   trExerciseViewMode: "sessions",
@@ -4646,9 +4661,9 @@ function renderOverviewDashboard(sets) {
 
   document.getElementById("ovPrevBtn").disabled = !bounds.hasOlder;
   document.getElementById("ovNextBtn").disabled = !bounds.hasNewer;
-  document.getElementById("ovRangeLabel").textContent = allDatesPool.length > 0
-    ? `${formatShortNL(bounds.startYmd)} – ${formatShortNL(bounds.endYmd)}`
-    : "Geen data";
+  document.getElementById("ovRangeLabel").textContent = formatPeriodHeaderLabel(
+    bounds.startYmd, bounds.endYmd, rangeKey, allDatesPool.length > 0
+  );
 
   let totalSessions = 0, totalMinutes = 0, totalVolKg = 0, totalSets = 0, totalReps = 0;
   const visibleBody = [];
@@ -4950,7 +4965,7 @@ function renderBodyMeasurementsTab() {
   if (fullList.length > 0) {
     const range = getBodyPeriodRange(fullList.map(m => m.date));
     filteredList = fullList.filter(m => m.date >= range.startStr && m.date <= range.endStr);
-    if (lbl) lbl.textContent = `${formatShortNL(range.startStr)} – ${formatShortNL(range.endStr)}`;
+    if (lbl) lbl.textContent = formatPeriodHeaderLabel(range.startStr, range.endStr, bRange, true);
     if (prevB) prevB.disabled = !range.hasOlder;
     if (nextB) nextB.disabled = !range.hasNewer;
   } else {
@@ -5369,7 +5384,7 @@ function renderTrainingProgressSection(sets) {
   if (trPrevBtn) trPrevBtn.disabled = !win.hasOlder;
   if (trNextBtn) trNextBtn.disabled = !win.hasNewer;
   if (trRangeLbl) {
-    trRangeLbl.textContent = allActivities.length > 0 ? `${formatShortNL(win.startYmd)} – ${formatShortNL(win.endYmd)}` : "Geen data";
+    trRangeLbl.textContent = formatPeriodHeaderLabel(win.startYmd, win.endYmd, trRange, allActivities.length > 0);
   }
 
   // Filter KPI's op het geselecteerde centrale tijdsvenster
@@ -5919,10 +5934,15 @@ function bindEvents() {
     state.ovOffset = 0;
     if (newRange === "all" && state.ovGranularity === "week") state.ovGranularity = "month";
     if ((newRange === "ytd" || newRange === "12m") && state.ovGranularity === "year") state.ovGranularity = "month";
+    try {
+      localStorage.setItem("pref_ov_range_v1", JSON.stringify(state.ovRange));
+      localStorage.setItem("pref_ov_gran_v1", JSON.stringify(state.ovGranularity));
+    } catch (e) {}
     renderOverviewDashboard(getCombinedSets());
   });
   bindSegmentedButtonGroup("ovGranularityPills", "data-gran", newGran => {
     state.ovGranularity = newGran;
+    try { localStorage.setItem("pref_ov_gran_v1", JSON.stringify(state.ovGranularity)); } catch (e) {}
     renderOverviewDashboard(getCombinedSets());
   });
   document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
@@ -6143,11 +6163,16 @@ function bindEvents() {
     state.trOffset = 0;
     if (newRange === "all" && state.trGranularity === "week") state.trGranularity = "month";
     if ((newRange === "ytd" || newRange === "12m") && state.trGranularity === "year") state.trGranularity = "week";
+    try {
+      localStorage.setItem("pref_tr_range_v1", JSON.stringify(state.trRange));
+      localStorage.setItem("pref_tr_gran_v1", JSON.stringify(state.trGranularity));
+    } catch (e) {}
     refreshTrainingTabAll();
   });
 
   bindSegmentedButtonGroup("trGranularityPills", "data-trgran", newGran => {
     state.trGranularity = newGran;
+    try { localStorage.setItem("pref_tr_gran_v1", JSON.stringify(state.trGranularity)); } catch (e) {}
     refreshTrainingTabAll();
   });
 
@@ -7494,10 +7519,15 @@ function bindEvents() {
     if ((newRange === "ytd" || newRange === "12m") && state.bodyGranularity === "year") {
       state.bodyGranularity = "raw";
     }
+    try {
+      localStorage.setItem("pref_body_range_v1", JSON.stringify(state.bodyPeriod));
+      localStorage.setItem("pref_body_gran_v1", JSON.stringify(state.bodyGranularity));
+    } catch (e) {}
     renderBodyMeasurementsTab();
   });
   bindSegmentedButtonGroup("bodyGranularityPills", "data-bgran", newGran => {
     state.bodyGranularity = newGran;
+    try { localStorage.setItem("pref_body_gran_v1", JSON.stringify(state.bodyGranularity)); } catch (e) {}
     renderBodyMeasurementsTab();
   });
   document.getElementById("bodyPrevPeriodBtn").addEventListener("click", () => {
