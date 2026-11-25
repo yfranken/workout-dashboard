@@ -7,7 +7,7 @@
   <title>Leefstyl App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Momo+Signature&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Momo+Signature&family=Roboto:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0" rel="stylesheet" />
   <script type="importmap">
     {
@@ -46,7 +46,7 @@
       --danger: #ef4444;
       --star: #fbbf24;
     }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { box-sizing: border-box; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     body {
       margin: 0; padding: 14px; background: var(--bg); color: var(--text);
       padding-bottom: 90px;
@@ -114,12 +114,40 @@
       margin-bottom: 12px;
     }
     .kpi {
-      background: var(--card); border: 1px solid var(--card-border);
-      border-radius: 12px; padding: 10px;
+      background: linear-gradient(165deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.96) 100%);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 4px 14px rgba(2, 6, 23, 0.28);
+      transition: transform 0.14s ease, border-color 0.16s ease, background 0.16s ease;
     }
-    .kpi-label { font-size: 0.7rem; color: var(--muted); }
-    .kpi-val { font-size: 1.15rem; font-weight: 700; margin-top: 2px; }
-    .kpi-sub { font-size: 0.66rem; color: var(--muted); margin-top: 2px; }
+    .kpi-label { font-size: 0.7rem; font-weight: 600; color: var(--muted); letter-spacing: 0.15px; }
+    .kpi-val { font-size: 1.2rem; font-weight: 700; margin-top: 3px; letter-spacing: -0.2px; }
+    .kpi-sub { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .m3-cycle-tile {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      background: linear-gradient(160deg, rgba(56, 189, 248, 0.12) 0%, rgba(30, 41, 59, 0.96) 55%, rgba(15, 23, 42, 0.98) 100%);
+      border-color: rgba(56, 189, 248, 0.32);
+    }
+    .m3-cycle-tile:hover {
+      border-color: var(--accent);
+      background: linear-gradient(160deg, rgba(56, 189, 248, 0.18) 0%, rgba(30, 41, 59, 0.98) 60%, rgba(15, 23, 42, 0.98) 100%);
+    }
+    .m3-cycle-tile:active {
+      transform: scale(0.98);
+    }
+    .m3-cycle-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.64rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 4px;
+      opacity: 0.9;
+    }
     .delta-pos { color: #10b981; }
     .delta-neg { color: #f43f5e; }
 
@@ -764,7 +792,7 @@
       --md-sys-color-outline-variant: #334155;
       --md-navigation-bar-container-color: #1e293b;
       --md-navigation-bar-container-height: 76px;
-      --md-navigation-tab-label-text-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --md-navigation-tab-label-text-font: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --md-navigation-tab-label-text-size: 0.72rem;
       --md-navigation-tab-label-text-weight: 600;
       --md-navigation-tab-active-indicator-color: rgba(56, 189, 248, 0.22);
@@ -1028,20 +1056,20 @@
     </div>
 
     <div class="kpi-grid-3" id="ovKpiGrid">
-      <div class="kpi">
-        <div class="kpi-label">Sessies &amp; Tijd</div>
-        <div class="kpi-val" id="ovKpiSessions">0</div>
-        <div class="kpi-sub" id="ovKpiMinutes">0 min · 0/wk</div>
+      <div class="kpi m3-cycle-tile" id="ovKpiTile1" title="Klik om stat te wisselen">
+        <div class="kpi-label" id="ovKpiLabel1">Sessies</div>
+        <div class="kpi-val" id="ovKpiVal1">0×</div>
+        <div class="m3-cycle-hint" id="ovKpiHint1">↻ Tijd</div>
       </div>
-      <div class="kpi" id="ovKpiVolCard">
-        <div class="kpi-label">Volume &amp; Sets</div>
-        <div class="kpi-val" id="ovKpiVolume">0 t</div>
-        <div class="kpi-sub" id="ovKpiSetsReps">0 sets · 0 reps</div>
+      <div class="kpi m3-cycle-tile" id="ovKpiTile2" title="Klik om stat te wisselen">
+        <div class="kpi-label" id="ovKpiLabel2">Volume</div>
+        <div class="kpi-val" id="ovKpiVal2">0 t</div>
+        <div class="m3-cycle-hint" id="ovKpiHint2">↻ Sets</div>
       </div>
-      <div class="kpi" id="ovKpiBodyCard">
-        <div class="kpi-label" id="ovKpiBodyLabel">Spier / Vet Delta</div>
-        <div class="kpi-val" id="ovKpiBodyDelta">-</div>
-        <div class="kpi-sub" id="ovKpiFatDelta">Laad metingen</div>
+      <div class="kpi m3-cycle-tile" id="ovKpiTile3" title="Klik om stat te wisselen">
+        <div class="kpi-label" id="ovKpiLabel3">Spier / Vet</div>
+        <div class="kpi-val" id="ovKpiVal3">-</div>
+        <div class="m3-cycle-hint" id="ovKpiHint3">↻ Wissel</div>
       </div>
     </div>
 
@@ -1601,15 +1629,15 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
     </div>
 
     <div class="kpi-grid">
-      <div class="kpi">
-        <div class="kpi-label">Uitgevoerde Sessies</div>
-        <div class="kpi-val" id="kpiWorkouts">0</div>
-        <div class="kpi-sub" id="kpiWorkoutsSub">0 activiteiten</div>
+      <div class="kpi m3-cycle-tile" id="trKpiTile1" title="Klik om stat te wisselen">
+        <div class="kpi-label" id="trKpiLabel1">Uitgevoerde Sessies</div>
+        <div class="kpi-val" id="trKpiVal1">0</div>
+        <div class="m3-cycle-hint" id="trKpiHint1">↻ Tijd</div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label" id="kpiSecondLabel">Actieve Tijd &amp; Kcal</div>
-        <div class="kpi-val" id="kpiVolume">0 min</div>
-        <div class="kpi-sub" id="kpiSetsSub">0 kcal verbrand</div>
+      <div class="kpi m3-cycle-tile" id="trKpiTile2" title="Klik om stat te wisselen">
+        <div class="kpi-label" id="trKpiLabel2">Actieve Tijd</div>
+        <div class="kpi-val" id="trKpiVal2">0 min</div>
+        <div class="m3-cycle-hint" id="trKpiHint2">↻ Kcal</div>
       </div>
     </div>
 
@@ -1764,7 +1792,7 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
         <div class="kpi-sub" id="bodyKpiSmmSub">-</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Vetmassa / %</div>
+        <div class="kpi-label">Vetmassa</div>
         <div class="kpi-val" id="bodyKpiFat">-</div>
         <div class="kpi-sub" id="bodyKpiFatSub">-</div>
       </div>
@@ -2191,6 +2219,11 @@ let state = {
   trRange: safeParseJSON("pref_tr_range_v1", "12m"),
   trGranularity: safeParseJSON("pref_tr_gran_v1", "week"),
   trOffset: 0,
+  ovTileIdx1: 0,
+  ovTileIdx2: 0,
+  ovTileIdx3: 0,
+  trTileIdx1: 0,
+  trTileIdx2: 0,
   trActivityMetric: "minutes",
   trExerciseViewMode: "sessions",
   trMuscleMetric: "sets",
@@ -4566,7 +4599,7 @@ function renderOverviewDashboard(sets) {
     b.classList.toggle("active", b.getAttribute("data-gran") === gran);
   });
 
-  const volCard = document.getElementById("ovKpiVolCard");
+  const volCard = document.getElementById("ovKpiTile2");
   const kpiGrid = document.getElementById("ovKpiGrid");
   if (volCard && kpiGrid) {
     volCard.style.display = hasCsv ? "block" : "none";
@@ -4679,39 +4712,65 @@ function renderOverviewDashboard(sets) {
 
   const spanDays = Math.max(7, Math.round((new Date(bounds.endYmd + "T12:00:00") - new Date(bounds.startYmd + "T12:00:00")) / 86400000) + 1);
   const weeksApprox = spanDays / 7;
-  document.getElementById("ovKpiSessions").textContent = `${totalSessions}×`;
-  document.getElementById("ovKpiMinutes").textContent = `${Math.round(totalMinutes / 60)} uur · ${(weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0")}/wk`;
-  document.getElementById("ovKpiVolume").textContent = `${(totalVolKg / 1000).toFixed(1)} t`;
-  document.getElementById("ovKpiSetsReps").textContent = `${totalSets} sets · ${totalReps.toLocaleString("nl-NL")} reps`;
+
+  const t1Opts = [
+    { label: "Sessies", val: `${totalSessions}×`, nextLabel: "Tijd" },
+    { label: "Trainingsuren", val: `${Math.round(totalMinutes / 60)} uur`, nextLabel: "Per week" },
+    { label: "Per week", val: `${weeksApprox > 0 ? (totalSessions / weeksApprox).toFixed(1) : "0"}/wk`, nextLabel: "Sessies" }
+  ];
+  const t1Cur = t1Opts[(state.ovTileIdx1 || 0) % t1Opts.length];
+  const t1Next = t1Opts[((state.ovTileIdx1 || 0) + 1) % t1Opts.length];
+  document.getElementById("ovKpiLabel1").textContent = t1Cur.label;
+  document.getElementById("ovKpiVal1").textContent = t1Cur.val;
+  document.getElementById("ovKpiHint1").textContent = `↻ ${t1Next.label}`;
+
+  const t2Opts = [
+    { label: "Volume", val: `${(totalVolKg / 1000).toFixed(1)} t`, nextLabel: "Sets" },
+    { label: "Sets", val: `${totalSets} sets`, nextLabel: "Reps" },
+    { label: "Herhalingen", val: `${totalReps.toLocaleString("nl-NL")} reps`, nextLabel: "Volume" }
+  ];
+  const t2Cur = t2Opts[(state.ovTileIdx2 || 0) % t2Opts.length];
+  const t2Next = t2Opts[((state.ovTileIdx2 || 0) + 1) % t2Opts.length];
+  document.getElementById("ovKpiLabel2").textContent = t2Cur.label;
+  document.getElementById("ovKpiVal2").textContent = t2Cur.val;
+  document.getElementById("ovKpiHint2").textContent = `↻ ${t2Next.label}`;
 
   visibleBody.sort((a, b) => a.date.localeCompare(b.date));
-  const bodyLbl = document.getElementById("ovKpiBodyLabel");
+  const t3Opts = [];
   if (visibleBody.length >= 2) {
     const first = visibleBody[0], last = visibleBody[visibleBody.length - 1];
     const dSmm = (last.smm && first.smm) ? (last.smm - first.smm) : null;
     const dFat = (last.fatMass && first.fatMass) ? (last.fatMass - first.fatMass) : null;
     const dWeight = (last.weight && first.weight) ? (last.weight - first.weight) : null;
     if (dSmm !== null) {
-      if (bodyLbl) bodyLbl.textContent = "Spier / Vet Delta";
-      document.getElementById("ovKpiBodyDelta").innerHTML = `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`;
-      document.getElementById("ovKpiFatDelta").textContent = dFat !== null ? `Vet: ${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg` : `${visibleBody.length} metingen`;
-    } else if (dWeight !== null) {
-      if (bodyLbl) bodyLbl.textContent = "Gewicht Delta";
-      document.getElementById("ovKpiBodyDelta").innerHTML = `<span style="color:var(--accent);">${dWeight >= 0 ? "+" : ""}${dWeight.toFixed(1)} kg</span>`;
-      document.getElementById("ovKpiFatDelta").textContent = `${first.weight} → ${last.weight} kg`;
-    } else {
-      document.getElementById("ovKpiBodyDelta").textContent = "-";
-      document.getElementById("ovKpiFatDelta").textContent = `${visibleBody.length} metingen`;
+      t3Opts.push({
+        label: "Spiermassa",
+        val: `<span class="${dSmm >= 0 ? "delta-pos" : "delta-neg"}">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`
+      });
+    }
+    if (dFat !== null) {
+      t3Opts.push({
+        label: "Vetmassa",
+        val: `<span class="${dFat <= 0 ? "delta-pos" : "delta-neg"}">${dFat >= 0 ? "+" : ""}${dFat.toFixed(1)} kg</span>`
+      });
+    }
+    if (dWeight !== null) {
+      t3Opts.push({
+        label: "Gewicht",
+        val: `<span style="color:var(--accent);">${dWeight >= 0 ? "+" : ""}${dWeight.toFixed(1)} kg</span>`
+      });
     }
   } else if (visibleBody.length === 1) {
-    if (bodyLbl) bodyLbl.textContent = "Huidig Gewicht";
-    document.getElementById("ovKpiBodyDelta").textContent = `${visibleBody[0].weight} kg`;
-    document.getElementById("ovKpiFatDelta").textContent = formatShortNL(visibleBody[0].date);
-  } else {
-    if (bodyLbl) bodyLbl.textContent = hasCsv ? "Spier / Vet Delta" : "Gewicht Delta";
-    document.getElementById("ovKpiBodyDelta").textContent = "-";
-    document.getElementById("ovKpiFatDelta").textContent = "Voeg meting toe";
+    t3Opts.push({ label: "Gewicht", val: `${visibleBody[0].weight} kg` });
   }
+  if (t3Opts.length === 0) {
+    t3Opts.push({ label: hasCsv ? "Spier / Vet" : "Gewicht", val: "-" });
+  }
+  const t3Cur = t3Opts[(state.ovTileIdx3 || 0) % t3Opts.length];
+  const t3Next = t3Opts[((state.ovTileIdx3 || 0) + 1) % t3Opts.length];
+  document.getElementById("ovKpiLabel3").textContent = t3Cur.label;
+  document.getElementById("ovKpiVal3").innerHTML = t3Cur.val;
+  document.getElementById("ovKpiHint3").textContent = t3Opts.length > 1 ? `↻ ${t3Next.label}` : "Metingen";
 
   const trainMetric = trainSel.value;
   const bodyMetric = bodySel.value;
@@ -5151,7 +5210,8 @@ function refreshAll() {
   const garminDays = new Set(state.garminSets.map(s => s.dateDay)).size;
   const hevyDays = new Set(state.hevySets.map(s => s.dateDay)).size;
   const totalVolTons = sets.reduce((sum, s) => sum + s.volume, 0) / 1000;
-  document.getElementById("kpiWorkouts").textContent = garminDays + hevyDays;
+  const fallbackKpi1 = document.getElementById("kpiWorkouts");
+  if (fallbackKpi1) fallbackKpi1.textContent = garminDays + hevyDays;
   document.getElementById("kpiWorkoutsSub").textContent = `${garminDays} Garmin · ${hevyDays} Hevy`;
   document.getElementById("kpiVolume").textContent = `${totalVolTons.toFixed(1)} t`;
   document.getElementById("kpiSetsSub").textContent = `${sets.length} actieve sets`;
@@ -5396,23 +5456,34 @@ function renderTrainingProgressSection(sets) {
   const totalBurned = periodActivities.reduce((a, b) => a + Number(b.burnedKcal || 0), 0);
   const totalVolTons = periodSets.reduce((sum, s) => sum + s.volume, 0) / 1000;
 
-  document.getElementById("kpiWorkouts").textContent = totalSessions;
-  const csvCount = periodActivities.filter(a => a.source !== "planner").length;
-  const planCount = totalSessions - csvCount;
-  document.getElementById("kpiWorkoutsSub").textContent = hasCsv
-    ? `${csvCount} CSV · ${planCount} Planner`
-    : `${Math.round(totalMins / 60)} uur · ${totalMins} min`;
+  const trTile1Opts = hasCsv
+    ? [
+        { label: "Uitgevoerde Sessies", val: `${totalSessions}`, next: "Tijd" },
+        { label: "Actieve Tijd", val: `${totalMins} min`, next: "Sessies" }
+      ]
+    : [
+        { label: "Uitgevoerde Sessies", val: `${totalSessions}`, next: "Uren" },
+        { label: "Trainingsuren", val: `${Math.round(totalMins / 60)} uur`, next: "Sessies" }
+      ];
+  const tr1Cur = trTile1Opts[(state.trTileIdx1 || 0) % trTile1Opts.length];
+  document.getElementById("trKpiLabel1").textContent = tr1Cur.label;
+  document.getElementById("trKpiVal1").textContent = tr1Cur.val;
+  document.getElementById("trKpiHint1").textContent = `↻ ${tr1Cur.next}`;
 
-  const secLbl = document.getElementById("kpiSecondLabel");
-  if (hasCsv) {
-    if (secLbl) secLbl.textContent = "Totaal Volume & Tijd";
-    document.getElementById("kpiVolume").textContent = `${totalVolTons.toFixed(1)} t`;
-    document.getElementById("kpiSetsSub").textContent = `${periodSets.length} sets · ${totalMins} min`;
-  } else {
-    if (secLbl) secLbl.textContent = "Actieve Tijd & Kcal";
-    document.getElementById("kpiVolume").textContent = `${totalMins} min`;
-    document.getElementById("kpiSetsSub").textContent = `~${totalBurned.toLocaleString("nl-NL")} kcal verbrand`;
-  }
+  const trTile2Opts = hasCsv
+    ? [
+        { label: "Totaal Volume", val: `${totalVolTons.toFixed(1)} t`, next: "Sets" },
+        { label: "Aantal Sets", val: `${periodSets.length} sets`, next: "Kcal" },
+        { label: "Verbrande Kcal", val: `~${totalBurned.toLocaleString("nl-NL")} kcal`, next: "Volume" }
+      ]
+    : [
+        { label: "Actieve Tijd", val: `${totalMins} min`, next: "Kcal" },
+        { label: "Verbrande Kcal", val: `~${totalBurned.toLocaleString("nl-NL")} kcal`, next: "Tijd" }
+      ];
+  const tr2Cur = trTile2Opts[(state.trTileIdx2 || 0) % trTile2Opts.length];
+  document.getElementById("trKpiLabel2").textContent = tr2Cur.label;
+  document.getElementById("trKpiVal2").textContent = tr2Cur.val;
+  document.getElementById("trKpiHint2").textContent = `↻ ${tr2Cur.next}`;
 
   const sortedKeys = win.visibleKeys;
   const labels = win.labels;
@@ -5947,6 +6018,11 @@ function bindEvents() {
   });
   document.getElementById("ovPrevBtn").addEventListener("click", () => { state.ovOffset += 1; renderOverviewDashboard(getCombinedSets()); });
   document.getElementById("ovNextBtn").addEventListener("click", () => { state.ovOffset = Math.max(0, state.ovOffset - 1); renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("ovKpiTile1")?.addEventListener("click", () => { state.ovTileIdx1 = (state.ovTileIdx1 || 0) + 1; renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("ovKpiTile2")?.addEventListener("click", () => { state.ovTileIdx2 = (state.ovTileIdx2 || 0) + 1; renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("ovKpiTile3")?.addEventListener("click", () => { state.ovTileIdx3 = (state.ovTileIdx3 || 0) + 1; renderOverviewDashboard(getCombinedSets()); });
+  document.getElementById("trKpiTile1")?.addEventListener("click", () => { state.trTileIdx1 = (state.trTileIdx1 || 0) + 1; renderTrainingProgressSection(getCombinedSets()); });
+  document.getElementById("trKpiTile2")?.addEventListener("click", () => { state.trTileIdx2 = (state.trTileIdx2 || 0) + 1; renderTrainingProgressSection(getCombinedSets()); });
   document.getElementById("ovTrainMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovBodyMetric").addEventListener("change", () => renderOverviewDashboard(getCombinedSets()));
   document.getElementById("ovSegMetricPills").addEventListener("click", e => {
