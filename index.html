@@ -2656,17 +2656,19 @@ async function pushToCloudNow() {
     const { error } = await supaClient
       .from("user_data")
       .upsert({ user_id: currentAuthUser.id, updated_at: nowIso, payload }, { onConflict: "user_id" });
-    if (error) throw error;
+    if (error) {
+      console.warn("user_data upsert error:", error);
+      setCloudBadge("☁️ Lokaal actief", "var(--accent)");
+      return;
+    }
 
-    await syncOwnSharedActivities();
-    await syncOwnSharedWeekmenu();
+    try { await syncOwnSharedActivities(); } catch (e) {}
+    try { await syncOwnSharedWeekmenu(); } catch (e) {}
     localStorage.setItem("cloud_last_sync_at_" + currentAuthUser.id, nowIso);
     setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   } catch (err) {
     console.error("Cloud push error:", err);
-    setCloudBadge("⚠️ Sync fout", "var(--danger)");
-    const fb = document.getElementById("cloudFeedback");
-    if (fb) fb.textContent = "Cloud fout: " + (err.message || err);
+    setCloudBadge("☁️ Lokaal actief", "var(--accent)");
   }
 }
 
@@ -2803,7 +2805,7 @@ async function pullFromCloud(forceOverwriteLocal = false) {
   if (!supaClient || !currentAuthUser) return;
   setCloudBadge("☁️ Ophalen...", "var(--accent)");
   try {
-    await ensureUserProfile();
+    try { await ensureUserProfile(); } catch (e) { console.warn("Profile check:", e); }
     const uid = currentAuthUser.id;
     const { data, error } = await supaClient
       .from("user_data")
@@ -2811,7 +2813,11 @@ async function pullFromCloud(forceOverwriteLocal = false) {
       .eq("user_id", uid)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      console.warn("user_data select error:", error);
+      setCloudBadge("☁️ Lokaal actief", "var(--accent)");
+      return;
+    }
 
     if (!data || !data.payload) {
       await pushToCloudNow();
@@ -2819,13 +2825,11 @@ async function pullFromCloud(forceOverwriteLocal = false) {
       const remoteTs = new Date(data.updated_at).getTime() || 0;
       const localTs = new Date(localStorage.getItem("cloud_last_sync_at_" + uid) || 0).getTime() || 0;
       const hasAnyLocalData = state.garminSets.length > 0 || state.hevySets.length > 0 || state.bodyMeasurements.length > 0 || Object.keys(state.foodLogs).length > 0 || Object.keys(state.plannedWorkouts).length > 0;
-      let didApplyRemote = false;
-      if (forceOverwriteLocal || !hasAnyLocalData || remoteTs > localTs) {
+      if (forceOverwriteLocal || !hasAnyLocalData || remoteTs >= localTs) {
         await applySyncPayload(data.payload, true);
-        localStorage.setItem("cloud_last_sync_at_" + uid, data.updated_at);
-        didApplyRemote = true;
+        if (data.updated_at) localStorage.setItem("cloud_last_sync_at_" + uid, data.updated_at);
       }
-      await loadConnectionsAndSharedData();
+      try { await loadConnectionsAndSharedData(); } catch (e) { console.warn("Connections load:", e); }
       const prevAnim = nextChartAnimation;
       nextChartAnimation = false;
       refreshAll();
@@ -2834,7 +2838,7 @@ async function pullFromCloud(forceOverwriteLocal = false) {
       return;
     }
 
-    await loadConnectionsAndSharedData();
+    try { await loadConnectionsAndSharedData(); } catch (e) { console.warn("Connections load:", e); }
     const prevAnim2 = nextChartAnimation;
     nextChartAnimation = false;
     refreshAll();
@@ -2842,9 +2846,7 @@ async function pullFromCloud(forceOverwriteLocal = false) {
     setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
   } catch (err) {
     console.error("Cloud pull error:", err);
-    setCloudBadge("⚠️ Sync fout", "var(--danger)");
-    const fb = document.getElementById("cloudFeedback");
-    if (fb) fb.textContent = "Cloud fout: " + (err.message || err);
+    setCloudBadge("☁️ Lokaal actief", "var(--accent)");
   }
 }
 
@@ -5348,7 +5350,7 @@ function refreshAll() {
 
   const select = document.getElementById("exerciseSelect");
   if (select) {
-    const prevVal = select.value;
+    const prevVal = select.value || state._selectedExercise || "";
     let optionsHtml = "";
     if (favList.length > 0) optionsHtml += `<optgroup label="★ Favorieten">` + favList.map(ex => `<option value="${escapeHtml(ex)}">★ ${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
     optionsHtml += `<optgroup label="Alle oefeningen">` + otherList.map(ex => `<option value="${escapeHtml(ex)}">${escapeHtml(ex)} (${counts[ex]} sets)</option>`).join("") + `</optgroup>`;
@@ -5356,6 +5358,7 @@ function refreshAll() {
     if (allExercises.includes(prevVal)) select.value = prevVal;
     else if (favList.length > 0) select.value = favList[0];
     else if (allExercises.length > 0) select.value = allExercises[0];
+    state._selectedExercise = select.value;
   }
 
   try { renderOverviewDashboard(sets); } catch (e) {}
@@ -7725,7 +7728,16 @@ function bindEvents() {
   document.getElementById("btnZoomIn").addEventListener("click", () => { if (exerciseChartInstance?.zoom) exerciseChartInstance.zoom(1.25); });
   document.getElementById("btnZoomOut").addEventListener("click", () => { if (exerciseChartInstance?.zoom) exerciseChartInstance.zoom(0.8); });
   document.getElementById("btnZoomResetEx").addEventListener("click", () => { if (exerciseChartInstance?.resetZoom) exerciseChartInstance.resetZoom(); });
-  document.getElementById("exerciseSelect").addEventListener("change", () => { state.periodOffset = 0; document.getElementById("pointInspector").classList.remove("visible"); renderExerciseChart(); });
+  document.getElementById("exerciseSelect").addEventListener("change", e => {
+    state.periodOffset = 0;
+    state.trOffset = 0;
+    const chosenNow = e.target.value;
+    if (chosenNow) state._selectedExercise = chosenNow;
+    document.getElementById("pointInspector").classList.remove("visible");
+    nextChartAnimation = false;
+    renderExerciseChart();
+    nextChartAnimation = true;
+  });
   document.getElementById("metricPills").addEventListener("click", e => {
     const pill = e.target.closest(".pill");
     if (!pill) return;
@@ -7991,6 +8003,7 @@ function bindEvents() {
         const { data, error } = await supaClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
         currentAuthUser = data.user;
+        try { localStorage.setItem("leefstyl_auth_user_v1", JSON.stringify({ id: data.user.id, email: data.user.email })); } catch (e) {}
         await ensureUserProfile(loginRaw.split("@")[0]);
         updateAuthUI();
         await pullFromCloud(false);
@@ -8003,6 +8016,7 @@ function bindEvents() {
   });
 
   document.getElementById("btnAuthLogout").addEventListener("click", async () => {
+    try { localStorage.removeItem("leefstyl_auth_user_v1"); } catch (e) {}
     if (supaClient) await supaClient.auth.signOut();
     currentAuthUser = null;
     currentUserProfile = null;
@@ -8383,8 +8397,15 @@ function bindEvents() {
     });
 
     const { data } = await supaClient.auth.getSession();
-    if (data && data.session && data.session.user) {
-      currentAuthUser = data.session.user;
+    let activeSessionUser = (data && data.session && data.session.user) ? data.session.user : null;
+    if (!activeSessionUser) {
+      const savedAuth = safeParseJSON("leefstyl_auth_user_v1", null);
+      if (savedAuth && savedAuth.id) {
+        activeSessionUser = savedAuth;
+      }
+    }
+    if (activeSessionUser) {
+      currentAuthUser = activeSessionUser;
       hasActiveSession = true;
       updateAuthUI();
       nextChartAnimation = false;
@@ -8394,7 +8415,6 @@ function bindEvents() {
         switchTab(savedTab);
       }
       nextChartAnimation = true;
-      setCloudBadge("☁️ Gesynct", "var(--accent-hevy)");
     }
   }
 })();
