@@ -1880,6 +1880,16 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
  </div>
  </div>
 
+ <!-- AI-schatting op basis van gerechtomschrijving (via Supabase Edge Function) -->
+ <div style="background:#0f172a; border:1px solid var(--card-border); border-radius:10px; padding:9px 10px; margin-bottom:10px;">
+ <span class="field-lbl" style="margin-bottom:4px;">Omschrijf je avondeten voor een directe macro-schatting:</span>
+ <div style="display:flex; gap:6px; align-items:center;">
+ <input type="text" id="aiDinnerDescInput" placeholder="Bijv. 2 opscheplepels pasta bolognese met parmezaan" style="margin-bottom:0; padding:7px 9px; font-size:0.8rem;" />
+ <button type="button" class="btn-sm btn-accent" id="btnEstimateDinnerAi" style="color:#0f172a; white-space:nowrap; height:34px; padding:0 11px;">✨ Schatting door AI</button>
+ </div>
+ <div id="aiDinnerStatusMsg" style="font-size:0.74rem; color:var(--muted); margin-top:5px; display:none;"></div>
+ </div>
+
  <div id="dinnerContainer"></div>
  </div>
 
@@ -7968,6 +7978,114 @@ function bindEvents() {
  document.getElementById("weekmenuPasteText").value = "";
  renderNutritionTab();
  renderPlannerTab();
+ });
+
+ async function estimateMealWithEdgeAI(description) {
+ if (!supaClient && !initSupabaseClient()) {
+ return { error: "AI is momenteel druk, probeer het later opnieuw." };
+ }
+ try {
+ const { data, error } = await supaClient.functions.invoke("estimate-meal", {
+ body: { description }
+ });
+ if (error) {
+ return { error: "AI is momenteel druk, probeer het later opnieuw." };
+ }
+ if (!data || data.error) {
+ return { error: data?.error || "AI is momenteel druk, probeer het later opnieuw." };
+ }
+ const kcal = Math.round(Number(data.kcal) || 0);
+ const p = Number((Number(data.p) || 0).toFixed(1));
+ const c = Number((Number(data.c) || 0).toFixed(1));
+ const f = Number((Number(data.f) || 0).toFixed(1));
+ if (kcal <= 0 && p <= 0 && c <= 0 && f <= 0) {
+ return { error: "AI is momenteel druk, probeer het later opnieuw." };
+ }
+ return {
+ title: String(data.title || description).trim(),
+ kcal,
+ p,
+ c,
+ f
+ };
+ } catch (err) {
+ return { error: "AI is momenteel druk, probeer het later opnieuw." };
+ }
+ }
+
+ document.getElementById("btnEstimateDinnerAi")?.addEventListener("click", async () => {
+ const inp = document.getElementById("aiDinnerDescInput");
+ const statusEl = document.getElementById("aiDinnerStatusMsg");
+ const btn = document.getElementById("btnEstimateDinnerAi");
+ const desc = (inp?.value || "").trim();
+ if (!desc) {
+ if (statusEl) {
+ statusEl.style.display = "block";
+ statusEl.style.color = "var(--accent-garmin)";
+ statusEl.textContent = "Vul eerst een korte omschrijving van het gerecht in.";
+ }
+ inp?.focus();
+ return;
+ }
+
+ const origLabel = btn ? btn.textContent : "✨ Schatting door AI";
+ if (btn) {
+ btn.disabled = true;
+ btn.textContent = "Bezig...";
+ }
+ if (statusEl) {
+ statusEl.style.display = "block";
+ statusEl.style.color = "var(--accent)";
+ statusEl.textContent = "Schatting wordt opgevraagd...";
+ }
+
+ const res = await estimateMealWithEdgeAI(desc);
+
+ if (btn) {
+ btn.disabled = false;
+ btn.textContent = origLabel;
+ }
+
+ if (res.error) {
+ if (statusEl) {
+ statusEl.style.display = "block";
+ statusEl.style.color = "var(--accent-garmin)";
+ statusEl.textContent = res.error;
+ }
+ return;
+ }
+
+ const log = getOrCreateFoodDay(state.selectedNutriDate);
+ log.dinner = {
+ title: res.title,
+ kcal: res.kcal,
+ p: res.p,
+ c: res.c,
+ f: res.f,
+ portionMult: 1,
+ confirmed: true,
+ fromFamilyOwnerId: null,
+ fromFamilyUsername: null
+ };
+ log.customDinnerOverride = true;
+ log.touched = true;
+ saveFoodState();
+
+ if (inp) inp.value = "";
+ if (statusEl) {
+ statusEl.style.display = "block";
+ statusEl.style.color = "var(--accent-hevy)";
+ statusEl.textContent = `✓ Toegevoegd: ${res.title} (${res.kcal} kcal · ${res.p}g E · ${res.c}g KH · ${res.f}g V)`;
+ }
+ renderNutritionTab();
+ renderPlannerTab();
+ });
+
+ document.getElementById("aiDinnerDescInput")?.addEventListener("keydown", e => {
+ if (e.key === "Enter") {
+ e.preventDefault();
+ document.getElementById("btnEstimateDinnerAi")?.click();
+ }
  });
 
  document.getElementById("dinnerContainer").addEventListener("click", e => {
