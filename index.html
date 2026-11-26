@@ -2352,6 +2352,7 @@ let state = {
  // plannedWorkouts: { "2026-11-18": ["Upper Body"] }
  plannedWorkouts: safeParseJSON("planned_workouts_v1", {}),
  dismissedSharedIds: safeParseJSON("dismissed_shared_ids_v1", []),
+ csvWorkoutLinks: safeParseJSON("csv_workout_links_v1", {}),
  selectedNutriDate: TODAY_YMD,
  nutriCalYear: new Date().getFullYear(),
  nutriCalMonth: new Date().getMonth(),
@@ -2548,6 +2549,7 @@ function buildFullSyncPayload() {
  foodLogs: state.foodLogs,
  plannedWorkouts: state.plannedWorkouts,
  dismissedSharedIds: state.dismissedSharedIds,
+ csvWorkoutLinks: state.csvWorkoutLinks,
  nutriGoals: state.nutriGoals,
  basisItems: state.basisItems,
  drinkFavorites: state.drinkFavorites,
@@ -2574,6 +2576,7 @@ async function applySyncPayload(d, saveLocally = true) {
  if (d.foodLogs) state.foodLogs = d.foodLogs;
  if (d.plannedWorkouts) state.plannedWorkouts = d.plannedWorkouts;
  if (Array.isArray(d.dismissedSharedIds)) state.dismissedSharedIds = d.dismissedSharedIds;
+ if (d.csvWorkoutLinks && typeof d.csvWorkoutLinks === "object") state.csvWorkoutLinks = d.csvWorkoutLinks;
  if (d.nutriGoals) state.nutriGoals = d.nutriGoals;
  if (Array.isArray(d.basisItems)) state.basisItems = d.basisItems;
  if (d.smartOverload !== undefined) state.smartOverload = d.smartOverload;
@@ -2596,6 +2599,7 @@ async function applySyncPayload(d, saveLocally = true) {
  localStorage.setItem("custom_drinks_v1", JSON.stringify(state.customDrinks));
  localStorage.setItem("nutri_goals_v1", JSON.stringify(state.nutriGoals));
  localStorage.setItem("basis_items_v1", JSON.stringify(state.basisItems));
+ localStorage.setItem("csv_workout_links_v1", JSON.stringify(state.csvWorkoutLinks));
  localStorage.setItem("exercise_mappings", JSON.stringify(state.mappings));
  localStorage.setItem("exercise_favorites", JSON.stringify(state.favorites));
  localStorage.setItem("global_trend", JSON.stringify(state.globalTrend));
@@ -3063,6 +3067,215 @@ function estimateBurnedKcal(sportName, durationMin) {
  return Math.round(preset.met * weightKg * (Math.max(1, Number(durationMin) || 30) / 60));
 }
 
+// === SLIMME KOPPELING TUSSEN GEPLANDE WORKOUTS & HEVY/GARMIN CSV ===
+function getWorkoutFocusCategory(title, exercises = []) {
+ const t = String(title || "").toLowerCase();
+ const exJoined = (exercises || []).join(" ").toLowerCase();
+
+ // 1. Expliciete titel-herkenning
+ if (/\b(leg|legs|benen|lower|squat|glute|hamstring|quad|kuiten)\b/.test(t)) return "lower";
+ if (/\b(push|chest|borst|schouder|shoulder|tricep)\b/.test(t)) return "push";
+ if (/\b(pull|back|rug|bicep|lat|row)\b/.test(t)) return "pull";
+ if (/\b(upper|bovenlichaam|arm|arms|armen)\b/.test(t)) return "upper";
+ if (/\b(full\s*body|totaal|hele\s*lichaam)\b/.test(t)) return "fullbody";
+ if (/\b(core|abs|buik)\b/.test(t)) return "core";
+
+ // 2. Afleiden uit oefeningen in de CSV-sessie
+ if (exercises && exercises.length > 0) {
+ const groups = exercises.map(e => classifyMuscleGroup(e));
+ const lowerCnt = groups.filter(g => g === "Benen").length;
+ const upperCnt = groups.filter(g => ["Borst", "Rug", "Schouders", "Armen"].includes(g)).length;
+ const pushCnt = groups.filter(g => ["Borst", "Schouders"].includes(g)).length;
+ const pullCnt = groups.filter(g => g === "Rug").length;
+ const total = lowerCnt + upperCnt;
+ if (total > 0) {
+ if (lowerCnt / total >= 0.65) return "lower";
+ if (upperCnt / total >= 0.65) {
+ if (pushCnt > 0 && pullCnt === 0) return "push";
+ if (pullCnt > 0 && pushCnt === 0) return "pull";
+ return "upper";
+ }
+ return "fullbody";
+ }
+ }
+
+ // 3. Algemene krachttraining zonder specifieke focus
+ if (/kracht|strength|workout|gym|fitness|hevy|garmin/.test(t)) return "generic_strength";
+ return "other";
+}
+
+function areWorkoutCategoriesCompatible(planCat, csvCat) {
+ // Strikte uitsluiting: Lower/Legday en Upper/Push/Pull vervangen elkaar NOOIT
+ const upperFamily = ["upper", "push", "pull"];
+ if (planCat === "lower" && upperFamily.includes(csvCat)) return false;
+ if (upperFamily.includes(planCat) && csvCat === "lower") return false;
+ if (planCat === "push" && csvCat === "pull") return false;
+ if (planCat === "pull" && csvCat === "push") return false;
+ return true;
+}
+
+function computeWorkoutMatchScore(planEntry, csvSession) {
+ const pTitle = String(planEntry.title || "").trim().toLowerCase();
+ const cTitle = String(csvSession.workoutTitle || "").trim().toLowerCase();
+ const planCat = getWorkoutFocusCategory(planEntry.title);
+ const csvCat = getWorkoutFocusCategory(csvSession.workoutTitle, csvSession.exercises);
+
+ if (!areWorkoutCategoriesCompatible(planCat, csvCat)) {
+ return { score: 0, reason: "incompatible" };
+ }
+
+ // Exacte of directe sub-string match op naam
+ if (pTitle && cTitle && (pTitle === cTitle || pTitle.includes(cTitle) || cTitle.includes(pTitle))) {
+ return { score: 100, reason: "naam" };
+ }
+
+ // Sterke categorie-overeenkomst (bijv. "Lower Body" <-> "Leg Day", "Upper Body" <-> "Push/Upper")
+ if (planCat !== "generic_strength" && planCat !== "other" && planCat === csvCat) {
+ return { score: 90, reason: "focus" };
+ }
+
+ // Upper Body (gepland) <-> Push of Pull (CSV) is compatible, maar net iets specifieker -> voorstel ter bevestiging
+ if (planCat === "upper" && (csvCat === "push" || csvCat === "pull")) {
+ return { score: 65, reason: "deel_focus" };
+ }
+ if ((planCat === "push" || planCat === "pull") && csvCat === "upper") {
+ return { score: 65, reason: "deel_focus" };
+ }
+
+ // Algemene 'Krachttraining' gepland <-> specifieke kracht-CSV (bijv. 'Upper Body' of 'Full Body')
+ if (planCat === "generic_strength" && ["lower", "upper", "push", "pull", "fullbody", "generic_strength"].includes(csvCat)) {
+ return { score: 85, reason: "kracht_algemeen" };
+ }
+
+ // Specifieke geplande workout <-> algemene CSV-naam (bijv. 'Krachttraining' of 'Afternoon Workout')
+ if (["lower", "upper", "push", "pull", "fullbody"].includes(planCat) && csvCat === "generic_strength") {
+ return { score: 60, reason: "onzeker_csv_naam" };
+ }
+
+ return { score: 0, reason: "geen_match" };
+}
+
+function getCsvDaySessionsMap() {
+ const map = {};
+ const allSets = [...(state.garminSets || []), ...(state.hevySets || [])];
+ for (const s of allSets) {
+ if (!s || !s.dateDay) continue;
+ if (!map[s.dateDay]) {
+ map[s.dateDay] = {
+ date: s.dateDay,
+ workoutTitle: s.workoutTitle || (s.source === "garmin" ? "Garmin Krachttraining" : "Hevy Krachttraining"),
+ durationMin: 0,
+ source: s.source || "hevy",
+ setsCount: 0,
+ exercises: []
+ };
+ }
+ map[s.dateDay].setsCount += 1;
+ if (s.rawExercise && !map[s.dateDay].exercises.includes(s.rawExercise)) {
+ map[s.dateDay].exercises.push(s.rawExercise);
+ }
+ if (s.workoutDurationMin > 0) {
+ map[s.dateDay].durationMin = Math.max(map[s.dateDay].durationMin, s.workoutDurationMin);
+ }
+ }
+ return map;
+}
+
+function reconcileCsvWithPlannedWorkouts(saveChanges = true) {
+ const csvMap = getCsvDaySessionsMap();
+ const links = state.csvWorkoutLinks || {};
+ let changed = false;
+
+ for (const [ymd, csvSess] of Object.entries(csvMap)) {
+ const rawList = state.plannedWorkouts[ymd];
+ if (!Array.isArray(rawList) || rawList.length === 0) continue;
+
+ const normalizedList = rawList.map(normalizePlannedEntry).filter(Boolean);
+ const dayLink = links[ymd];
+
+ // Als de gebruiker dit voorstel expliciet heeft afgewezen voor deze CSV-sessie, niets doen
+ if (dayLink && dayLink.rejectedCsvTitle === csvSess.workoutTitle) continue;
+
+ // Check of er al een geplande workout op deze dag gekoppeld is aan deze CSV
+ const alreadyLinkedIdx = normalizedList.findIndex(w => w.linkedCsvSource === csvSess.source && w.linkedCsvTitle === csvSess.workoutTitle);
+ if (alreadyLinkedIdx !== -1) {
+ if (!normalizedList[alreadyLinkedIdx].completed) {
+ normalizedList[alreadyLinkedIdx].completed = true;
+ state.plannedWorkouts[ymd] = normalizedList;
+ changed = true;
+ }
+ continue;
+ }
+
+ // Zoek de beste kandidaat onder de openstaande (nog niet-voltooide) geplande krachttrainingen op deze dag
+ let bestIdx = -1;
+ let bestScore = 0;
+ normalizedList.forEach((w, idx) => {
+ if (w.completed || !w.isStrength) return;
+ const res = computeWorkoutMatchScore(w, csvSess);
+ if (res.score > bestScore) {
+ bestScore = res.score;
+ bestIdx = idx;
+ }
+ });
+
+ if (bestIdx !== -1 && bestScore >= 85) {
+ // Hoge zekerheid -> direct automatisch koppelen & bevestigen (geen dubbele workout!)
+ const mins = csvSess.durationMin > 0 ? Math.round(csvSess.durationMin) : normalizedList[bestIdx].durationMin;
+ normalizedList[bestIdx].completed = true;
+ normalizedList[bestIdx].durationMin = mins;
+ normalizedList[bestIdx].burnedKcal = estimateBurnedKcal("Krachttraining", mins);
+ normalizedList[bestIdx].linkedCsvSource = csvSess.source;
+ normalizedList[bestIdx].linkedCsvTitle = csvSess.workoutTitle;
+ normalizedList[bestIdx].linkedCsvSetsCount = csvSess.setsCount;
+ state.plannedWorkouts[ymd] = normalizedList;
+ changed = true;
+ }
+ }
+
+ if (changed && saveChanges) {
+ localStorage.setItem("planned_workouts_v1", JSON.stringify(state.plannedWorkouts));
+ scheduleCloudPush();
+ }
+}
+
+function getPendingCsvMatchProposal(ymd) {
+ const csvMap = getCsvDaySessionsMap();
+ const csvSess = csvMap[ymd];
+ if (!csvSess) return null;
+
+ const dayLink = (state.csvWorkoutLinks || {})[ymd];
+ if (dayLink && dayLink.rejectedCsvTitle === csvSess.workoutTitle) return null;
+
+ const normalizedList = getNormalizedDayWorkouts(ymd);
+ // Als al gekoppeld op deze dag, geen openstaand voorstel meer
+ if (normalizedList.some(w => w.linkedCsvSource === csvSess.source && w.linkedCsvTitle === csvSess.workoutTitle)) {
+ return null;
+ }
+
+ let bestIdx = -1;
+ let bestScore = 0;
+ normalizedList.forEach((w, idx) => {
+ if (w.completed || !w.isStrength) return;
+ const res = computeWorkoutMatchScore(w, csvSess);
+ if (res.score > bestScore) {
+ bestScore = res.score;
+ bestIdx = idx;
+ }
+ });
+
+ if (bestIdx !== -1 && bestScore >= 50 && bestScore < 85) {
+ return {
+ ymd,
+ planIdx: bestIdx,
+ planWorkout: normalizedList[bestIdx],
+ csvSession: csvSess,
+ score: bestScore
+ };
+ }
+ return null;
+}
+
 function normalizePlannedEntry(entry) {
  if (!entry) return null;
  if (typeof entry === "string") {
@@ -3091,7 +3304,10 @@ function normalizePlannedEntry(entry) {
  sharedWithPartner: entry.sharedWithPartner || "",
  sourceSharedActivityId: entry.sourceSharedActivityId || null,
  fromConnectionUserId: entry.fromConnectionUserId || null,
- fromConnectionUsername: entry.fromConnectionUsername || null
+ fromConnectionUsername: entry.fromConnectionUsername || null,
+ linkedCsvSource: entry.linkedCsvSource || null,
+ linkedCsvTitle: entry.linkedCsvTitle || null,
+ linkedCsvSetsCount: entry.linkedCsvSetsCount || 0
  };
 }
 
@@ -3968,10 +4184,12 @@ function renderPlannerTab() {
  const foodInfo = computeDayNutrition(ymd);
  const hasCsvWo = actualCsvDays.has(ymd);
  const dayWorkouts = getNormalizedDayWorkouts(ymd);
+ const isCsvLinkedToPlan = hasCsvWo && dayWorkouts.some(w => Boolean(w.linkedCsvTitle));
+ const showStandaloneCsv = hasCsvWo && !isCsvLinkedToPlan;
  const samenWorkouts = dayWorkouts.filter(w => w.sharedWithConnections || w.fromConnectionUserId);
  const regularWorkouts = dayWorkouts.filter(w => !w.sharedWithConnections && !w.fromConnectionUserId);
 
- const regularCount = (hasCsvWo ? 1 : 0) + regularWorkouts.length;
+ const regularCount = (showStandaloneCsv ? 1 : 0) + regularWorkouts.length;
  const regularAllDone = regularCount > 0 && regularWorkouts.every(w => w.completed);
 
  const samenCount = samenWorkouts.length;
@@ -4050,15 +4268,37 @@ function renderPlannerTab() {
  ? `<div>${statusTxt}</div>`
  : `<div>${statusTxt} · <strong>${fTotals.kcal} kcal</strong></div>`;
 
- // Bouw Training-blokjes direct onder Voeding (inclusief eventuele CSV-workout + handmatige/geplande workouts)
+ // Bouw Training-blokjes direct onder Voeding (gekoppelde CSV vervangt de geplande workout zodat er geen dubbele items staan)
  let blocksHtml = "";
- if (hasCsv) {
+ const isCsvAlreadyLinked = hasCsv && pList.some(w => Boolean(w.linkedCsvTitle));
+ const pendingProposal = getPendingCsvMatchProposal(selYmd);
+
+ if (pendingProposal) {
+ const pW = pendingProposal.planWorkout;
+ const cS = pendingProposal.csvSession;
+ const srcLabel = cS.source === "garmin" ? "Garmin" : "Hevy";
+ blocksHtml += `
+ <div class="shared-proposal-box" style="margin-top:0; margin-bottom:8px; border-color:var(--accent-garmin); background:rgba(245,158,11,0.1);">
+ <div style="font-weight:700; color:var(--accent-garmin); margin-bottom:4px;">🔗 ${srcLabel} workout koppelen aan geplande training?</div>
+ <div style="font-size:0.76rem; color:var(--text); line-height:1.4;">
+ Je had <strong>${escapeHtml(pW.title)}</strong> ingepland en hebt <strong>${escapeHtml(cS.workoutTitle)}</strong> (${cS.setsCount} sets) uitgevoerd. Is dit dezelfde training?
+ </div>
+ <div style="display:flex; gap:6px; margin-top:7px;">
+ <button type="button" class="btn-sm btn-hevy" id="btnConfirmCsvPlanLink" style="color:#0f172a; flex:1;">✓ Ja, bevestigen</button>
+ <button type="button" class="btn-sm" id="btnRejectCsvPlanLink" style="color:var(--muted);">Nee, los houden</button>
+ </div>
+ </div>
+ `;
+ }
+
+ if (hasCsv && !isCsvAlreadyLinked) {
  const dayCsvSets = [...state.garminSets, ...state.hevySets].filter(s => s.dateDay === selYmd);
  const csvTitle = (dayCsvSets[0] && dayCsvSets[0].workoutTitle) || "Krachttraining (CSV)";
+ const srcTag = (dayCsvSets[0] && dayCsvSets[0].source === "garmin") ? "Garmin" : "Hevy";
  blocksHtml += `
  <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:rgba(16,185,129,0.4);">
  <div class="meal-info">
- <div class="meal-title" style="color:var(--accent-hevy);">✅ ${escapeHtml(csvTitle)}</div>
+ <div class="meal-title" style="color:var(--accent-hevy);">✅ ${escapeHtml(csvTitle)} <span style="font-size:0.68rem; color:var(--muted); font-weight:500;">(${srcTag})</span></div>
  <div class="meal-macros">${dayCsvSets.length} sets · Uitgevoerd</div>
  </div>
  </div>
@@ -4076,13 +4316,16 @@ function renderPlannerTab() {
  const sharedTag = partnerName
  ? `<span style="font-size:0.68rem; color:var(--accent); margin-left:5px;">🤝 Samen met ${escapeHtml(partnerName)}</span>`
  : (w.sharedWithConnections ? `<span style="font-size:0.68rem; color:var(--accent-hevy); margin-left:5px;">🤝 Samen</span>` : "");
+ const csvLinkBadge = w.linkedCsvTitle
+ ? `<span style="font-size:0.68rem; color:var(--accent-hevy); margin-left:5px;">· ✓ ${w.linkedCsvSource === "garmin" ? "Garmin" : "Hevy"} (${escapeHtml(w.linkedCsvTitle)}${w.linkedCsvSetsCount ? ", " + w.linkedCsvSetsCount + " sets" : ""})</span>`
+ : "";
  return `
  <div class="meal-row" style="padding:7px 9px; margin-bottom:6px; gap:6px; border-color:${w.completed ? "rgba(16,185,129,0.4)" : "rgba(56,189,248,0.35)"};">
  <div class="meal-info">
- <div class="meal-title" style="color:${badgeColor};">${statusIcon} ${escapeHtml(w.title)}${sharedTag}</div>
+ <div class="meal-title" style="color:${badgeColor};">${statusIcon} ${escapeHtml(w.title)}${sharedTag}${csvLinkBadge}</div>
  <div class="meal-macros">${w.durationMin} min · ~${w.burnedKcal} kcal · ${w.completed ? "Uitgevoerd" : "Ingepland"}</div>
  </div>
- <button type="button" class="${toggleCls}" data-toggle-plan="${idx}" style="${toggleStyle}">${toggleLabel}</button>
+ ${w.linkedCsvTitle ? "" : `<button type="button" class="${toggleCls}" data-toggle-plan="${idx}" style="${toggleStyle}">${toggleLabel}</button>`}
  <button type="button" class="btn-sm" data-del-plan="${idx}" style="color:var(--danger); padding:4px 7px;">✕</button>
  </div>
  `;
@@ -4358,8 +4601,10 @@ function handleFileUpload(event, source) {
  workoutDurationMin, setDurationSec, rawExercise, weight, reps
  });
  }
- if (source === "garmin") { state.garminSets = parsed; await saveDataset("garmin", parsed); scheduleCloudPush(); }
- else { state.hevySets = parsed; await saveDataset("hevy", parsed); scheduleCloudPush(); }
+ if (source === "garmin") { state.garminSets = parsed; await saveDataset("garmin", parsed); }
+ else { state.hevySets = parsed; await saveDataset("hevy", parsed); }
+ reconcileCsvWithPlannedWorkouts(true);
+ scheduleCloudPush();
  feedback.textContent = `Succes! ${parsed.length} sets opgeslagen voor ${source.toUpperCase()}.`;
  event.target.value = "";
  refreshAll();
@@ -4894,8 +5139,10 @@ function renderOverviewDashboard(sets) {
  const k = keyFn(pDate);
  const b = ensureBucket(k);
  const hasCsvOnDay = b.csvDays.has(pDate);
+ const anyLinkedOnDay = dayWos.some(x => Boolean(x.linkedCsvTitle));
  dayWos.forEach(w => {
- if (hasCsvOnDay && w.isStrength) return;
+ if (w.linkedCsvTitle) return;
+ if (hasCsvOnDay && !anyLinkedOnDay && w.isStrength) return;
  b.extraSessions += 1;
  b.extraMinutes += Number(w.durationMin || 45);
  b.burnedKcal += Number(w.burnedKcal || 0);
@@ -5380,6 +5627,7 @@ function getPeriodRange(allTimelineDays) {
 }
 
 function refreshAll() {
+ try { reconcileCsvWithPlannedWorkouts(true); } catch (e) {}
  const sets = getCombinedSets();
  try {
  const tb = document.getElementById("totalBadge"); if (tb) tb.textContent = `${sets.length} sets`;
@@ -5585,8 +5833,10 @@ function renderTrainingProgressSection(sets) {
  for (const [pDate, rawList] of Object.entries(state.plannedWorkouts || {})) {
  const completedWos = getNormalizedDayWorkouts(pDate).filter(w => w.completed);
  const hasCsvOnDay = Boolean(csvDayMap[pDate]);
+ const anyLinkedOnDay = completedWos.some(x => Boolean(x.linkedCsvTitle));
  completedWos.forEach(w => {
- if (hasCsvOnDay && w.isStrength) return;
+ if (w.linkedCsvTitle) return;
+ if (hasCsvOnDay && !anyLinkedOnDay && w.isStrength) return;
  const sportCat = SPORT_PRESETS[w.title]
  ? (w.isStrength ? "Krachttraining" : w.title)
  : (w.isStrength ? "Krachttraining" : w.title);
@@ -6448,6 +6698,35 @@ function bindEvents() {
 
  document.getElementById("plannedWorkoutsList").addEventListener("click", e => {
  const d = state.selectedPlannerDate;
+ if (e.target.closest("#btnConfirmCsvPlanLink")) {
+ const prop = getPendingCsvMatchProposal(d);
+ if (prop) {
+ const normalized = getNormalizedDayWorkouts(d);
+ const w = normalized[prop.planIdx];
+ if (w) {
+ const mins = prop.csvSession.durationMin > 0 ? Math.round(prop.csvSession.durationMin) : w.durationMin;
+ w.completed = true;
+ w.durationMin = mins;
+ w.burnedKcal = estimateBurnedKcal("Krachttraining", mins);
+ w.linkedCsvSource = prop.csvSession.source;
+ w.linkedCsvTitle = prop.csvSession.workoutTitle;
+ w.linkedCsvSetsCount = prop.csvSession.setsCount;
+ state.plannedWorkouts[d] = normalized;
+ saveFoodState();
+ refreshAll();
+ }
+ }
+ return;
+ }
+ if (e.target.closest("#btnRejectCsvPlanLink")) {
+ const prop = getPendingCsvMatchProposal(d);
+ if (prop) {
+ state.csvWorkoutLinks[d] = { rejectedCsvTitle: prop.csvSession.workoutTitle };
+ saveFoodState();
+ refreshAll();
+ }
+ return;
+ }
  const toggleBtn = e.target.closest("[data-toggle-plan]");
  if (toggleBtn) {
  const idx = Number(toggleBtn.getAttribute("data-toggle-plan"));
