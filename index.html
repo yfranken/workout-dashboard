@@ -1961,6 +1961,12 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
  <button type="button" class="btn-sm" id="btnCloseAddDrawer" title="Sluiten">✕</button>
  </div>
  </h2>
+ <div class="pill-row" id="targetSectionPills" style="display:none;">
+ <span class="pill" data-tsec="ontbijt">🌅 Ontbijt</span>
+ <span class="pill" data-tsec="lunch">🥪 Lunch</span>
+ <span class="pill" data-tsec="tussendoor">🍎 Tussendoor</span>
+ <span class="pill active" data-tsec="extra">➕ Extra</span>
+ </div>
 
  <div id="mealPasteBox" style="display:none; background:#0f172a; padding:10px; border-radius:10px; border:1px solid var(--accent); margin-bottom:12px;">
  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -4451,25 +4457,19 @@ function renderNutritionTab() {
  ? `<div class="m3-food-tiles-grid">${secTiles[sec].join("")}</div>`
  : `<div style="font-size:0.74rem; color:var(--muted); padding:2px 4px;">Nog geen items.</div>`;
 
- const hostEl = document.getElementById(`secAddHost_${sec}`);
  const addBtnEl = document.querySelector(`[data-open-sec-add="${sec}"]`);
  if (addBtnEl) addBtnEl.classList.toggle("active", state.activeAddSection === sec);
- if (hostEl) {
+ });
  const drawerCard = document.getElementById("nutritionAddDrawerCard");
- if (state.activeAddSection === sec && drawerCard) {
+ if (drawerCard) {
+ if (state.activeAddSection) {
  drawerCard.style.display = "block";
- hostEl.appendChild(drawerCard);
  const secNames = { ontbijt: "Ontbijt", lunch: "Lunch", tussendoor: "Tussendoor", extra: "Extra" };
  const lblEl = document.getElementById("activeAddSectionTitle");
- if (lblEl) lblEl.textContent = secNames[sec] || "Extra";
+ if (lblEl) lblEl.textContent = secNames[state.activeAddSection] || "Extra";
  } else {
- hostEl.innerHTML = "";
+ drawerCard.style.display = "none";
  }
- }
- });
- if (!state.activeAddSection) {
- const drawerCard = document.getElementById("nutritionAddDrawerCard");
- if (drawerCard) drawerCard.style.display = "none";
  }
 
  // Avondeten onderaan Dagmenu: compacte tegel die bij aanklikken invoer-opties toont
@@ -7229,8 +7229,12 @@ function switchTab(tabName) {
  try { renderTrainingProgressSection(sets); } catch (e) { console.error(e); }
  try { if (hasStrengthCsvData()) renderExerciseChart(); } catch (e) { console.error(e); }
  });
+ } else if (tabName === "nutrition") {
+ try { renderNutritionTab(); } catch (e) { console.error(e); }
  } else if (tabName === "planner") {
- try { renderPlannerTab(); } catch (e) {}
+ try { renderPlannerTab(); } catch (e) { console.error(e); }
+ } else if (tabName === "body") {
+ try { renderBodyMeasurementsTab(); } catch (e) { console.error(e); }
  } else if (tabName === "upload") {
  try {
  document.getElementById("garminStatus").textContent = state.garminSets.length > 0 ? `${state.garminSets.length} sets geladen` : "Nog geen Garmin-data";
@@ -7660,8 +7664,17 @@ function bindEvents() {
  if (openSecBtn) {
  const sec = openSecBtn.getAttribute("data-open-sec-add") || "extra";
  state.activeAddSection = state.activeAddSection === sec ? null : sec;
- if (state.activeAddSection) state.selectedTargetSection = state.activeAddSection;
+ if (state.activeAddSection) {
+ state.selectedTargetSection = state.activeAddSection;
+ const favD = document.getElementById("favDrinksPanel");
+ const favF = document.getElementById("favFoodPanel");
+ if (favD) favD.style.display = "block";
+ if (favF) favF.style.display = "block";
+ }
  renderNutritionTab();
+ if (state.activeAddSection) {
+ document.getElementById("nutritionAddDrawerCard")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+ }
  return;
  }
  if (e.target.closest("#btnCloseAddDrawer")) {
