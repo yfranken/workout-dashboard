@@ -115,11 +115,11 @@
  }
  .zoom-controls { display: flex; gap: 4px; align-items: center; }
  .kpi-grid {
- display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+ display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
  margin-bottom: 14px;
  }
  .kpi-grid-3 {
- display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
  margin-bottom: 14px;
  }
  .kpi-grid-4 {
@@ -1000,14 +1000,14 @@
  .m3-min-grid {
  display: grid;
  grid-template-columns: 1fr;
- gap: 10px;
+ gap: 12px;
  margin-bottom: 14px;
  }
  @media (min-width: 700px) {
  .m3-min-grid-2 {
  display: grid;
  grid-template-columns: repeat(2, 1fr);
- gap: 10px;
+ gap: 12px;
  }
  }
  .m3-action-tile {
@@ -2519,6 +2519,7 @@ let state = {
  ovTileIdx1: 0,
  ovTileIdx2: 0,
  ovTileIdx3: 0,
+ ovFavTileIdx: 0,
  trTileIdx1: 0,
  trTileIdx2: 0,
  trActivityMetric: "minutes",
@@ -5247,6 +5248,88 @@ function applyGranularityVisibilityForRange(granGroupId, attrName, currentGran, 
  return effectiveGran;
 }
 
+let ovFavAutoTimer = null;
+let ovFavManualPausedUntil = 0;
+
+function formatFutureWorkoutScheduleLabel(targetYmd, baseYmd = TODAY_YMD) {
+ const baseDt = new Date(baseYmd + "T12:00:00");
+ const tgtDt = new Date(targetYmd + "T12:00:00");
+ const diffDays = Math.round((tgtDt.getTime() - baseDt.getTime()) / 86400000);
+ const dayNames = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+ const dName = dayNames[tgtDt.getDay()];
+
+ // Bepaal maandag van huidige week en volgende week (ISO/nl week ma-zo)
+ const baseDow = (baseDt.getDay() + 6) % 7; // ma=0..zo=6
+ const curMon = new Date(baseDt);
+ curMon.setDate(baseDt.getDate() - baseDow);
+ const nextMon = new Date(curMon);
+ nextMon.setDate(curMon.getDate() + 7);
+ const weekAfterNextMon = new Date(nextMon);
+ weekAfterNextMon.setDate(nextMon.getDate() + 7);
+
+ if (tgtDt < nextMon) {
+ return `komende ${dName} gepland`;
+ }
+ if (tgtDt < weekAfterNextMon) {
+ return `volgende week ${dName} gepland`;
+ }
+ return `over ${Math.max(1, diffDays)} dagen gepland`;
+}
+
+function getFavoriteExerciseProgressItems() {
+ const favs = Array.isArray(state.favorites) ? state.favorites : [];
+ if (favs.length === 0 || !hasStrengthCsvData()) return [];
+ const allSets = getCombinedSets();
+ if (!allSets || allSets.length === 0) return [];
+
+ const items = [];
+ for (const exName of favs) {
+ const exSets = allSets.filter(s => s.exercise === exName && s.dateDay);
+ if (exSets.length === 0) continue;
+
+ const byDay = {};
+ for (const s of exSets) {
+ if (!byDay[s.dateDay]) byDay[s.dateDay] = { day: s.dateDay, e1rm: 0, maxW: 0 };
+ if (s.e1rm > byDay[s.dateDay].e1rm) byDay[s.dateDay].e1rm = s.e1rm;
+ if (s.weight > byDay[s.dateDay].maxW) byDay[s.dateDay].maxW = s.weight;
+ }
+ const days = Object.keys(byDay).sort();
+ const last = byDay[days[days.length - 1]];
+ const prev = days.length >= 2 ? byDay[days[days.length - 2]] : null;
+
+ let deltaHtml = `<span style="color:var(--muted);">Nieuw</span>`;
+ if (prev && prev.e1rm > 0) {
+ const pct = ((last.e1rm - prev.e1rm) / prev.e1rm) * 100;
+ const cls = pct >= 0 ? "delta-pos" : "delta-neg";
+ const sign = pct >= 0 ? "+" : "";
+ deltaHtml = `<span class="${cls}">${sign}${pct.toFixed(1)}% 1RM</span>`;
+ }
+ items.push({
+ name: exName,
+ main: `${last.maxW.toFixed(1).replace(/\.0$/, "")} kg · 1RM ${last.e1rm.toFixed(1).replace(/\.0$/, "")} kg`,
+ sub: `${formatShortNL(last.day)}`,
+ deltaHtml
+ });
+ }
+ return items;
+}
+
+function startOverviewFavAutoCycle() {
+ if (ovFavAutoTimer) {
+ clearInterval(ovFavAutoTimer);
+ ovFavAutoTimer = null;
+ }
+ if (state.ovExtendedView || !hasStrengthCsvData() || !(state.favorites && state.favorites.length > 0)) return;
+ ovFavAutoTimer = setInterval(() => {
+ if (state.ovExtendedView) return;
+ if (Date.now() < ovFavManualPausedUntil) return;
+ const items = getFavoriteExerciseProgressItems();
+ if (items.length <= 1) return;
+ state.ovFavTileIdx = ((state.ovFavTileIdx || 0) + 1) % items.length;
+ renderMinimalOverview();
+ }, 3000);
+}
+
 function renderMinimalOverview() {
  const wrap = document.getElementById("ovMinimalTiles");
  const minView = document.getElementById("ovMinimalView");
@@ -5260,7 +5343,11 @@ function renderMinimalOverview() {
  if (swLabel) swLabel.classList.toggle("active", isExt);
  if (swInput) swInput.checked = isExt;
 
- if (isExt || !wrap) return;
+ if (isExt) {
+ if (ovFavAutoTimer) { clearInterval(ovFavAutoTimer); ovFavAutoTimer = null; }
+ return;
+ }
+ if (!wrap) return;
 
  const ymd = TODAY_YMD;
  const fTotals = computeDayNutrition(ymd);
@@ -5293,25 +5380,43 @@ function renderMinimalOverview() {
  }
  }
 
- // Training vandaag
+ // Training vandaag + eerstkomende geplande training in de toekomst
  const dayWorkouts = getNormalizedDayWorkouts(ymd);
  const hasCsvToday = state.garminSets.some(s => s.dateDay === ymd) || state.hevySets.some(s => s.dateDay === ymd);
- const pendingWos = dayWorkouts.filter(w => !w.completed);
- const doneWos = dayWorkouts.filter(w => w.completed);
+ const pendingToday = dayWorkouts.filter(w => !w.completed);
+ const doneToday = dayWorkouts.filter(w => w.completed);
 
- let woChip = `<span class="m3-status-chip chip-muted">Rustdag</span>`;
+ const futureDates = Object.keys(state.plannedWorkouts || {})
+ .filter(d => d > ymd)
+ .sort();
+ let nextFutureWo = null;
+ for (const fDate of futureDates) {
+ const openWos = getNormalizedDayWorkouts(fDate).filter(w => !w.completed);
+ if (openWos.length > 0) {
+ nextFutureWo = { date: fDate, workout: openWos[0] };
+ break;
+ }
+ }
+
+ let woChip = `<span class="m3-status-chip chip-bad">Geen gepland</span>`;
  let woMain = `Geen training gepland`;
- let woSub = `Plan een workout in de agenda`;
+ let woSub = `<span style="color:var(--danger); font-weight:600;">Geen training gepland</span>`;
 
- if (pendingWos.length > 0) {
- woChip = `<span class="m3-status-chip chip-info">Nog te doen</span>`;
- woMain = pendingWos[0].title + (pendingWos.length > 1 ? ` (+${pendingWos.length - 1})` : "");
- woSub = `${pendingWos[0].durationMin} min gepland voor vandaag`;
- } else if (doneWos.length > 0 || hasCsvToday) {
- const title = doneWos[0]?.title || "Krachttraining";
+ if (pendingToday.length > 0) {
+ woChip = `<span class="m3-status-chip chip-info">Vandaag</span>`;
+ woMain = pendingToday[0].title + (pendingToday.length > 1 ? ` (+${pendingToday.length - 1})` : "");
+ woSub = `${pendingToday[0].durationMin} min vandaag gepland`;
+ } else if (nextFutureWo) {
+ const schedTxt = formatFutureWorkoutScheduleLabel(nextFutureWo.date, ymd);
+ const isFarFuture = /over \d+ dagen gepland/.test(schedTxt);
+ woChip = `<span class="m3-status-chip chip-info">Gepland</span>`;
+ woMain = nextFutureWo.workout.title;
+ woSub = `<span style="color:${isFarFuture ? "#f59e0b" : "var(--muted)"}; font-weight:${isFarFuture ? "600" : "400"};">${escapeHtml(nextFutureWo.workout.title)} · ${escapeHtml(schedTxt)}</span>`;
+ } else if (doneToday.length > 0 || hasCsvToday) {
+ const title = doneToday[0]?.title || "Krachttraining";
  woChip = `<span class="m3-status-chip chip-good">Voltooid</span>`;
  woMain = title;
- woSub = `Vandaag afgerond`;
+ woSub = `<span style="color:var(--danger); font-weight:600;">Geen training gepland</span>`;
  }
 
  // Metingen check (tip na >= 30 dagen)
@@ -5333,21 +5438,46 @@ function renderMinimalOverview() {
  }
  }
 
- // Resultaat (kort & krachtig)
+ // Resultaat (positief spier kg in groen cijfer)
  let resMain = `Geen metingen`;
- let resSub = `Voeg metingen of workouts toe`;
+ let resSubHtml = `Voeg metingen of workouts toe`;
  if (sortedBm.length >= 2) {
  const firstBm = sortedBm[0];
  const lastBm = sortedBm[sortedBm.length - 1];
  const dW = (lastBm.weight - firstBm.weight).toFixed(1);
  const dSmm = (lastBm.smm && firstBm.smm) ? (lastBm.smm - firstBm.smm) : null;
  resMain = `${Number(dW) >= 0 ? "+" : ""}${dW} kg gewicht`;
- resSub = dSmm !== null
- ? `Spier: ${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg · Sinds ${formatShortNL(firstBm.date)}`
- : `Sinds ${formatShortNL(firstBm.date)}`;
+ if (dSmm !== null) {
+ const smmSpan = `<span class="${dSmm > 0 ? "delta-pos" : (dSmm < 0 ? "delta-neg" : "")}" style="font-weight:700;">${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg</span>`;
+ resSubHtml = `Spier: ${smmSpan} · Sinds ${escapeHtml(formatShortNL(firstBm.date))}`;
+ } else {
+ resSubHtml = `Sinds ${escapeHtml(formatShortNL(firstBm.date))}`;
+ }
  } else if (sortedBm.length === 1) {
  resMain = `${sortedBm[0].weight} kg`;
- resSub = sortedBm[0].smm ? `Skeletspier: ${sortedBm[0].smm} kg` : `Gemeten op ${formatShortNL(sortedBm[0].date)}`;
+ resSubHtml = sortedBm[0].smm ? `Skeletspier: <span class="delta-pos" style="font-weight:700;">${sortedBm[0].smm} kg</span>` : `Gemeten op ${escapeHtml(formatShortNL(sortedBm[0].date))}`;
+ }
+
+ // Optionele tegel onderaan met favoriete oefeningen (alleen bij Hevy/Garmin CSV + favorieten)
+ const favItems = getFavoriteExerciseProgressItems();
+ let favTileHtml = "";
+ if (favItems.length > 0) {
+ const idx = ((state.ovFavTileIdx || 0) % favItems.length + favItems.length) % favItems.length;
+ const curFav = favItems[idx];
+ favTileHtml = `
+ <div class="m3-action-tile m3-cycle-tile" id="ovFavExerciseTile" data-jump-tab="charts" title="Swipe of klik om favoriete oefening te wisselen">
+ <div class="m3-tile-head">
+ <span class="m3-tile-cat">⭐ ${escapeHtml(curFav.name)}</span>
+ ${curFav.deltaHtml}
+ </div>
+ <div class="m3-tile-main" style="font-size:1.05rem;">${escapeHtml(curFav.main)}</div>
+ <div class="m3-tile-foot">
+ <span>Laatste sessie: ${escapeHtml(curFav.sub)}</span>
+ <span class="m3-tile-cta">Training &rarr;</span>
+ </div>
+ <div class="m3-dots-row" id="ovFavDots">${renderDotsHtml(favItems.length, idx)}</div>
+ </div>
+ `;
  }
 
  wrap.innerHTML = `
@@ -5371,7 +5501,7 @@ function renderMinimalOverview() {
  </div>
  <div class="m3-tile-main">${escapeHtml(woMain)}</div>
  <div class="m3-tile-foot">
- <span>${escapeHtml(woSub)}</span>
+ <span>${woSub}</span>
  <span class="m3-tile-cta">Planner &rarr;</span>
  </div>
  </div>
@@ -5396,11 +5526,47 @@ function renderMinimalOverview() {
  </div>
  <div class="m3-tile-main" style="font-size:1.05rem;">${escapeHtml(resMain)}</div>
  <div class="m3-tile-foot">
- <span>${escapeHtml(resSub)}</span>
+ <span>${resSubHtml}</span>
  <span class="m3-tile-cta">Bekijk &rarr;</span>
  </div>
  </div>
+
+ ${favTileHtml}
  `;
+
+ if (favItems.length > 1) {
+ const favEl = document.getElementById("ovFavExerciseTile");
+ if (favEl && !favEl.dataset.swipeBound) {
+ favEl.dataset.swipeBound = "1";
+ let sx = 0, sy = 0, swiped = false;
+ favEl.addEventListener("touchstart", e => {
+ if (!e.touches || !e.touches.length) return;
+ sx = e.touches[0].clientX;
+ sy = e.touches[0].clientY;
+ swiped = false;
+ }, { passive: true });
+ favEl.addEventListener("touchmove", e => {
+ if (!e.touches || !e.touches.length) return;
+ const dx = e.touches[0].clientX - sx;
+ const dy = e.touches[0].clientY - sy;
+ if (Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy)) swiped = true;
+ }, { passive: true });
+ favEl.addEventListener("touchend", e => {
+ if (!swiped) return;
+ e.stopPropagation();
+ const exX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : sx;
+ const dir = (exX - sx) < 0 ? 1 : -1;
+ ovFavManualPausedUntil = Date.now() + 6000;
+ state.ovFavTileIdx = ((state.ovFavTileIdx || 0) + dir + favItems.length) % favItems.length;
+ renderMinimalOverview();
+ setTimeout(() => { swiped = false; }, 140);
+ });
+ favEl.addEventListener("click", e => {
+ if (swiped) { e.stopPropagation(); return; }
+ });
+ }
+ }
+ startOverviewFavAutoCycle();
 }
 
 function renderOverviewDashboard(sets) {
