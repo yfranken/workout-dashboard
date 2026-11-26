@@ -936,6 +936,171 @@
  color: #38bdf8;
  }
 
+ /* Minimalistisch M3 Dashboard op Totaal-tab */
+ .ov-top-bar {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 10px;
+ margin-bottom: 12px;
+ padding: 8px 12px;
+ background: var(--card);
+ border: 1px solid var(--card-border);
+ border-radius: 14px;
+ }
+ .ov-top-title {
+ font-size: 0.84rem;
+ font-weight: 700;
+ color: var(--text);
+ display: flex;
+ align-items: center;
+ gap: 6px;
+ }
+ .m3-switch-wrap {
+ display: inline-flex;
+ align-items: center;
+ gap: 8px;
+ cursor: pointer;
+ user-select: none;
+ font-size: 0.78rem;
+ font-weight: 600;
+ color: var(--muted);
+ }
+ .m3-switch-wrap.active {
+ color: var(--accent);
+ }
+ .m3-switch-track {
+ position: relative;
+ width: 42px;
+ height: 24px;
+ border-radius: 999px;
+ background: #0f172a;
+ border: 1.5px solid #475569;
+ transition: background 0.2s ease, border-color 0.2s ease;
+ flex-shrink: 0;
+ }
+ .m3-switch-wrap.active .m3-switch-track {
+ background: rgba(56, 189, 248, 0.25);
+ border-color: var(--accent);
+ }
+ .m3-switch-thumb {
+ position: absolute;
+ top: 2px;
+ left: 2px;
+ width: 17px;
+ height: 17px;
+ border-radius: 50%;
+ background: #94a3b8;
+ transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, width 0.2s ease, height 0.2s ease, top 0.2s ease;
+ }
+ .m3-switch-wrap.active .m3-switch-thumb {
+ transform: translateX(18px);
+ background: var(--accent);
+ }
+ .m3-min-grid {
+ display: grid;
+ grid-template-columns: 1fr;
+ gap: 10px;
+ margin-bottom: 14px;
+ }
+ @media (min-width: 700px) {
+ .m3-min-grid-2 {
+ display: grid;
+ grid-template-columns: repeat(2, 1fr);
+ gap: 10px;
+ }
+ }
+ .m3-action-tile {
+ background: linear-gradient(160deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%);
+ border: 1px solid var(--card-border);
+ border-radius: 18px;
+ padding: 14px;
+ display: flex;
+ flex-direction: column;
+ justify-content: space-between;
+ gap: 10px;
+ cursor: pointer;
+ transition: transform 0.14s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+ box-shadow: 0 6px 18px rgba(2, 6, 23, 0.32);
+ }
+ .m3-action-tile:hover {
+ border-color: var(--accent);
+ box-shadow: 0 8px 22px rgba(56, 189, 248, 0.12);
+ }
+ .m3-action-tile:active {
+ transform: scale(0.985);
+ }
+ .m3-tile-head {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 8px;
+ }
+ .m3-tile-cat {
+ font-size: 0.74rem;
+ font-weight: 700;
+ text-transform: uppercase;
+ letter-spacing: 0.45px;
+ color: var(--muted);
+ display: flex;
+ align-items: center;
+ gap: 6px;
+ }
+ .m3-status-chip {
+ font-size: 0.7rem;
+ font-weight: 700;
+ padding: 3px 9px;
+ border-radius: 999px;
+ white-space: nowrap;
+ }
+ .chip-good {
+ background: rgba(16, 185, 129, 0.16);
+ color: #10b981;
+ border: 1px solid rgba(16, 185, 129, 0.35);
+ }
+ .chip-warn {
+ background: rgba(245, 158, 11, 0.16);
+ color: #f59e0b;
+ border: 1px solid rgba(245, 158, 11, 0.35);
+ }
+ .chip-bad {
+ background: rgba(239, 68, 68, 0.16);
+ color: #ef4444;
+ border: 1px solid rgba(239, 68, 68, 0.35);
+ }
+ .chip-info {
+ background: rgba(56, 189, 248, 0.16);
+ color: #38bdf8;
+ border: 1px solid rgba(56, 189, 248, 0.35);
+ }
+ .chip-muted {
+ background: rgba(148, 163, 184, 0.14);
+ color: #94a3b8;
+ border: 1px solid rgba(148, 163, 184, 0.28);
+ }
+ .m3-tile-main {
+ font-size: 1.18rem;
+ font-weight: 700;
+ color: var(--text);
+ letter-spacing: -0.2px;
+ }
+ .m3-tile-foot {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 8px;
+ font-size: 0.75rem;
+ color: var(--muted);
+ }
+ .m3-tile-cta {
+ font-size: 0.74rem;
+ font-weight: 700;
+ color: var(--accent);
+ display: inline-flex;
+ align-items: center;
+ gap: 3px;
+ }
+
  /* Unified Period Header + Material 3 Segmented Button Groups */
  .period-options-block {
  margin-top: 8px;
@@ -1065,6 +1230,25 @@
  <!-- TAB 1: TOTAALBEELD -->
  <!-- ========================================================= -->
  <div id="tab-overview" class="panel active">
+ <div class="ov-top-bar">
+ <div class="ov-top-title">
+ <span>Vandaag &amp; Resultaat</span>
+ </div>
+ <label class="m3-switch-wrap" id="ovExtendedSwitch" title="Schakel tussen minimalistisch en uitgebreid met grafieken">
+ <span>Uitgebreid</span>
+ <span class="m3-switch-track">
+ <span class="m3-switch-thumb"></span>
+ </span>
+ <input type="checkbox" id="ovExtendedToggle" style="display:none;" />
+ </label>
+ </div>
+
+ <div id="ovMinimalView">
+ <div class="m3-min-grid" id="ovMinimalTiles"></div>
+ </div>
+
+ <div id="ovExtendedView" style="display:none;">
+
  <div class="card" style="padding:10px 12px;">
  <div class="period-nav" id="ovNavBar">
  <button type="button" class="nav-arrow" id="ovPrevBtn" title="Vorige periode" disabled>&#9664;</button>
@@ -1161,7 +1345,10 @@
  </div>
  </div>
 
- <!-- ========================================================= -->
+  </div>
+</div>
+
+<!-- ========================================================= -->
  <!-- TAB 2: PLANNER (AGENDA MET VOEDING & WORKOUTS) -->
  <!-- ========================================================= -->
  <div id="tab-planner" class="panel">
@@ -2316,6 +2503,7 @@ let state = {
  periodOffset: 0,
  inspectedPoint: null,
  ovRange: safeParseJSON("pref_ov_range_v1", "12m"),
+ ovExtendedView: safeParseJSON("pref_ov_extended_v1", false),
  ovGranularity: safeParseJSON("pref_ov_gran_v1", "month"),
  ovOffset: 0,
  ovStepCount: 1,
@@ -5059,7 +5247,165 @@ function applyGranularityVisibilityForRange(granGroupId, attrName, currentGran, 
  return effectiveGran;
 }
 
+function renderMinimalOverview() {
+ const wrap = document.getElementById("ovMinimalTiles");
+ const minView = document.getElementById("ovMinimalView");
+ const extView = document.getElementById("ovExtendedView");
+ const swLabel = document.getElementById("ovExtendedSwitch");
+ const swInput = document.getElementById("ovExtendedToggle");
+
+ const isExt = Boolean(state.ovExtendedView);
+ if (minView) minView.style.display = isExt ? "none" : "block";
+ if (extView) extView.style.display = isExt ? "block" : "none";
+ if (swLabel) swLabel.classList.toggle("active", isExt);
+ if (swInput) swInput.checked = isExt;
+
+ if (isExt || !wrap) return;
+
+ const ymd = TODAY_YMD;
+ const fTotals = computeDayNutrition(ymd);
+ const trainDay = isTrainingDay(ymd);
+ const goalKcal = trainDay ? Number(state.nutriGoals.kcalTrain || 2550) : Number(state.nutriGoals.kcalRest || 2250);
+
+ let foodChip = `<span class="m3-status-chip chip-warn">Nog loggen</span>`;
+ let foodMain = `0 / ${goalKcal} kcal`;
+ let foodSub = `Ontbijt, lunch en avondeten bijwerken`;
+
+ if (fTotals.isFreeDay) {
+ foodChip = `<span class="m3-status-chip chip-muted">Vrije dag</span>`;
+ foodMain = `Logging overgeslagen`;
+ foodSub = `Niet meegerekend in gemiddelden`;
+ } else if (goalKcal > 0) {
+ const ratio = fTotals.kcal / goalKcal;
+ foodMain = `${fTotals.kcal} / ${goalKcal} kcal`;
+ if (fTotals.kcal < goalKcal * 0.85) {
+ foodChip = `<span class="m3-status-chip chip-info">Onder doel</span>`;
+ foodSub = fTotals.completed ? `Dag afgerond · ${fTotals.p}g eiwit` : `Nog ${Math.max(0, goalKcal - fTotals.kcal)} kcal tot doel`;
+ } else if (ratio <= 1.05) {
+ foodChip = `<span class="m3-status-chip chip-good">Op peil</span>`;
+ foodSub = fTotals.completed ? `Dag afgerond · ${fTotals.p}g eiwit` : `${fTotals.p}g eiwit · Rond dag af`;
+ } else if (ratio <= 1.15) {
+ foodChip = `<span class="m3-status-chip chip-warn">Licht over</span>`;
+ foodSub = `+${fTotals.kcal - goalKcal} kcal boven doel`;
+ } else {
+ foodChip = `<span class="m3-status-chip chip-bad">Over doel</span>`;
+ foodSub = `+${fTotals.kcal - goalKcal} kcal boven doel`;
+ }
+ }
+
+ // Training vandaag
+ const dayWorkouts = getNormalizedDayWorkouts(ymd);
+ const hasCsvToday = state.garminSets.some(s => s.dateDay === ymd) || state.hevySets.some(s => s.dateDay === ymd);
+ const pendingWos = dayWorkouts.filter(w => !w.completed);
+ const doneWos = dayWorkouts.filter(w => w.completed);
+
+ let woChip = `<span class="m3-status-chip chip-muted">Rustdag</span>`;
+ let woMain = `Geen training gepland`;
+ let woSub = `Plan een workout in de agenda`;
+
+ if (pendingWos.length > 0) {
+ woChip = `<span class="m3-status-chip chip-info">Nog te doen</span>`;
+ woMain = pendingWos[0].title + (pendingWos.length > 1 ? ` (+${pendingWos.length - 1})` : "");
+ woSub = `${pendingWos[0].durationMin} min gepland voor vandaag`;
+ } else if (doneWos.length > 0 || hasCsvToday) {
+ const title = doneWos[0]?.title || "Krachttraining";
+ woChip = `<span class="m3-status-chip chip-good">Voltooid</span>`;
+ woMain = title;
+ woSub = `Vandaag afgerond`;
+ }
+
+ // Metingen check (tip na >= 30 dagen)
+ const sortedBm = [...(state.bodyMeasurements || [])].filter(m => m && m.date).sort((a, b) => a.date.localeCompare(b.date));
+ let bmChip = `<span class="m3-status-chip chip-warn">Plan meting</span>`;
+ let bmMain = `Geen meting bekend`;
+ let bmSub = `Doe een lichaamsmeting voor inzicht`;
+
+ if (sortedBm.length > 0) {
+ const lastBm = sortedBm[sortedBm.length - 1];
+ const daysAgo = Math.max(0, Math.round((new Date(ymd + "T12:00:00") - new Date(lastBm.date + "T12:00:00")) / 86400000));
+ bmMain = `${lastBm.weight} kg`;
+ if (daysAgo >= 30) {
+ bmChip = `<span class="m3-status-chip chip-warn">Meting plannen</span>`;
+ bmSub = `${daysAgo} dagen geleden (${formatShortNL(lastBm.date)}) · Tijd voor check`;
+ } else {
+ bmChip = `<span class="m3-status-chip chip-good">Actueel</span>`;
+ bmSub = `${daysAgo === 0 ? "Vandaag" : daysAgo + "d geleden"} (${escapeHtml(lastBm.scanner)})`;
+ }
+ }
+
+ // Resultaat (kort & krachtig)
+ let resMain = `Geen metingen`;
+ let resSub = `Voeg metingen of workouts toe`;
+ if (sortedBm.length >= 2) {
+ const firstBm = sortedBm[0];
+ const lastBm = sortedBm[sortedBm.length - 1];
+ const dW = (lastBm.weight - firstBm.weight).toFixed(1);
+ const dSmm = (lastBm.smm && firstBm.smm) ? (lastBm.smm - firstBm.smm) : null;
+ resMain = `${Number(dW) >= 0 ? "+" : ""}${dW} kg gewicht`;
+ resSub = dSmm !== null
+ ? `Spier: ${dSmm >= 0 ? "+" : ""}${dSmm.toFixed(1)} kg · Sinds ${formatShortNL(firstBm.date)}`
+ : `Sinds ${formatShortNL(firstBm.date)}`;
+ } else if (sortedBm.length === 1) {
+ resMain = `${sortedBm[0].weight} kg`;
+ resSub = sortedBm[0].smm ? `Skeletspier: ${sortedBm[0].smm} kg` : `Gemeten op ${formatShortNL(sortedBm[0].date)}`;
+ }
+
+ wrap.innerHTML = `
+ <div class="m3-action-tile" data-jump-tab="nutrition">
+ <div class="m3-tile-head">
+ <span class="m3-tile-cat">🍽️ Voeding</span>
+ ${foodChip}
+ </div>
+ <div class="m3-tile-main">${escapeHtml(foodMain)}</div>
+ <div class="m3-tile-foot">
+ <span>${escapeHtml(foodSub)}</span>
+ <span class="m3-tile-cta">Voeding &rarr;</span>
+ </div>
+ </div>
+
+ <div class="m3-min-grid-2">
+ <div class="m3-action-tile" data-jump-tab="planner">
+ <div class="m3-tile-head">
+ <span class="m3-tile-cat">🏋️ Training</span>
+ ${woChip}
+ </div>
+ <div class="m3-tile-main">${escapeHtml(woMain)}</div>
+ <div class="m3-tile-foot">
+ <span>${escapeHtml(woSub)}</span>
+ <span class="m3-tile-cta">Planner &rarr;</span>
+ </div>
+ </div>
+
+ <div class="m3-action-tile" data-jump-tab="body">
+ <div class="m3-tile-head">
+ <span class="m3-tile-cat">⚖️ Metingen</span>
+ ${bmChip}
+ </div>
+ <div class="m3-tile-main">${escapeHtml(bmMain)}</div>
+ <div class="m3-tile-foot">
+ <span>${escapeHtml(bmSub)}</span>
+ <span class="m3-tile-cta">Metingen &rarr;</span>
+ </div>
+ </div>
+ </div>
+
+ <div class="m3-action-tile" data-jump-tab="body" style="padding:12px 14px;">
+ <div class="m3-tile-head">
+ <span class="m3-tile-cat">📈 Resultaat</span>
+ <span class="m3-status-chip chip-info">Overzicht</span>
+ </div>
+ <div class="m3-tile-main" style="font-size:1.05rem;">${escapeHtml(resMain)}</div>
+ <div class="m3-tile-foot">
+ <span>${escapeHtml(resSub)}</span>
+ <span class="m3-tile-cta">Bekijk &rarr;</span>
+ </div>
+ </div>
+ `;
+}
+
 function renderOverviewDashboard(sets) {
+ renderMinimalOverview();
+ if (!state.ovExtendedView) return;
  const rangeKey = state.ovRange || "12m";
  const gran = applyGranularityVisibilityForRange("ovGranularityPills", "data-gran", state.ovGranularity || "month", rangeKey);
  state.ovGranularity = gran;
@@ -6467,6 +6813,18 @@ function bindEvents() {
  }
 
 
+
+ document.getElementById("ovExtendedToggle")?.addEventListener("change", e => {
+ state.ovExtendedView = Boolean(e.target.checked);
+ try { localStorage.setItem("pref_ov_extended_v1", JSON.stringify(state.ovExtendedView)); } catch (err) {}
+ renderOverviewDashboard(getCombinedSets());
+ });
+ document.getElementById("ovMinimalTiles")?.addEventListener("click", e => {
+ const tile = e.target.closest("[data-jump-tab]");
+ if (!tile) return;
+ const target = tile.getAttribute("data-jump-tab");
+ if (target) switchTab(target);
+ });
 
  // Overview events (Material 3 Button Groups + enkele pijlnavigatie per periode)
  bindSegmentedButtonGroup("ovRangeChips", "data-range", newRange => {
