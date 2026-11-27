@@ -1380,8 +1380,8 @@
  width: 100%;
  height: 100%;
  object-fit: cover;
- opacity: 0.44;
- filter: saturate(0.88) contrast(1.05);
+ opacity: 0.54;
+ filter: saturate(0.9) contrast(1.05);
  transform: scale(1.03);
  }
  .auth-bg-scrim {
@@ -1389,11 +1389,12 @@
  inset: 0;
  z-index: 1;
  pointer-events: none;
- background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.78) 100%);
+ background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.68) 100%);
  }
  .auth-gate-card {
  position: relative;
  z-index: 2;
+ border: none;
  background: rgba(30, 41, 59, 0.68);
  backdrop-filter: blur(6px);
  -webkit-backdrop-filter: blur(6px);
@@ -4190,30 +4191,50 @@ function renderNutriDateCalendar() {
 }
 
 // === RENDER VOEDING TAB ===
-function renderMacroShareHtml(itemMacros, dayTotals) {
- const kcalShare = dayTotals.kcal > 0 ? Math.min(100, Math.round((itemMacros.kcal / dayTotals.kcal) * 100)) : 0;
- const pShare = dayTotals.p > 0 ? Math.min(100, Math.round((itemMacros.p / dayTotals.p) * 100)) : 0;
- const cShare = dayTotals.c > 0 ? Math.min(100, Math.round((itemMacros.c / dayTotals.c) * 100)) : 0;
- const fShare = dayTotals.f > 0 ? Math.min(100, Math.round((itemMacros.f / dayTotals.f) * 100)) : 0;
+function renderMacroShareHtml(itemMacros, dayTotals, dayGoals) {
+ const goals = dayGoals || {
+ kcal: Number(state.nutriGoals.kcalRest || 2250),
+ p: Number(state.nutriGoals.protein || 155),
+ c: Number(state.nutriGoals.carbs || 240),
+ f: Number(state.nutriGoals.fat || 75)
+ };
+ const calcDual = (v, tot, g) => {
+ const val = Number(v || 0);
+ const pctLogged = tot > 0 ? Math.min(100, Math.round((val / tot) * 100)) : 0;
+ const pctGoal = g > 0 ? Math.min(100, Math.round((val / g) * 100)) : 0;
+ return { pctLogged, pctGoal };
+ };
+
+ const kDual = calcDual(itemMacros.kcal, dayTotals.kcal, goals.kcal);
+ const pDual = calcDual(itemMacros.p, dayTotals.p, goals.p);
+ const cDual = calcDual(itemMacros.c, dayTotals.c, goals.c);
+ const fDual = calcDual(itemMacros.f, dayTotals.f, goals.f);
 
  const rows = [
- { lbl: "Calorieën", val: `${Math.round(itemMacros.kcal)} kcal`, pct: kcalShare, color: "var(--accent)" },
- { lbl: "Eiwitten", val: `${Number(itemMacros.p || 0).toFixed(1)}g`, pct: pShare, color: "var(--accent-hevy)" },
- { lbl: "Koolhydraten", val: `${Math.round(itemMacros.c || 0)}g`, pct: cShare, color: "var(--accent-carbs)" },
- { lbl: "Vetten", val: `${Number(itemMacros.f || 0).toFixed(1)}g`, pct: fShare, color: "var(--accent-fat)" }
+ { lbl: "Calorieën", val: `${Math.round(itemMacros.kcal)} kcal`, ...kDual, color: "var(--accent)" },
+ { lbl: "Eiwitten", val: `${Number(itemMacros.p || 0).toFixed(1)}g`, ...pDual, color: "var(--accent-hevy)" },
+ { lbl: "Koolhydraten", val: `${Math.round(itemMacros.c || 0)}g`, ...cDual, color: "var(--accent-carbs)" },
+ { lbl: "Vetten", val: `${Number(itemMacros.f || 0).toFixed(1)}g`, ...fDual, color: "var(--accent-fat)" }
  ];
 
- return rows.map(r => `
+ return rows.map(r => {
+ const maxPct = Math.max(r.pctLogged, r.pctGoal);
+ const minPct = Math.min(r.pctLogged, r.pctGoal);
+ const outerColor = r.pctLogged >= r.pctGoal ? r.color : "#f8fafc";
+ const innerColor = r.pctLogged >= r.pctGoal ? "#f8fafc" : r.color;
+ return `
  <div class="m3-share-row">
  <div class="m3-share-row-top">
  <span>${r.lbl}: <strong style="color:var(--text);">${r.val}</strong></span>
- <span>${r.pct}% van dag</span>
+ <span><span style="color:${r.color}; font-weight:700;">${r.pctLogged}% ingevoerd</span> · <span style="color:#f8fafc; font-weight:600;">${r.pctGoal}% doel</span></span>
  </div>
- <div class="m3-share-bar-bg">
- <div class="m3-share-bar-fill" style="width:${r.pct}%; background:${r.color};"></div>
+ <div class="m3-share-bar-bg" style="position:relative;">
+ <div style="position:absolute; left:0; top:0; bottom:0; width:${maxPct}%; background:${outerColor}; opacity:0.45; border-radius:999px; transition:width 0.25s ease;"></div>
+ <div style="position:absolute; left:0; top:0; bottom:0; width:${minPct}%; background:${innerColor}; border-radius:999px; transition:width 0.25s ease;"></div>
  </div>
  </div>
- `).join("");
+ `;
+ }).join("");
 }
 
 function renderNutritionTab() {
@@ -4366,7 +4387,7 @@ function renderNutritionTab() {
 
  const detailHtml = isExp ? `
  <div class="m3-food-macro-detail" data-stop-expand="1">
- ${renderMacroShareHtml(macrosObj, totals)}
+ ${renderMacroShareHtml(macrosObj, totals, { kcal: goalKcal, p: goalP, c: goalC, f: goalF })}
  <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; margin-top:7px;">
  ${drawerControlsHtml}
  <div style="display:flex; gap:6px; align-items:center; margin-left:auto;">
@@ -4556,12 +4577,15 @@ function renderNutritionTab() {
 
  const expandedControls = state.dinnerPickerOpen ? `
  <div class="dinner-box ${isConf ? "" : "unconfirmed"}" style="margin-top:8px;">
- <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+ <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
  <div style="font-size:0.74rem; color:var(--muted);">
  ${dKcal} kcal · ${dProt}g E · ${dCarb}g KH · ${dFat}g V ${pMult !== 1 ? `<strong style="color:var(--accent);">(${pMult}×)</strong>` : ""}${famSub}
  </div>
- <button type="button" class="btn-sm" id="btnRemoveDinner" style="color:var(--danger); padding:2px 7px;">✕</button>
+ <button type="button" class="btn-sm" id="btnRemoveDinner" style="color:var(--danger); padding:4px 7px; display:inline-flex; align-items:center; justify-content:center;" title="Verwijder avondeten" aria-label="Verwijder avondeten">
+ <svg viewBox="0 0 24 24" style="width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+ </button>
  </div>
+ ${renderMacroShareHtml({ kcal: dKcal, p: dProt, c: dCarb, f: dFat }, totals, { kcal: goalKcal, p: goalP, c: goalC, f: goalF })}
  <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid rgba(51,65,85,0.5); gap:8px;">
  <span style="font-size:0.75rem; color:var(--muted); font-weight:600;">Portiegrootte:</span>
  <div class="stepper" style="padding:2px;">
@@ -7717,11 +7741,33 @@ function bindEvents() {
  return;
  }
  if (e.target.closest("#btnEstimateDinnerAi")) {
- document.getElementById("btnEstimateDinnerAi").dispatchEvent(new Event("click"));
+ runEstimateDinnerAi();
  return;
  }
  if (e.target.closest("#btnSaveOwnDinner")) {
- document.getElementById("btnSaveOwnDinner").dispatchEvent(new Event("click"));
+ const title = (document.getElementById("customOwnDinnerTitle")?.value || "").trim();
+ const kcal = Number(document.getElementById("customOwnDinnerKcal")?.value) || 0;
+ const p = Number(document.getElementById("customOwnDinnerProt")?.value) || 0;
+ const c = Number(document.getElementById("customOwnDinnerCarb")?.value) || 0;
+ const f = Number(document.getElementById("customOwnDinnerFat")?.value) || 0;
+ if (!title) { alert("Vul een naam in voor je eigen gerecht."); return; }
+ const log = getOrCreateFoodDay(state.selectedNutriDate);
+ log.dinner = {
+ title,
+ kcal,
+ p,
+ c,
+ f,
+ portionMult: 1,
+ confirmed: true,
+ fromFamilyOwnerId: null,
+ fromFamilyUsername: null
+ };
+ log.customDinnerOverride = true;
+ log.touched = true;
+ saveFoodState();
+ renderNutritionTab();
+ renderPlannerTab();
  return;
  }
  if (e.target.closest("#btnConfirmDinner") || e.target.closest("#btnRemoveDinner") || e.target.closest("#btnDinnerPortionDown") || e.target.closest("#btnDinnerPortionUp")) {
@@ -8346,7 +8392,7 @@ function bindEvents() {
  }
  }
 
- document.getElementById("btnEstimateDinnerAi")?.addEventListener("click", async () => {
+ async function runEstimateDinnerAi() {
  const inp = document.getElementById("aiDinnerDescInput");
  const statusEl = document.getElementById("aiDinnerStatusMsg");
  const btn = document.getElementById("btnEstimateDinnerAi");
@@ -8405,19 +8451,20 @@ function bindEvents() {
  saveFoodState();
 
  if (inp) inp.value = "";
- if (statusEl) {
- statusEl.style.display = "block";
- statusEl.style.color = "var(--accent-hevy)";
- statusEl.textContent = `✓ Toegevoegd: ${res.title} (${res.kcal} kcal · ${res.p}g E · ${res.c}g KH · ${res.f}g V)`;
- }
  renderNutritionTab();
  renderPlannerTab();
- });
+ const newStatusEl = document.getElementById("aiDinnerStatusMsg");
+ if (newStatusEl) {
+ newStatusEl.style.display = "block";
+ newStatusEl.style.color = "var(--accent-hevy)";
+ newStatusEl.textContent = `✓ Toegevoegd: ${res.title} (${res.kcal} kcal · ${res.p}g E · ${res.c}g KH · ${res.f}g V)`;
+ }
+ }
 
- document.getElementById("aiDinnerDescInput")?.addEventListener("keydown", e => {
- if (e.key === "Enter") {
+ document.getElementById("dinnerContainer")?.addEventListener("keydown", e => {
+ if (e.target && e.target.id === "aiDinnerDescInput" && e.key === "Enter") {
  e.preventDefault();
- document.getElementById("btnEstimateDinnerAi")?.click();
+ runEstimateDinnerAi();
  }
  });
 
@@ -8953,6 +9000,23 @@ function bindEvents() {
  });
 
  document.getElementById("unifiedSearchResults").addEventListener("click", async e => {
+ const confirmAiBtn = e.target.closest("#btnConfirmAiEstimate");
+ if (confirmAiBtn) {
+ const item = JSON.parse(confirmAiBtn.getAttribute("data-ai-item"));
+ const mult = Math.max(0.1, Number(document.getElementById("inpAiEstPortion")?.value) || 1);
+ addFoodItemToLog(item, mult);
+ document.getElementById("unifiedSearchInput").value = "";
+ syncUnifiedClearBtn();
+ document.getElementById("unifiedSearchResults").innerHTML = "";
+ return;
+ }
+
+ const cancelAiBtn = e.target.closest("#btnCancelAiEstimate");
+ if (cancelAiBtn) {
+ document.getElementById("unifiedSearchResults").innerHTML = "";
+ return;
+ }
+
  const aiEstBtn = e.target.closest("#btnEstimateSearchAi");
  if (aiEstBtn) {
  const qDesc = aiEstBtn.getAttribute("data-ai-query") || document.getElementById("unifiedSearchInput")?.value || "";
@@ -8967,7 +9031,7 @@ function bindEvents() {
  if (stEl) { stEl.style.display = "block"; stEl.style.color = "var(--accent-garmin)"; stEl.textContent = res.error; }
  return;
  }
- addFoodItemToLog({
+ const aiItem = {
  id: "ai_" + Date.now(),
  name: res.title,
  unitType: "stuk",
@@ -8976,10 +9040,25 @@ function bindEvents() {
  pUnit: res.p,
  cUnit: res.c,
  fUnit: res.f
- }, 1);
- document.getElementById("unifiedSearchInput").value = "";
- syncUnifiedClearBtn();
- document.getElementById("unifiedSearchResults").innerHTML = "";
+ };
+ document.getElementById("unifiedSearchResults").innerHTML = `
+ <div style="padding:10px; background:#0f172a; border:1px solid var(--accent); border-radius:10px;">
+ <div style="font-size:0.72rem; color:var(--accent); font-weight:700; margin-bottom:4px;">✨ AI-inschatting klaar ter bevestiging</div>
+ <div style="font-size:0.86rem; font-weight:700; color:var(--text);">${escapeHtml(res.title)}</div>
+ <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">${res.kcal} kcal · ${res.p}g eiwit · ${res.c}g kh · ${res.f}g vet</div>
+ <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; flex-wrap:wrap;">
+ <div style="display:flex; align-items:center; gap:5px; font-size:0.75rem; color:var(--muted);">
+ <span>Portie:</span>
+ <input type="number" id="inpAiEstPortion" value="1" step="0.5" min="0.1" class="step-val-input" style="width:52px !important; padding:4px 2px !important;" />
+ <span>×</span>
+ </div>
+ <div style="display:flex; gap:6px; margin-left:auto;">
+ <button type="button" class="btn-sm" id="btnCancelAiEstimate">Annuleren</button>
+ <button type="button" class="btn-sm btn-hevy" id="btnConfirmAiEstimate" data-ai-item="${escapeHtml(JSON.stringify(aiItem))}" style="color:#0f172a; padding:6px 12px;">✓ Bevestigen &amp; toevoegen</button>
+ </div>
+ </div>
+ </div>
+ `;
  return;
  }
 
