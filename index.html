@@ -1380,8 +1380,8 @@
  width: 100%;
  height: 100%;
  object-fit: cover;
- opacity: 0.34;
- filter: saturate(0.85) contrast(1.05);
+ opacity: 0.44;
+ filter: saturate(0.88) contrast(1.05);
  transform: scale(1.03);
  }
  .auth-bg-scrim {
@@ -1389,14 +1389,14 @@
  inset: 0;
  z-index: 1;
  pointer-events: none;
- background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.88) 100%);
+ background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.78) 100%);
  }
  .auth-gate-card {
  position: relative;
  z-index: 2;
- background: rgba(30, 41, 59, 0.78);
- backdrop-filter: blur(8px);
- -webkit-backdrop-filter: blur(8px);
+ background: rgba(30, 41, 59, 0.68);
+ backdrop-filter: blur(6px);
+ -webkit-backdrop-filter: blur(6px);
  }
 
  </style>
@@ -2018,17 +2018,17 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
  </div>
  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
  <span class="field-lbl" style="line-height:1.4; margin-bottom:0; flex:1;">
- Laat je eigen AI-tool op basis van een grove omschrijving een schatting maken in dit vaste format:
+ Gebruik je eigen AI-tool om op basis van een grove omschrijving een schatting te maken met het Dagmenu format en plak het hieronder
  </span>
- <button type="button" class="btn-sm btn-accent" id="btnCopyAiMealFormat" style="color:#0f172a; white-space:nowrap;">Kopieer format</button>
+ <button type="button" class="btn-sm btn-accent" id="btnCopyAiMealFormat" style="color:#0f172a; white-space:nowrap;">Kopieer Dagmenu format</button>
  </div>
  <textarea id="mealPasteText" rows="4" placeholder=""></textarea>
  <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-size:0.76rem;">
  <input type="checkbox" id="chkPasteReplaceBasis" />
- Standaard basisdag op deze dag op 0 zetten
+ Basisdag vandaag uitzetten
  </label>
  <div class="manual-grid" style="margin-top:0;">
- <button type="button" class="btn btn-hevy" id="btnParseMealPaste" style="margin-top:0; padding:8px;">Inladen op deze dag</button>
+ <button type="button" class="btn btn-hevy" id="btnParseMealPaste" style="margin-top:0; padding:8px;">Dagmenu invoeren</button>
  <button type="button" class="btn-sm" id="btnCancelMealPaste">Annuleren</button>
  </div>
  </div>
@@ -2068,28 +2068,6 @@ Dinsdag: Zalm met zoete aardappel en sperziebonen (710 kcal, 44g eiwit, 55g kh, 
  </div>
  </div>
  </div>
-
- <details id="smartMealComposerDetails" style="margin-top:10px; font-size:0.8rem; color:var(--muted);">
- <summary style="cursor:pointer; font-weight:600; color:var(--accent);">🧩 Slimme samenstelling (bouw gerecht uit ingrediënten)</summary>
- <div style="margin-top:8px; background:#0f172a; border:1px solid var(--card-border); border-radius:10px; padding:10px;">
- <div style="font-size:0.74rem; color:var(--muted); margin-bottom:6px;">
- Combineer losse ingrediënten (bijv. <em>2× Gekookt Ei + 10g Roomboter</em> = <strong>Roerei</strong>) zonder zelf macro's te rekenen:
- </div>
- <input type="text" id="compMealName" placeholder="Naam gerecht (bijv. Roerei met kaas)" style="margin-bottom:6px; padding:7px; font-size:0.8rem;" />
- <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
- <select id="compIngSelect" style="flex:1; margin-bottom:0; padding:7px; font-size:0.78rem;"></select>
- <input type="number" id="compIngQty" value="1" min="0.5" step="0.5" style="width:66px; margin-bottom:0; padding:7px; font-size:0.78rem; text-align:center;" />
- <button type="button" class="btn-sm btn-accent" id="btnAddCompIng" style="color:#0f172a; height:34px; white-space:nowrap;">+ Voeg toe</button>
- </div>
- <div id="compIngList" style="margin-bottom:6px;"></div>
- <div id="compTotalsBar" style="font-size:0.76rem; font-weight:700; color:var(--accent-hevy); margin-bottom:8px;">Totaal: 0 kcal · 0g E · 0g KH · 0g V</div>
- <label class="toggle-label" style="color:var(--text); margin-bottom:8px; font-size:0.75rem;">
- <input type="checkbox" id="chkSaveCompAsFav" checked />
- Ook bewaren onder ★ Favoriet Eten
- </label>
- <button type="button" class="btn btn-hevy" id="btnSaveCompMeal" style="margin-top:0; padding:8px;">Gerecht toevoegen aan dagmenu</button>
- </div>
- </details>
 
  <details style="margin-top:8px; font-size:0.8rem; color:var(--muted);">
  <summary style="cursor:pointer; font-weight:600; color:var(--text);">+ Handmatig nieuw item aanmaken (stuk of gram)</summary>
@@ -8658,16 +8636,17 @@ function bindEvents() {
  if (item) addFoodItemToLog(item);
  });
 
- // Gecombineerd zoeken (Dranken + Lokaal eten + Directe Open Food Facts API)
+ // Gecombineerd zoeken: 1) Lokale DB, 2) Betrouwbare Open Food Facts, 3) Geen resultaten + AI inschatting
  let searchDebounceTimer = null;
  let activeSearchAbort = null;
+ const onlineSearchCache = {};
 
  function renderLocalUnifiedMatches(query) {
  const q = query.trim().toLowerCase();
  const resEl = document.getElementById("unifiedSearchResults");
  if (!q) { resEl.innerHTML = ""; return []; }
 
- const drinkMatches = DEFAULT_DRINKS.filter(d => d.name.toLowerCase().includes(q));
+ const drinkMatches = [...state.customDrinks, ...DEFAULT_DRINKS].filter(d => d.name.toLowerCase().includes(q));
  const foodPool = [...state.customFoods, ...LOCAL_FOOD_DB];
  const foodMatches = foodPool.filter(item => item.name.toLowerCase().includes(q));
 
@@ -8714,47 +8693,68 @@ function bindEvents() {
  return html;
  }
 
- const onlineSearchCache = {};
+ function renderNoResultsWithAiBtn(queryText, existingLocalHtml) {
+ const resEl = document.getElementById("unifiedSearchResults");
+ if (existingLocalHtml) {
+ resEl.innerHTML = existingLocalHtml;
+ return;
+ }
+ resEl.innerHTML = `
+ <div style="padding:10px; background:#0f172a; border:1px dashed var(--card-border); border-radius:10px; text-align:center;">
+ <div style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;">Geen resultaten voor "${escapeHtml(queryText)}".</div>
+ <button type="button" class="btn-sm btn-accent" id="btnEstimateSearchAi" data-ai-query="${escapeHtml(queryText)}" style="color:#0f172a; padding:6px 12px;">Laat AI een inschatting maken</button>
+ <div id="searchAiStatus" style="font-size:0.74rem; color:var(--muted); margin-top:6px; display:none;"></div>
+ </div>
+ `;
+ }
+
+ async function fetchOpenFoodFactsReliable(query, signal) {
+ const fields = "product_name,product_name_nl,brands,quantity,product_quantity,product_quantity_unit,serving_size,serving_quantity,categories_tags,nutriments";
+ const endpoints = [
+ `https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&fields=${fields}`,
+ `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&fields=${fields}`
+ ];
+
+ for (const ep of endpoints) {
+ if (signal.aborted) return [];
+ try {
+ const resp = await fetch(ep, {
+ signal,
+ headers: { "Accept": "application/json" }
+ });
+ if (!resp.ok) continue;
+ const data = await resp.json();
+ const prods = (data.products || []).filter(p => (p.product_name_nl || p.product_name) && p.nutriments);
+ if (prods.length > 0) return prods;
+ } catch (e) {
+ if (signal.aborted && signal.reason !== "timeout") throw e;
+ }
+ }
+ return [];
+ }
 
  async function runOnlineFoodSearch(query) {
  const q = query.trim();
- if (q.length < 2) return;
+ if (!q) {
+ document.getElementById("unifiedSearchResults").innerHTML = "";
+ return;
+ }
  const resEl = document.getElementById("unifiedSearchResults");
  const existingLocalHtml = renderLocalUnifiedMatches(q);
  const cacheKey = q.toLowerCase();
 
- function renderApiProducts(prods) {
- if (!prods || prods.length === 0) {
- if (!existingLocalHtml) {
- resEl.innerHTML = `<div style="font-size:0.78rem; color:var(--muted); padding:6px;">Geen online resultaten gevonden voor "${escapeHtml(q)}".</div>`;
- }
- return;
- }
  function detectIsDrinkProduct(p, label) {
  const cats = (p.categories_tags ? p.categories_tags.join(" ") : "").toLowerCase();
  const hay = `${label} ${cats}`.toLowerCase();
- // Sluit expliciet ijsjes / desserts / snacks uit (zoals Magnum ijsjes die in ml vermeld staan)
  if (/ice-cream|ijs|magnum|cornetto|dessert|sorbet|yoghurt|kwark|pudding|chocola|koek|chips/.test(hay)) return false;
  if (/beverages|drinks|sodas|waters|milks|coffees|teas|juices|icetea|ice-tea/.test(cats)) return true;
  return /chocomel|icetea|ice tea|cola|fanta|sprite|sinas|sap|juice|melk|milk|drank|drink|koffie|coffee|espresso|cappuccino|latte|thee|tea|water|bier|wijn|limonade|frisdrank|smoothie|shake|red bull|monster|aa drink|aquarius|fristi|yogho|karnemelk/.test(label.toLowerCase());
  }
 
- const apiHtml = prods.map((p, idx) => {
- const n = p.nutriments || {};
- const rawTitle = (p.product_name_nl || p.product_name || "Onbekend product").trim();
- const brand = (p.brands || "").split(",")[0].trim();
- const fullLabel = brand && !rawTitle.toLowerCase().includes(brand.toLowerCase()) ? `${rawTitle} (${brand})` : rawTitle;
- const itemId = "off_" + fullLabel.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 28);
- const isDrink = Object.prototype.hasOwnProperty.call(p, "_manualIsDrink")
- ? Boolean(p._manualIsDrink)
- : detectIsDrinkProduct(p, fullLabel);
- const isEspresso = /espresso/i.test(fullLabel);
-
  function extractPortionQty(prod, drinkMode) {
- // 1. Check expliciete portiegrootte (serving_quantity of getal in serving_size)
  let srv = parseFloat(prod.serving_quantity);
  if ((!srv || isNaN(srv)) && prod.serving_size) {
- const mSrv = String(prod.serving_size).match(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|ml|cl) /i);
+ const mSrv = String(prod.serving_size).match(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|ml|cl)/i);
  if (mSrv) {
  srv = parseFloat(mSrv[1].replace(",", "."));
  if (mSrv[2].toLowerCase() === "cl") srv *= 10;
@@ -8764,11 +8764,10 @@ function bindEvents() {
  return { qty: Math.round(srv), sourceLabel: "Portie" };
  }
 
- // 2. Check verpakkingsgewicht/inhoud (product_quantity of quantity zoals "450 g" of "330 ml")
  let pkg = parseFloat(prod.product_quantity);
  const qStr = String(prod.quantity || "");
  if ((!pkg || isNaN(pkg)) && qStr) {
- const mPkg = qStr.match(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|kg|ml|cl|l) /i);
+ const mPkg = qStr.match(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|kg|ml|cl|l)/i);
  if (mPkg) {
  pkg = parseFloat(mPkg[1].replace(",", "."));
  const u = mPkg[2].toLowerCase();
@@ -8787,11 +8786,27 @@ function bindEvents() {
  return { qty: Math.round(pkg), sourceLabel: "Verpakking" };
  }
  }
- return { qty: drinkMode ? (isEspresso ? 35 : 250) : 100, sourceLabel: null };
+ return { qty: drinkMode ? 250 : 100, sourceLabel: null };
  }
 
+ function renderApiProducts(prods) {
+ if (!prods || prods.length === 0) {
+ renderNoResultsWithAiBtn(q, existingLocalHtml);
+ return;
+ }
+ const isEspressoQuery = /espresso/i.test(q);
+ const apiHtml = prods.map((p, idx) => {
+ const n = p.nutriments || {};
+ const rawTitle = (p.product_name_nl || p.product_name || "Onbekend product").trim();
+ const brand = (p.brands || "").split(",")[0].trim();
+ const fullLabel = brand && !rawTitle.toLowerCase().includes(brand.toLowerCase()) ? `${rawTitle} (${brand})` : rawTitle;
+ const itemId = "off_" + fullLabel.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 28);
+ const isDrink = Object.prototype.hasOwnProperty.call(p, "_manualIsDrink")
+ ? Boolean(p._manualIsDrink)
+ : detectIsDrinkProduct(p, fullLabel);
+ const isEspresso = isEspressoQuery || /espresso/i.test(fullLabel);
  const portionInfo = extractPortionQty(p, isDrink);
- const stdQty = portionInfo.qty;
+ const stdQty = isEspresso ? 35 : portionInfo.qty;
  const drinkVolChoices = [...new Set([stdQty, 250, 330, 500])].sort((a, b) => a - b);
 
  const per100 = {
@@ -8871,39 +8886,25 @@ function bindEvents() {
  }
  const controller = new AbortController();
  activeSearchAbort = controller;
- const timeoutId = setTimeout(() => controller.abort("timeout"), 18000);
+ const timeoutId = setTimeout(() => controller.abort("timeout"), 12000);
 
- resEl.innerHTML = existingLocalHtml + `<div id="onlineSearchSpinner" style="font-size:0.76rem; color:var(--accent); padding:6px;">🌐 Zoeken naar "${escapeHtml(q)}" in Open Food Facts...</div>`;
+ resEl.innerHTML = existingLocalHtml + `<div id="onlineSearchSpinner" style="font-size:0.76rem; color:var(--accent); padding:6px;">🌐 Zoeken naar "${escapeHtml(q)}"...</div>`;
 
  try {
- // Gebruik cgi/search.pl met search_terms (v2 negeert search_terms) en beperkte fields voor snelle respons
- const fields = "product_name,product_name_nl,brands,quantity,product_quantity,product_quantity_unit,serving_size,serving_quantity,categories_tags,nutriments";
- const nlUrl = `https://nl.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=${fields}`;
- let resp = await fetch(nlUrl, { signal: controller.signal });
- if (!resp.ok) throw new Error("HTTP " + resp.status);
- let data = await resp.json();
- let prods = (data.products || []).filter(p => (p.product_name_nl || p.product_name) && p.nutriments);
-
- if (prods.length === 0) {
- const worldUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=${fields}`;
- resp = await fetch(worldUrl, { signal: controller.signal });
- if (resp.ok) {
- data = await resp.json();
- prods = (data.products || []).filter(p => (p.product_name_nl || p.product_name) && p.nutriments);
+ let prods = await fetchOpenFoodFactsReliable(q, controller.signal);
+ if (prods.length === 0 && q.includes(" ")) {
+ const firstWord = q.split(/\s+/)[0];
+ if (firstWord.length >= 2) {
+ prods = await fetchOpenFoodFactsReliable(firstWord, controller.signal);
  }
  }
-
  clearTimeout(timeoutId);
  onlineSearchCache[cacheKey] = prods;
  renderApiProducts(prods);
  } catch (err) {
  clearTimeout(timeoutId);
  if (err.name === "AbortError" && controller.signal.reason !== "timeout") return;
- const spinner = document.getElementById("onlineSearchSpinner");
- if (spinner) {
- spinner.style.color = "var(--muted)";
- spinner.textContent = "Online database reageert traag, probeer nogmaals of voeg handmatig toe.";
- }
+ renderNoResultsWithAiBtn(q, existingLocalHtml);
  }
  }
 
@@ -8920,8 +8921,8 @@ function bindEvents() {
  syncUnifiedClearBtn();
  renderLocalUnifiedMatches(val);
  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
- if (val.trim().length >= 3) {
- searchDebounceTimer = setTimeout(() => runOnlineFoodSearch(val), 1100);
+ if (val.trim().length >= 2) {
+ searchDebounceTimer = setTimeout(() => runOnlineFoodSearch(val), 750);
  }
  });
 
@@ -8951,7 +8952,37 @@ function bindEvents() {
  }
  });
 
- document.getElementById("unifiedSearchResults").addEventListener("click", e => {
+ document.getElementById("unifiedSearchResults").addEventListener("click", async e => {
+ const aiEstBtn = e.target.closest("#btnEstimateSearchAi");
+ if (aiEstBtn) {
+ const qDesc = aiEstBtn.getAttribute("data-ai-query") || document.getElementById("unifiedSearchInput")?.value || "";
+ const stEl = document.getElementById("searchAiStatus");
+ aiEstBtn.disabled = true;
+ aiEstBtn.textContent = "Bezig...";
+ if (stEl) { stEl.style.display = "block"; stEl.style.color = "var(--accent)"; stEl.textContent = "AI maakt een inschatting..."; }
+ const res = await estimateMealWithEdgeAI(qDesc);
+ aiEstBtn.disabled = false;
+ aiEstBtn.textContent = "Laat AI een inschatting maken";
+ if (res.error) {
+ if (stEl) { stEl.style.display = "block"; stEl.style.color = "var(--accent-garmin)"; stEl.textContent = res.error; }
+ return;
+ }
+ addFoodItemToLog({
+ id: "ai_" + Date.now(),
+ name: res.title,
+ unitType: "stuk",
+ defaultQty: 1,
+ kcalUnit: res.kcal,
+ pUnit: res.p,
+ cUnit: res.c,
+ fUnit: res.f
+ }, 1);
+ document.getElementById("unifiedSearchInput").value = "";
+ syncUnifiedClearBtn();
+ document.getElementById("unifiedSearchResults").innerHTML = "";
+ return;
+ }
+
  const favDrink = e.target.closest("[data-search-fav-drink]");
  if (favDrink) {
  const dId = favDrink.getAttribute("data-search-fav-drink");
@@ -8979,7 +9010,6 @@ function bindEvents() {
  const list = onlineSearchCache[cKey];
  if (list && list[idx]) {
  const p = list[idx];
- const rawTitle = (p.product_name_nl || p.product_name || "").trim();
  const curState = Object.prototype.hasOwnProperty.call(p, "_manualIsDrink")
  ? Boolean(p._manualIsDrink)
  : /beverages|drinks|sodas|waters|milks|coffees|teas|juices|icetea|ice-tea/i.test(p.categories_tags ? p.categories_tags.join(" ") : "");
