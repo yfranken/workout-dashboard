@@ -1051,11 +1051,18 @@
  height: 100%;
  width: 0%;
  background: var(--accent);
- animation: m3SegFill 3s linear forwards;
+ animation: m3SegFill 4s linear forwards;
  }
  @keyframes m3SegFill {
  from { width: 0%; }
  to { width: 100%; }
+ }
+ @keyframes m3FavSlideIn {
+ 0% { opacity: 0; transform: translateX(var(--fav-enter-x, 14px)); }
+ 100% { opacity: 1; transform: translateX(0); }
+ }
+ .m3-fav-anim-body {
+ animation: m3FavSlideIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
  }
  .m3-action-tile {
  background: linear-gradient(160deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%);
@@ -1487,17 +1494,9 @@
  <!-- TAB 1: TOTAALBEELD -->
  <!-- ========================================================= -->
  <div id="tab-overview" class="panel active">
- <div class="ov-top-bar">
- <div class="ov-top-title">
- <span>Vandaag &amp; Resultaat</span>
- </div>
- <label class="m3-switch-wrap" id="ovExtendedSwitch" title="Schakel tussen minimalistisch en uitgebreid met grafieken">
- <span>Uitgebreid</span>
- <span class="m3-switch-track">
- <span class="m3-switch-thumb"></span>
- </span>
- <input type="checkbox" id="ovExtendedToggle" style="display:none;" />
- </label>
+ <div class="m3-segmented-group" id="ovModeSegGroup" role="group" aria-label="Totaal weergave" style="margin-bottom:12px;">
+ <button type="button" class="m3-seg-btn active" data-ovmode="dashboard">Dashboard</button>
+ <button type="button" class="m3-seg-btn" data-ovmode="charts">Grafieken</button>
  </div>
 
  <div id="ovMinimalView">
@@ -5582,6 +5581,7 @@ function applyGranularityVisibilityForRange(granGroupId, attrName, currentGran, 
 
 let ovFavAutoTimer = null;
 let ovFavManualPausedUntil = 0;
+let ovFavAnimDir = 1;
 
 function formatFutureWorkoutScheduleLabel(targetYmd, baseYmd = TODAY_YMD) {
  const baseDt = new Date(baseYmd + "T12:00:00");
@@ -5685,23 +5685,27 @@ function startOverviewFavAutoCycle() {
  if (Date.now() < ovFavManualPausedUntil) return;
  const items = getFavoriteExerciseProgressItems();
  if (items.length <= 1) return;
+ ovFavAnimDir = 1;
  state.ovFavTileIdx = ((state.ovFavTileIdx || 0) + 1) % items.length;
  renderMinimalOverview();
- }, 3000);
+ }, 4000);
 }
 
 function renderMinimalOverview() {
  const wrap = document.getElementById("ovMinimalTiles");
  const minView = document.getElementById("ovMinimalView");
  const extView = document.getElementById("ovExtendedView");
- const swLabel = document.getElementById("ovExtendedSwitch");
- const swInput = document.getElementById("ovExtendedToggle");
+ const segGroup = document.getElementById("ovModeSegGroup");
 
  const isExt = Boolean(state.ovExtendedView);
  if (minView) minView.style.display = isExt ? "none" : "block";
  if (extView) extView.style.display = isExt ? "block" : "none";
- if (swLabel) swLabel.classList.toggle("active", isExt);
- if (swInput) swInput.checked = isExt;
+ if (segGroup) {
+ segGroup.querySelectorAll(".m3-seg-btn").forEach(b => {
+ const mode = b.getAttribute("data-ovmode");
+ b.classList.toggle("active", (mode === "charts" && isExt) || (mode === "dashboard" && !isExt));
+ });
+ }
 
  if (isExt) {
  if (ovFavAutoTimer) { clearInterval(ovFavAutoTimer); ovFavAutoTimer = null; }
@@ -5824,9 +5828,11 @@ function renderMinimalOverview() {
  if (favItems.length > 0) {
  const idx = ((state.ovFavTileIdx || 0) % favItems.length + favItems.length) % favItems.length;
  const curFav = favItems[idx];
+ const enterX = ovFavAnimDir < 0 ? "-16px" : "16px";
  favTileHtml = `
  <div class="m3-action-tile m3-cycle-tile" id="ovFavExerciseTile" data-jump-tab="charts" title="Swipe om favoriete oefening te wisselen">
- <div class="m3-tile-head">
+ <div class="m3-fav-anim-body" style="--fav-enter-x:${enterX};">
+ <div class="m3-tile-head" style="margin-bottom:8px;">
  <span class="m3-tile-cat">⭐ ${escapeHtml(curFav.name)}</span>
  <span class="m3-tile-cta">Training &rarr;</span>
  </div>
@@ -5836,6 +5842,7 @@ function renderMinimalOverview() {
  <div style="font-size:0.74rem; color:var(--muted); margin-top:4px;">${escapeHtml(curFav.sub)}</div>
  </div>
  <div class="m3-fav-growth">${escapeHtml(curFav.growthText)}</div>
+ </div>
  </div>
  ${renderSegmentedProgressBarHtml(favItems.length, idx)}
  </div>
@@ -5918,6 +5925,7 @@ function renderMinimalOverview() {
  e.stopPropagation();
  const exX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : sx;
  const dir = (exX - sx) < 0 ? 1 : -1;
+ ovFavAnimDir = dir;
  ovFavManualPausedUntil = Date.now() + 6000;
  state.ovFavTileIdx = ((state.ovFavTileIdx || 0) + dir + favItems.length) % favItems.length;
  renderMinimalOverview();
@@ -7324,10 +7332,31 @@ function bindEvents() {
  const tabEl = e.target.closest("md-navigation-tab");
  if (tabEl) switchTab(tabEl.getAttribute("data-tab"));
  });
- document.getElementById("btnOpenSettings").addEventListener("click", () => switchTab("upload"));
+ let lastMainTabBeforeOverlay = "overview";
+ const origSwitchTab = switchTab;
+ switchTab = function(tabName) {
+ if (tabName && tabName !== "upload" && tabName !== "profile") {
+ lastMainTabBeforeOverlay = tabName;
+ }
+ origSwitchTab(tabName);
+ };
+
+ document.getElementById("btnOpenSettings").addEventListener("click", () => {
+ const isAlreadyOpen = document.getElementById("tab-upload")?.classList.contains("active");
+ if (isAlreadyOpen) {
+ switchTab(lastMainTabBeforeOverlay || "overview");
+ } else {
+ switchTab("upload");
+ }
+ });
  document.getElementById("btnOpenProfile").addEventListener("click", () => {
+ const isAlreadyOpen = document.getElementById("tab-profile")?.classList.contains("active");
+ if (isAlreadyOpen) {
+ switchTab(lastMainTabBeforeOverlay || "overview");
+ } else {
  renderSocialConnectionsUI();
  switchTab("profile");
+ }
  });
 
  // Helper voor Material 3 Segmented Button Groups & geanimeerde uitklap-drawer
@@ -7346,8 +7375,8 @@ function bindEvents() {
 
 
 
- document.getElementById("ovExtendedToggle")?.addEventListener("change", e => {
- state.ovExtendedView = Boolean(e.target.checked);
+ bindSegmentedButtonGroup("ovModeSegGroup", "data-ovmode", mode => {
+ state.ovExtendedView = (mode === "charts");
  try { localStorage.setItem("pref_ov_extended_v1", JSON.stringify(state.ovExtendedView)); } catch (err) {}
  renderOverviewDashboard(getCombinedSets());
  });
